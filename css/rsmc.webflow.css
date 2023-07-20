@@ -1,0 +1,19 @@
+.div-100x100 {
+  width: 100vw;
+  height: 100vh;
+}
+
+.div-100x100.flex-v-center {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+}
+
+.h1.uc {
+  color: #000;
+  letter-spacing: 1px;
+  font-family: Inconsolata, monospace;
+  font-size: 1em;
+  line-height: 1.5em;
+}
