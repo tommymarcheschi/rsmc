@@ -10,10 +10,74 @@
   display: flex;
 }
 
+.div-100x100.flex-v-center.black {
+  background-color: #000;
+}
+
 .h1.uc {
   color: #000;
   letter-spacing: 1px;
   font-family: Inconsolata, monospace;
   font-size: 1em;
   line-height: 1.5em;
+}
+
+.h1.uc.white {
+  color: #fff;
+  letter-spacing: 5px;
+  font-size: 3em;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.p {
+  color: #000;
+  letter-spacing: 2px;
+  border: 3px solid #000;
+  margin-bottom: 0;
+  font-family: Inconsolata, monospace;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 2em;
+}
+
+.p.black {
+  color: #000;
+}
+
+.p.white {
+  color: #fff;
+}
+
+.form {
+  align-items: center;
+  display: flex;
+}
+
+.submit-button {
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background-color: #000;
+  font-family: Inconsolata, monospace;
+  font-weight: 400;
+}
+
+.form-block {
+  border: 2px solid #fff;
+  border-radius: 0;
+}
+
+.h2 {
+  color: #fff;
+  letter-spacing: 4px;
+  font-family: Chinese Rocks Rg, sans-serif;
+}
+
+
+@font-face {
+  font-family: 'Chinese Rocks Rg';
+  src: url('../fonts/chinese-rocks-rg.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
