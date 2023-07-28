@@ -82,4 +82,6 @@
   font-display: swap;
 }
 
-svg { cursor: pointer; }
+svg {
+  pointer-events: all;
+}
