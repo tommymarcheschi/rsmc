@@ -296,8 +296,9 @@
             </g>
         </g>
     </g>
-</svg>
-<script>
+
+<script type="application/ecmascript">
+<![CDATA[
 let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
 let currentLayer = 0;
 
@@ -317,3 +318,5 @@ document.getElementById("currency").addEventListener("click", function() {
   document.getElementById(layers[currentLayer]).style.display = "block";
 });
 </script>
+]]>
+</svg>
