@@ -1812,3 +1812,6 @@ textarea.w-select {
 .wf-layout-layout {
   display: grid;
 }
+svg {
+  pointer-events: all;
+}
