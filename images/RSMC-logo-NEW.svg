@@ -298,24 +298,43 @@
     </g>
     <script type="application/ecmascript">
     <![CDATA[
-      var svgElement = document.getElementById("currency");
-      svgElement.addEventListener("click", function() {
-        var paths = svgElement.getElementsByTagName("path");
-      
-        for (var i = 0; i < paths.length; i++) {
-            var path = paths[i];
-            
-            if (path.style.fillOpacity === "0") {
-                path.style.fill = "rgb(2,2,2)";
-                path.style.fillOpacity = "1";
-                path.style.fillRule = "nonzero";
-            } else {
-                path.style.fill = "none";
-                path.style.fillOpacity = "0";
-                path.style.fillRule = "nonzero";
-            }
+        var currency = document.getElementById('currency');
+        var layers = Array.from(currency.children);
+        var currentLayerIndex = 0;
+
+        function hideLayer(layer) {
+            var path = layer.querySelector('path');
+            path.style.fillOpacity = 0;
+            path.style.fillRule = 'nonzero';
         }
-      }, false);
+
+        function showLayer(layer) {
+            var path = layer.querySelector('path');
+            path.style.fill = 'rgb(2,2,2)';
+            path.style.fillOpacity = 100;
+            path.style.fillRule = 'nonzero';
+        }
+
+    // Initially hide all layers except the first one
+        layers.forEach((layer, index) => {
+            if (index !== currentLayerIndex) {
+                hideLayer(layer);
+            } else {
+                showLayer(layer);
+            }
+        });
+
+    // Add click event listener to the SVG
+        currency.addEventListener('click', function() {
+        // Hide current layer
+            hideLayer(layers[currentLayerIndex]);
+
+        // Move to next layer
+            currentLayerIndex = (currentLayerIndex + 1) % layers.length;
+
+            // Show next layer
+            showLayer(layers[currentLayerIndex]);
+        });
     ]]>
     </script>
 </svg>
