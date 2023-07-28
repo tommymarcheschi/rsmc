@@ -285,10 +285,10 @@
                         </g>
                     </g>
                 </g>
-                <g id="RSMC-LINK-R" href="https://rsmc.tech">
+                <a href="https://rsmc.tech"><g id="RSMC-LINK-R">
                     <g transform="matrix(1,0,0,1,1291.88,774.313)">
                         <path d="M0,-56.752C-21.06,-57.891 -50.238,-41.243 -49.762,-19.137C-48.045,-4.421 -41.583,11.826 -29.666,20.987C7.984,37.644 35.295,-7.791 29.158,-40.22C27.891,-50.138 8.284,-57.964 0,-56.752M-65.064,-20.823C-70.717,-74.277 39.052,-95.96 42.99,-36.049C45.236,-4.468 27.314,34.601 -6.587,39.208C-15.944,37.989 -25.41,37.055 -34.533,34.794C-41.002,33.19 -45.713,27.945 -49.12,22.291C-57.973,9.408 -65.508,-4.557 -65.064,-20.823" style="fill:rgb(1,1,1);fill-rule:nonzero;"/>
-                    </g>
+                    </g></a>
                     <g transform="matrix(1,0,0,1,1269.24,770.073)">
                         <path d="M2.379,-23.803C1.975,-12.407 -1.013,-9.02 10.774,-12.592C15.623,-13.814 21.403,-14.533 22.866,-20.918C15.444,-25.413 10.296,-25.845 2.379,-23.803M18.488,-4.235C21.077,-3.096 22.331,-2.544 23.803,-1.896C22.323,5.192 19.049,12.767 17.551,19.938C16.959,20.073 18.143,19.803 17.551,19.938C15.898,9.581 15.989,-0.495 3.242,-3.746C4.164,3.342 5.385,19.164 4.785,19.288C-1.147,6.04 -9.621,-7.647 -12.84,-21.782C-14.194,-27.726 -15.515,-28.803 -10.1,-31.872C2.04,-39.915 39.812,-43.185 34.811,-20.424C33.627,-11.325 27.925,-5.755 18.488,-4.235" style="fill:rgb(1,1,1);fill-rule:nonzero;"/>
                     </g>
@@ -296,26 +296,26 @@
             </g>
         </g>
     </g>
-<script type="application/ecmascript">
-<![CDATA[
-  let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
-  let currentLayer = 0;
+  <script type="application/ecmascript">
+  <![CDATA[
+    let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
+    let currentLayer = 0;
 
-  document.getElementById("currency").addEventListener("click", function() {
-    // Hide the current layer
-    document.getElementById(layers[currentLayer]).style.display = "none";
+    document.getElementById("currency").addEventListener("click", function() {
+      // Hide the current layer
+      document.getElementById(layers[currentLayer]).style.display = "none";
 
-    // Increment the current layer
-    currentLayer++;
+      // Increment the current layer
+      currentLayer++;
 
-    // If we've gone past the end of the array, start over
-    if (currentLayer >= layers.length) {
-      currentLayer = 0;
-    }
+      // If we've gone past the end of the array, start over
+      if (currentLayer >= layers.length) {
+        currentLayer = 0;
+      }
 
-    // Show the new current layer
-    document.getElementById(layers[currentLayer]).style.display = "block";
-  });
-]]>
-</script>
+      // Show the new current layer
+      document.getElementById(layers[currentLayer]).style.display = "block";
+    });
+  ]]>
+  </script>
 </svg>
