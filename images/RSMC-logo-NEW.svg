@@ -298,24 +298,24 @@
     </g>
   <script type="application/ecmascript">
   <![CDATA[
-    let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
-    let currentLayer = 0;
+  let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
+  let currentLayer = 0;
 
-    document.getElementById("currency").addEventListener("click", function() {
-      // Hide the current layer
-      document.getElementById(layers[currentLayer]).style.display = "none";
+  document.getElementById("currency").addEventListener("click", function() {
+    // Hide the current layer
+    document.getElementById(layers[currentLayer]).style.display = "none";
 
-      // Increment the current layer
-      currentLayer++;
+    // Increment the current layer
+    currentLayer++;
 
-      // If we've gone past the end of the array, start over
-      if (currentLayer >= layers.length) {
-        currentLayer = 0;
-      }
+    // If we've gone past the end of the array, start over
+    if (currentLayer >= layers.length) {
+      currentLayer = 0;
+    }
 
-      // Show the new current layer
-      document.getElementById(layers[currentLayer]).style.display = "block";
-    });
-  ]]>
-  </script>
+    // Show the new current layer
+    document.getElementById(layers[currentLayer]).style.display = "block";
+  });
+]]>
+</script>
 </svg>
