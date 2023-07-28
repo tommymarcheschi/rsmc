@@ -49,12 +49,14 @@
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
-        // Show the Webflow success message
+        // If the response indicates success, show the success message
         document.querySelector('.w-form-done').style.display = 'block';
+        document.querySelector('.w-form-fail').style.display = 'none';
       })
       .catch(error => {
-        // Show the Webflow failure message
+        // If the fetch request fails, show the failure message
         document.querySelector('.w-form-fail').style.display = 'block';
+        document.querySelector('.w-form-done').style.display = 'none';
       });
     });
   </script>
