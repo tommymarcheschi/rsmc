@@ -296,26 +296,26 @@
             </g>
         </g>
     </g>
-  <script type="application/ecmascript">
-  <![CDATA[
-  let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
-  let currentLayer = 0;
-
-  document.getElementById("currency").addEventListener("click", function() {
-    // Hide the current layer
-    document.getElementById(layers[currentLayer]).style.display = "none";
-
-    // Increment the current layer
-    currentLayer++;
-
-    // If we've gone past the end of the array, start over
-    if (currentLayer >= layers.length) {
-      currentLayer = 0;
-    }
-
-    // Show the new current layer
-    document.getElementById(layers[currentLayer]).style.display = "block";
-  });
-  ]]>
-  </script>
+    <script type="application/ecmascript">
+    <![CDATA[
+      var svgElement = document.getElementById("currency");
+      svgElement.addEventListener("click", function() {
+        var paths = svgElement.getElementsByTagName("path");
+      
+        for (var i = 0; i < paths.length; i++) {
+            var path = paths[i];
+            
+            if (path.style.fillOpacity === "0") {
+                path.style.fill = "rgb(2,2,2)";
+                path.style.fillOpacity = "1";
+                path.style.fillRule = "nonzero";
+            } else {
+                path.style.fill = "none";
+                path.style.fillOpacity = "0";
+                path.style.fillRule = "nonzero";
+            }
+        }
+      }, false);
+    ]]>
+    </script>
 </svg>
