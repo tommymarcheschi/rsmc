@@ -301,7 +301,7 @@
   let layers = ["yen", "W", "EU", "pound", "rupee", "dollar"];
   let currentLayer = 0;
 
-  document.getElementById("currency").addEventListener("click", function() {
+  document.getElementById("currency").addEventListener("onclick", function() {
     // Hide the current layer
     document.getElementById(layers[currentLayer]).style.display = "none";
 
@@ -316,6 +316,6 @@
     // Show the new current layer
     document.getElementById(layers[currentLayer]).style.display = "block";
   });
-]]>
-</script>
+  ]]>
+  </script>
 </svg>
