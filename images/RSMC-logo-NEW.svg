@@ -309,13 +309,13 @@
     currentLayer++;
 
     // If we've gone past the end of the array, start over
-      if (currentLayer >= layers.length) {
-        currentLayer = 0;
-      }
+    if (currentLayer >= layers.length) {
+      currentLayer = 0;
+    }
 
     // Show the new current layer
     document.getElementById(layers[currentLayer]).style.display = "block";
-  });
-  </script>
+    });
 ]]>
+</script>
 </svg>
