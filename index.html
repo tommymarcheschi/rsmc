@@ -31,7 +31,7 @@
     </div>
     <div class="p white">COPYRIGHT © 2023 RSMC. ALL RIGHTS RESERVED.</div>
   </div>
-    <!-- JavaScript code -->
+  <!-- JavaScript code -->
   <script>
     document.querySelector('form').addEventListener('submit', function(event) {
       // Prevent the form from submitting normally
@@ -46,12 +46,15 @@
         body: formData
       })
       .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
         // Show the Webflow success message
         document.querySelector('.w-form-done').style.display = 'block';
       })
       .catch(error => {
-        // Handle the error
-        console.error('Error:', error);
+        // Show the Webflow failure message
+        document.querySelector('.w-form-fail').style.display = 'block';
       });
     });
   </script>
