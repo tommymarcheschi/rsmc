@@ -1,3 +1,7 @@
+.black-bg {
+  background-color: #000;
+}
+
 .div-100x100 {
   width: 100vw;
   height: 100vh;
