@@ -158,6 +158,10 @@ img {
 svg:not(:root) {
   overflow: hidden;
 }
+
+svg {
+  pointer-events: all;
+}
 /* Grouping content
    ========================================================================== */
 /**
