@@ -1,24 +1,21 @@
-<div class="navbar bg-base-100">
-  <div class="flex-1">
-    <a class="btn btn-ghost normal-case text-xl">daisyUI</a>
+<script>
+  import typelogo from "$lib/images/RSMC-logo-text.svg"
+  
+</script>
+
+
+
+<div class="navbar bg-transparent flex fixed top-0 justify-between">
+  <div class="flex-initial h-auto m-2 mb-4">
+    <a href="/" class="link"><img src="{typelogo}" class="w-3/12"></a>
   </div>
-  <div class="flex-none">
-    <ul class="menu menu-horizontal px-1">
-      <li><a>About</a></li>
-      <li><a>Contact</a></li>
-      <li><a>Donate</a></li>
-      <li><a>Store</a></li>
-      <li>
-        <details>
-          <summary>
-            Parent
-          </summary>
-          <ul class="p-2 bg-base-100">
-            <li><a>Link 1</a></li>
-            <li><a>Link 2</a></li>
-          </ul>
-        </details>
-      </li>
+
+  <div class="flex-initial m-2 mb-4">
+    <ul class="menu menu-horizontal px-1 font-rocks text-white text-xl tracking-widest">
+      <li><a href="/About">About</a></li>
+      <li><a href="/Contact">Contact</a></li>
+      <li><a href="/Donate">Donate</a></li>
+      <li><a href="/Store">Store</a></li>
     </ul>
   </div>
 </div>
