@@ -1,7 +1,11 @@
 <script>
-  import logo from "$lib/images/RSMC-logo-NEW.svg";
+  import logo from "$lib/images/RSMC-logo-NEW.svg?raw";
 </script>
 
 <div class="flex items-center justify-center">
-  <img src={logo} class="w-5/12">
+  <div class="flex w-3/5 h-auto">
+    {@html logo}
+  </div>
 </div>
+
+
