@@ -3,5 +3,5 @@
 </script>
 
 <div class="flex items-center justify-center">
-  <img src={logo} class="w-3/6">
+  <img src={logo} class="w-5/12">
 </div>

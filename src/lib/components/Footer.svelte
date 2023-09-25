@@ -4,19 +4,19 @@
 </script>
 
 <footer class="footer footer-center p-10 text-base-content bg-black">
-  <nav class="grid grid-flow-col gap-4">
+<!--  <nav class="grid grid-flow-col gap-4">
     <a class="link link-hover">About</a> 
     <a class="link link-hover">Contact</a> 
     <a class="link link-hover">Donate</a> 
     <a class="link link-hover">Store</a>
-  </nav> 
+  </nav> !-->
   <nav>
     <div class="grid grid-flow-col gap-4">
-      <img src="{socialx}" class="w-6">
-      <img src="{socialnostr}" class="w-6">
+      <a href="https://x.com/rsmctech" target="_blank"><img src="{socialx}" class="w-6"></a>
+       <a href="https://snort.social/p/npub1rqr8p092lu26550keluxuz6ce4yvcw3zgjdpnpmyktp3hyy47gcs9fu8yd" target="_blank"><img src="{socialnostr}" class="w-6">
     </div>
   </nav> 
   <span>
-    <p>COPYRIGHT © 2023 RSMC. ALL RIGHTS RESERVED. <a href="#" class="hover:text-orange-400">TERMS OF SERVICE</a>.</p>
+    <p class="font-rocks text-white text-base tracking-widest">COPYRIGHT © 2023 RSMC. ALL RIGHTS RESERVED. <a href="#" class="underline hover:text-orange-400">TERMS OF SERVICE</a>.</p>
   </span>
 </footer>
