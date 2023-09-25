@@ -1,0 +1,15 @@
+@import '@fontsource-variable/inconsolata';
+@import '@fontsource/anonymous-pro/400.css';
+@import '@fontsource/anonymous-pro/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Chinese Rocks';
+  src: url('$lib/fonts/chinese-rocks-rg.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
