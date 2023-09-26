@@ -1,6 +1,8 @@
 @import '@fontsource-variable/inconsolata';
 @import '@fontsource/anonymous-pro/400.css';
 @import '@fontsource/anonymous-pro/700.css';
+@import '@fontsource/bahiana';
+@import '@fontsource/bahianita';
 
 @tailwind base;
 @tailwind components;
@@ -14,12 +16,4 @@
   font-display: swap;
 }
 
-body {
-  background-color: black;
-  margin: 0;
-  min-height: 100%;
-  width: 100%;
-  overflow-x: hidden;
-  box-sizing: border-box;
-  display: block;
-}
+

@@ -35,6 +35,8 @@
 	"dependencies": {
 		"@bitjson/qr-code": "^1.0.2",
 		"@fontsource-variable/inconsolata": "^5.0.8",
-		"@fontsource/anonymous-pro": "^5.0.8"
+		"@fontsource/anonymous-pro": "^5.0.8",
+		"@fontsource/bahiana": "^5.0.12",
+		"@fontsource/bahianita": "^5.0.12"
 	}
 }

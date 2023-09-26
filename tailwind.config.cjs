@@ -7,6 +7,8 @@ export default {
         'rocks': ['Chinese Rocks', 'sans-serif'],
         'incon': ['"Inconsolata Variable"'],
         'anon': ['"Anonymous Pro"'],
+        'bahianita': ['Bahianita'],
+        'bahiana': ['Bahiana'],
       }, 
       fontWeight: {
         'regular': 400,

@@ -1,14 +1,26 @@
 <script>
-  import logo from "$lib/images/RSMC-logo-NEW.svg";
+  import logowithtype from "$lib/images/RSMC-logo-white-type.svg?raw";
+
 </script>
 
 
-<div class="flex items-center justify-center h-screen">
+<div class="flex flex-col items-center justify-center">
 
-	<h1 class="flex align-middle uppercase text-3xl font-rocks text-white">
-	About Rsmc
-	</h1>
-	<span class="font-incon text-white text-sm">Building with Bitcoin, Lightning, Nostr, Ordinals, Counterparty, Cashu, RGB, etc.!</span>
+  <div class="flex flex-col mt-32 ">
+  	<h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">About Rsmc</h1>
+  	<span class="flex flex-col font-incon text-white text-sm mb-4">Building with Bitcoin, Lightning, Nostr, Ordinals, Counterparty, Cashu, RGB, etc.!</span>
+  </div>
 
-
+  <div class="flex flex-col items-center justify-center w-3/5 mt-2">
+  	<div class="w-3/6 my-14">{@html logowithtype}</div>
+  	<h2 class="text-white font-bahiana text-5xl tracking-wider uppercase text-center mt-8 mb-4 antialiased">"RARE SATOSHI MINTING CELL"</h2>
+  	<h3 class="text-white subpixel-antialiased font-incon text-xl tracking-wider uppercase text-center mt-2 mb-2">Permissionless Bitcoin Pirate sHIP</h3>
+  	<p class="text-white antialiased font-incon text-base tracking-wider text-center leading-loose px-14">RSMC was born in the Bitcoin Magazine warehouse in Nashville, TN.* As a Bitcoin Agency, RSMC is building towards a future of Hyperbitcoinization. Complete Manifesto coming soon. To contact us, <a href="/contact" class="underline hover:text-orange-400">fill out this form</a>.<br><br>*RSMC is not directly affiliated with Bitcoin Magazine or BTC Inc.<br><br>#HODL
+  	</p>
+  </div>
 </div>
+
+
+
+
+
