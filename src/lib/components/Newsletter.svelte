@@ -31,7 +31,7 @@
 </script>
 
 <div class="flex flex-col items-center justify-center mt-24 w-full font-incon">
-  <img src="{logoSecondary}" class="w-16 mb-4"/>
+  <img src="{logoSecondary}" class="w-16 mb-4" alt="secondary RSMC logo"/>
   <h2 class="text-3xl mb-4 font-rocks text-white tracking-widest">Join waitlist</h2>
   <span class="text-lg tracking-widest mb-4 font-rocks text-white">( For chance to win free RSMC T-shirt! )</span>
   <form on:submit={subscribe} class="w-full max-w-xs">

@@ -1,6 +1,6 @@
 <script>
   import logowithtype from "$lib/images/RSMC-logo-white-type.svg";
-  import QRCode from '$lib/components/QRCode.svelte';
+  import QRCode from "$lib/components/Qrcode.svelte";
 </script>
 
 
