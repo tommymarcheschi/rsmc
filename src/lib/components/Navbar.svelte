@@ -21,7 +21,7 @@
   }
 
   function handleOutsideClick(event) {
-    if (!event.target.closest('.dropdown') && !event.target.closest('button')) {
+    if (!event.target.closest('.dropdown') && !event.target.closest('label')) {
       closeMenu();
     }
   }
@@ -29,8 +29,10 @@
   import { onMount } from 'svelte';
   onMount(() => {
     document.addEventListener('click', handleOutsideClick);
+    document.addEventListener('touchend', handleOutsideClick);
     return () => {
-      document.removeEventListener('click', handleOutsideClick);
+        document.removeEventListener('click', handleOutsideClick);
+        document.removeEventListener('touchend', handleOutsideClick);
     };
   });
 </script>
@@ -55,16 +57,21 @@
 
     <!-- Mobile Dropdown Menu using daisyUI -->
     <div class="dropdown md:hidden">
-      <button class="text-white cursor-pointer" on:click|stopPropagation={toggleMenu} on:keydown={handleDropdownKeydown}>
+      <label tabindex="0" class="text-white cursor-pointer" 
+              on:click|stopPropagation={toggleMenu} 
+              on:keydown={handleDropdownKeydown}
+              on:touchend|stopPropagation={toggleMenu}>
         {#if isOpen}
           <Icon src={XIcon} size="24px" theme="solid" class="swap-on" />
         {:else}
           <Icon src={MenuIcon} size="24px" theme="solid" class="swap-off" />
         {/if}
-      </button>
+      </label>
 
       {#if isOpen}
-        <ul class="dropdown-content z-[1] p-4 shadow text-white rounded-none w-fit text-right right-0" on:click|stopPropagation>
+        <ul tabindex="0" class="dropdown-content z-[50] p-4 shadow text-white rounded-none w-fit text-right right-0" 
+            on:click|stopPropagation 
+            on:touchend|stopPropagation>
           <li><a href="/about" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">About</a></li>
           <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
           <li><a href="/donate" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Donate</a></li>
