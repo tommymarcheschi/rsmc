@@ -21,7 +21,7 @@
   }
 
   function handleOutsideClick(event) {
-    if (!event.target.closest('.dropdown') && !event.target.closest('label')) {
+    if (!event.target.closest('.dropdown') && !event.target.closest('button')) {
       closeMenu();
     }
   }
@@ -29,10 +29,8 @@
   import { onMount } from 'svelte';
   onMount(() => {
     document.addEventListener('click', handleOutsideClick);
-    document.addEventListener('touchend', handleOutsideClick);
     return () => {
         document.removeEventListener('click', handleOutsideClick);
-        document.removeEventListener('touchend', handleOutsideClick);
     };
   });
 </script>
@@ -57,21 +55,19 @@
 
     <!-- Mobile Dropdown Menu using daisyUI -->
     <div class="dropdown md:hidden">
-      <label tabindex="0" class="text-white cursor-pointer" 
+      <button class="text-white cursor-pointer" 
               on:click|stopPropagation={toggleMenu} 
-              on:keydown={handleDropdownKeydown}
-              on:touchend|stopPropagation={toggleMenu}>
+              on:keydown={handleDropdownKeydown}>
         {#if isOpen}
           <Icon src={XIcon} size="24px" theme="solid" class="swap-on" />
         {:else}
           <Icon src={MenuIcon} size="24px" theme="solid" class="swap-off" />
         {/if}
-      </label>
+      </button>
 
       {#if isOpen}
-        <ul tabindex="0" class="dropdown-content z-[50] p-4 bg-black shadow text-white rounded-none w-fit text-right right-0" 
-            on:click|stopPropagation 
-            on:touchend|stopPropagation>
+        <ul class="dropdown-content z-[50] p-4 shadow text-white rounded-none w-fit text-right right-0" 
+            on:click|stopPropagation >
           <li><a href="/about" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">About</a></li>
           <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
           <li><a href="/donate" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Donate</a></li>
