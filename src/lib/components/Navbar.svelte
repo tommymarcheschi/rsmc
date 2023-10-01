@@ -1,23 +1,76 @@
 <script>
-  import typelogo from "$lib/images/RSMC-logo-text.svg"
-  import { blockHeight, bitcoinPrice } from "../../store/bitcoin"
+  import typelogo from "$lib/images/RSMC-logo-text.svg";
+  import { blockHeight, bitcoinPrice } from "../../store/bitcoin";
+  import { Bars2 as MenuIcon, XMark as XIcon } from '@steeze-ui/heroicons';
+  import { Icon } from '@steeze-ui/svelte-icon';
+
+  let isOpen = false;
+
+  function toggleMenu() {
+    isOpen = !isOpen;
+  }
+
+  function closeMenu() {
+    isOpen = false;
+  }
+
+  function handleDropdownKeydown(event) {
+    if (event.key === 'Enter') {
+      toggleMenu();
+    }
+  }
+
+  function handleOutsideClick(event) {
+    if (!event.target.closest('.dropdown') && !event.target.closest('button')) {
+      closeMenu();
+    }
+  }
+
+  import { onMount } from 'svelte';
+  onMount(() => {
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  });
 </script>
 
-
-
-<div class="navbar flex bg-black fixed top-0 justify-between z-40 bottom-auto ">
-  <div class="flex-initial h-auto w-auto m-2 mb-4 grid grid-flow-col gap-4 bottom-auto">
-    <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20 mx-10" /></a>
-    <h2 class="font-bahiana text-3xl text-orange-500 ">Block #{ $blockHeight || 'Loading...' } </h2>
-    <h2 class="font-bahiana text-3xl text-green-600">1 BTC: ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(2)}` : 'Loading...' } </h2>
+<div class="navbar flex bg-black fixed top-0 justify-between items-center z-40 bottom-auto w-full p-2">
+  <div class="flex items-center space-x-4">
+    <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20" /></a>
+    <div class="flex items-center space-x-2 md:space-x-4">
+      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-orange-500 whitespace-nowrap">Block #{ $blockHeight || 'Loading...' }</h2>
+      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-green-600 whitespace-nowrap">1 BTC: ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(2)}` : 'Loading...' }</h2>
+    </div>
   </div>
 
-  <div class="flex-initial m-2 mb-4 w-auto right-0 bottom-auto">
-    <ul class="menu-horizontal font-rocks text-white text-xl rounded-none tracking-widest m-2">
-      <li><a href="/about" class="hover:text-orange-400 mx-4 px-1 ">About</a></li>
-      <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1 ">Contact</a></li>
-      <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1 ">Donate</a></li>
-      <li><a href="/store" class="hover:text-orange-400 mx-4 px-1 ">Store</a></li>
+  <div class="flex items-center space-x-4">
+    <!-- Desktop Menu (Visible on screens larger than 768px) -->
+    <ul class="menu-horizontal font-rocks text-white text-xl rounded-none tracking-widest m-2 hidden md:flex">
+      <li><a href="/about" class="hover:text-orange-400 mx-4 px-1">About</a></li>
+      <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1">Contact</a></li>
+      <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1">Donate</a></li>
+      <li><a href="/store" class="hover:text-orange-400 mx-4 px-1">Store</a></li>
     </ul>
+
+    <!-- Mobile Dropdown Menu using daisyUI -->
+    <div class="dropdown md:hidden">
+      <button class="cursor-pointer" on:click|stopPropagation={toggleMenu} on:keydown={handleDropdownKeydown}>
+        {#if isOpen}
+          <Icon src={XIcon} size="24px" theme="solid" class="swap-on" />
+        {:else}
+          <Icon src={MenuIcon} size="24px" theme="solid" class="swap-off" />
+        {/if}
+      </button>
+
+      {#if isOpen}
+      <ul class="dropdown-content z-[1] p-4 shadow text-white rounded-none w-fit text-right right-0">
+          <li><a href="/about" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">About</a></li>
+          <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
+          <li><a href="/donate" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Donate</a></li>
+          <li><a href="/store" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Store</a></li>
+        </ul>
+      {/if}
+    </div>
   </div>
 </div>
