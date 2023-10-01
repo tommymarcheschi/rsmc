@@ -39,7 +39,7 @@
 
 <div class="navbar flex bg-black fixed top-0 justify-between items-center z-40 bottom-auto w-full p-2">
   <div class="flex items-center space-x-4">
-    <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20" /></a>
+    <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20 md:ml-2" /></a>
     <div class="flex items-center space-x-2 md:space-x-4">
       <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-orange-500 whitespace-nowrap">Block #{ $blockHeight || 'Loading...' }</h2>
       <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-green-600 whitespace-nowrap">1 BTC: ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(2)}` : 'Loading...' }</h2>
@@ -69,7 +69,7 @@
       </label>
 
       {#if isOpen}
-        <ul tabindex="0" class="dropdown-content z-[50] p-4 shadow text-white rounded-none w-fit text-right right-0" 
+        <ul tabindex="0" class="dropdown-content z-[50] p-4 bg-black shadow text-white rounded-none w-fit text-right right-0" 
             on:click|stopPropagation 
             on:touchend|stopPropagation>
           <li><a href="/about" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">About</a></li>
