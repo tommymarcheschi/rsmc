@@ -66,7 +66,7 @@
       </button>
 
       {#if isOpen}
-        <ul class="dropdown-content z-[50] p-4 shadow text-white rounded-none w-fit text-right right-0" 
+        <ul class="dropdown-content z-[50] bg-black p-4 shadow text-white rounded-none w-fit text-right right-0" 
             on:click|stopPropagation >
           <li><a href="/about" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">About</a></li>
           <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
