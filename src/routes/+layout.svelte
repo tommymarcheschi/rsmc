@@ -6,8 +6,8 @@
 
 </script>
 
-  <div class="bg-black h-screen w-screen -z-20 fixed"> </div>
-  
+  <div class="bg-black h-screen w-screen h-screen -z-20 fixed"> </div>
+
   <div class="w-screen h-full bg-black">
   <div class="w-full h-auto ">
     <Navbar />
