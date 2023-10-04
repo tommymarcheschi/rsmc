@@ -8,9 +8,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:global(::selection) {
-  background: #ff9900;}
-
 @font-face {
   font-family: 'Chinese Rocks';
   src: url('$lib/fonts/chinese-rocks-rg.otf') format('opentype');
