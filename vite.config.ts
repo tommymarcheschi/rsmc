@@ -10,8 +10,8 @@ export default defineConfig({
 			manifest: {
 			icons: [
 			{
-			src: '/favicon.png', // replace this with the path to your icon file
-            sizes: '32x32',
+			src: '/RsmcFavicon-192x192.png', // replace this with the path to your icon file
+            sizes: '192x192',
             type: 'image/png',
             },
 
