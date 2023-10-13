@@ -1,6 +1,8 @@
 <script>
   import logowithtype from "$lib/images/RSMC-logo-white-type.svg";
   import QRCode from "$lib/components/Qrcode.svelte";
+  let selectedPaymentMethod = 'BTC'; // Default to BTC
+
 </script>
 
 
@@ -14,8 +16,10 @@
     <div class="w-3/5 mb-10 mt-8">
 
     <h2 class="text-white font-incon text-2xl tracking-widest uppercase mt-0 mb-2 antialiased">// ANON DONATION FORM</h2>
-    <h3 class="text-white subpixel-antialiased font-incon text-2xl tracking-wider uppercase text-left mt-2 mb-2">Bitcoin (BTC) only:</h3>
-    <QRCode />
+    <h3 class="text-white subpixel-antialiased font-incon text-2xl tracking-wider uppercase text-left mt-2 mb-2">
+      <button class="link {selectedPaymentMethod === 'BTC' ? 'no-underline' : ''}" 
+    on:click={() => selectedPaymentMethod = 'BTC'}>Bitcoin</button> or <button class="link {selectedPaymentMethod === 'BTC-LightningNetwork' ? 'no-underline' : ''}" on:click={() => selectedPaymentMethod = 'BTC-LightningNetwork'}>Lightning</button>:</h3>
+    <QRCode paymentMethod={selectedPaymentMethod} />
     <p class="text-white antialiased font-incon text-base tracking-wider text-center leading-loose px-14">Thank you.
     </p>
   </div>

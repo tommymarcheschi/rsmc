@@ -1,7 +1,15 @@
 <script>
   import { onMount } from 'svelte';
-import * as qr from '@bitjson/qr-code';
+  import * as qr from '@bitjson/qr-code';
   import qrcodeLogo from '$lib/images/RSMC-secondarylogo.svg';
+
+
+  let btcAddress = "bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm";
+  let lightningInvoice = "lnurlp://btcpay0.voltageapp.io/BTC/UILNURL/HtJkhjgZHfL9fKwzcr9cmVECCxUKWNR81qeKEBU87Qiz/pay?currency=USD";
+
+  export let paymentMethod = 'BTC'; // Default to BTC
+
+  $: qrContents = paymentMethod === 'BTC' ? btcAddress : lightningInvoice;
 
   onMount(() => {
     qr.defineCustomElements(window);
@@ -25,11 +33,10 @@ import * as qr from '@bitjson/qr-code';
     fadeIn(qrElement);
   }
 </script>
-
 <qr-code
   id="qr1"
   on:codeRendered={handleCodeRendered}
-  contents="bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm"
+  contents="{qrContents}"
   moduleColor="#000000" 
   positionRingColor="#ffffff" 
   positionCenterColor="#ffffff" 
