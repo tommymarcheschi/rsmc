@@ -40,7 +40,7 @@
     <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20 md:ml-2" /></a>
     <div class="flex items-center space-x-2 md:space-x-4">
       <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-orange-500 whitespace-nowrap">Block #{ $blockHeight || 'Loading...' }</h2>
-      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-green-600 whitespace-nowrap">1 BTC: ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(2)}` : 'Loading...' }</h2>
+      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-green-600 whitespace-nowrap">1 BTC: ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(0)}` : 'Loading...' }</h2>
     </div>
   </div>
 

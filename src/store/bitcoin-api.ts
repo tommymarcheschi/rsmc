@@ -1,10 +1,19 @@
-const bitcoinStatsApi = 'https://data.messari.io/api/v1/assets/bitcoin/metrics';
+// Updated API endpoints
+const blockHeightApi = 'https://mempool.space/api/blocks/tip/height';
+const bitcoinPriceApi = 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD';
 
 export async function fetchBitcoinData() {
-  const response = await fetch(bitcoinStatsApi);
-  const data = await response.json();
+  // Fetch block height
+  const blockHeightResponse = await fetch(blockHeightApi);
+  const blockHeight = await blockHeightResponse.text();
+
+  // Fetch Bitcoin price from Kraken
+  const priceResponse = await fetch(bitcoinPriceApi);
+  const priceData = await priceResponse.json();
+  const priceUsd = parseInt(priceData.result.XXBTZUSD.a[0], 10); // Parse the price to an integer
+
   return {
-    blockHeight: data.data.on_chain_data.block_height,
-    priceUsd: data.data.market_data.price_usd,
+    blockHeight: parseInt(blockHeight, 10),
+    priceUsd: priceUsd,
   };
 }
