@@ -1,14 +1,17 @@
 import type { RequestHandler } from '@sveltejs/kit';
 import { json, text } from '@sveltejs/kit';
-import * as FormData from 'form-data';
+import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const mailgun = new Mailgun(FormData);
+const mailgun = new Mailgun(formData);
 const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY});
+
+const domain = process.env.MAILGUN_DOMAIN || 'domain-here';
+console.log(`mailgun domain: `, domain);
 
 
 export const POST: RequestHandler = async ({request}) => {
@@ -46,7 +49,9 @@ export const POST: RequestHandler = async ({request}) => {
     };
 
     try {
-        await mg.messages().send(data);
+        const msg = await mg.messages.create(domain, data)
+        console.log(`Mailgun response message: `, msg);
+
         return json ({
             status: 200,
             body: { message: 'Email sent successfully' }
