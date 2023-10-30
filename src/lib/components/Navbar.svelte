@@ -51,6 +51,8 @@
       <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1">Contact</a></li>
       <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1">Donate</a></li>
       <li><a href="/store" class="hover:text-orange-400 mx-4 px-1">Store</a></li>
+      <li><a href="/Auction" class="hover:text-orange-400 mx-4 px-1 bg-white text-black">Auction</a></li>
+
     </ul>
 
     <!-- Mobile Dropdown Menu using daisyUI -->
@@ -72,6 +74,8 @@
           <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
           <li><a href="/donate" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Donate</a></li>
           <li><a href="/store" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Store</a></li>
+          <li><a href="/Auction" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right bg-white text-black">Auction</a></li>
+
         </ul>
       {/if}
     </div>

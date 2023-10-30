@@ -6,7 +6,7 @@
 
 <div class="flex flex-col items-center justify-center">
 
-  <div class="flex flex-col mt-32 text-left w-3/5">
+  <div class="flex flex-col mt-32 text-left w-4/5">
   	<h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">About Rsmc</h1>
   	<span class="flex flex-col font-incon text-white text-sm mb-4">Building with Bitcoin, Lightning, Nostr, Ordinals, Counterparty, Cashu, RGB, etc.!</span>
   </div>

@@ -7,7 +7,7 @@
 
 
 <div class="flex flex-col items-center justify-center ">
-  <div class="flex flex-col mt-32 text-left w-3/5">  
+  <div class="flex flex-col mt-32 text-left w-4/5">  
     <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">Donate Rsmc</h1>
     <span class="font-incon text-white text-left text-sm mb-4">Buy us a coffee. It makes us buidl more.</span>
   </div>
