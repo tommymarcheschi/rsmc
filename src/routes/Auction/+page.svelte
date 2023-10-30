@@ -1,6 +1,8 @@
 <script>
   import logowithtype from "$lib/images/RSMC-logo-white-type.svg?raw";
   import AuctionBox from "$lib/components/AuctionBox.svelte"
+  import AuctionImageGrid from "$lib/components/AuctionImageGrid.svelte"
+
 </script>
 
 
@@ -10,7 +12,9 @@
     <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">End Fiat Auction </h1>
     <span class="flex flex-col font-incon text-white text-sm mb-4">See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.</span>
   </div>
-<AuctionBox />
+  <AuctionImageGrid />
+
+
   <div class="flex flex-col items-center justify-center w-3/5 mt-2">
     <div class="w-3/6 my-14">{@html logowithtype}</div>
     <h2 class="text-white font-bahiana text-5xl tracking-wider uppercase text-center mt-8 mb-4 antialiased">"RARE SATOSHI MINTING CELL"</h2>
@@ -22,5 +26,4 @@
 
 
 
-
-
+<AuctionBox />
