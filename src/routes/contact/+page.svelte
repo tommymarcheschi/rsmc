@@ -9,7 +9,7 @@
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const res = await fetch('/api/sendEmail', {
+    const res = await fetch('/api/send-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

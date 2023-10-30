@@ -1,33 +1,41 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import mailgun from 'mailgun.js';
+import { json, text } from '@sveltejs/kit';
+import * as FormData from 'form-data';
+import Mailgun from 'mailgun.js';
 
-const mg = mailgun({ apiKey: process.env.MAILGUN_API_KEY as string, domain: process.env.MAILGUN_DOMAIN as string });
+import dotenv from 'dotenv';
 
-export const post: RequestHandler = async (request) => {
-    console.log("Received request:", request.body); // Moved this line to the top of the post function
+dotenv.config();
 
-    const { name, email, message } = request.body as { name: string; email: string; message: string };
+const mailgun = new Mailgun(FormData);
+const mg = mailgun.client({ username: 'api', key: process.env.MAILGUN_API_KEY});
+
+
+export const POST: RequestHandler = async ({request}) => {
+
+    const { name, email, message } = await request.json();
+    console.log("Received request:", name);
 
     // Basic validation
     if (!name || name.length < 3) {
-        return {
+        return json ({
             status: 400,
             body: { error: 'Name is required and should be at least 3 characters long.' }
-        };
+        });
     }
 
     if (!email || !email.includes('@')) {
-        return {
+        return json ({
             status: 400,
             body: { error: 'A valid email is required.' }
-        };
+        });
     }
 
     if (!message || message.length < 10) {
-        return {
+        return json ({
             status: 400,
             body: { error: 'Message is required and should be at least 10 characters long.' }
-        };
+        });
     }
 
     const data = {
@@ -39,15 +47,15 @@ export const post: RequestHandler = async (request) => {
 
     try {
         await mg.messages().send(data);
-        return {
+        return json ({
             status: 200,
             body: { message: 'Email sent successfully' }
-        };
+        });
     } catch (error) {
         console.error("Mailgun Error:", error);
-        return {
+        return json ({
             status: 500,
             body: { error: 'Failed to send email' }
-        };
+        });
     }
 }
