@@ -1,6 +1,6 @@
 <script>
-  import main from "$lib/images/auction/IMG_MAIN.jpg";
-  import detail2 from "$lib/images/auction/IMG_0616.jpg";
+  import main from "$lib/images/auction/IMG_MAIN.jpeg";
+  import detail2 from "$lib/images/auction/IMG_0616.jpeg";
 
 
 
@@ -8,7 +8,7 @@
   let scrollAmount = 0;
   const images = [
     { id: 1, src: main, alt: 'Description 1' },
-    { id: 2, src: detail2, alt: 'Description 2' },
+    { id: 2, src: main, alt: 'Description 2' },
     { id: 3, src: '/RsmcFavicon-192x192.png', alt: 'Description 3' },
     { id: 4, src: '/RsmcFavicon-192x192.png', alt: 'Description 4' },
   ];
