@@ -1,29 +1,33 @@
 <script>
   import main from "$lib/images/auction/IMG_MAIN.jpeg";
-  import detail2 from "$lib/images/auction/IMG_0616.jpeg";
+  
+ // import detail2 from "$lib/images/auction/IMG_0616.jpeg";
 
 
 
-  let selectedImage = 1;
-  let scrollAmount = 0;
-  const images = [
-    { id: 1, src: main, alt: 'Description 1' },
-    { id: 2, src: main, alt: 'Description 2' },
-    { id: 3, src: '/RsmcFavicon-192x192.png', alt: 'Description 3' },
-    { id: 4, src: '/RsmcFavicon-192x192.png', alt: 'Description 4' },
-  ];
-  function scrollThumbnails(direction) {
-    const container = document.querySelector('.thumbnails-container');
-    const scrollValue = 100; // Adjust this value based on your needs
-    if (direction === 'left') {
-      container.scrollLeft -= scrollValue;
-    } else {
-      container.scrollLeft += scrollValue;
-    }
-  }
+ // let selectedImage = 1;
+ // let scrollAmount = 0;
+ // const images = [
+ //   { id: 1, src: main, alt: 'Description 1' },
+ //   { id: 2, src: main, alt: 'Description 2' },
+ //   { id: 3, src: '/RsmcFavicon-192x192.png', alt: 'Description 3' },
+ //   { id: 4, src: '/RsmcFavicon-192x192.png', alt: 'Description 4' },
+ // ];
+ // function scrollThumbnails(direction) {
+ //   const container = document.querySelector('.thumbnails-container');
+ //   const scrollValue = 100; // Adjust this value based on your needs
+ //   if (direction === 'left') {
+ //     container.scrollLeft -= scrollValue;
+ //   } else {
+ //     container.scrollLeft += scrollValue;
+ //   }
+ // }
 </script>
 
-<img src="{main}" class="w-fit sticky top-20" />
+
+<div class="items-center justify-center text-center w-full">
+	<img src="{main}" class="sticky top-20 w-full" />
+</div>
 
 <!-- <div class="md:flex-1 px-4">
   <div class="h-64 md:h-80 rounded-lg bg-black mb-4">

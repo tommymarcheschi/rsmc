@@ -15,7 +15,7 @@
   
   <div class="flex flex-col items-center justify-center w-3/5 mt-2">
 
-    <div class="grid md:flex w-full mt-7 md:mt-14 mb-10 z-20 space-x-10">
+    <div class="grid md:flex w-full mt-7 md:mt-14 mb-10 z-20 md:space-x-10">
       <div id="auction" class="grid order-2 md:order-1 md:w-1/2 pr-2 scroll-mt-20">
     <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">Artist:</h3>
     <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon">Tommy Marcheschi<br><br> </p>
@@ -69,7 +69,7 @@
   </div>
 
 
-  <div class="grid order-1 md:order-2 w-full md:w-1/2 mb-7 md:mb-0">
+  <div class="grid order-1 md:order-2 w-fit md:w-1/2 mb-7 md:mb-0 ">
      <AuctionImageGrid />
   </div>
 
