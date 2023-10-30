@@ -1,9 +1,11 @@
 import type { RequestHandler } from '@sveltejs/kit';
-import mailgun from 'mailgun-js';
+import mailgun from 'mailgun.js';
 
 const mg = mailgun({ apiKey: process.env.MAILGUN_API_KEY as string, domain: process.env.MAILGUN_DOMAIN as string });
 
 export const post: RequestHandler = async (request) => {
+    console.log("Received request:", request.body); // Moved this line to the top of the post function
+
     const { name, email, message } = request.body as { name: string; email: string; message: string };
 
     // Basic validation
@@ -42,6 +44,7 @@ export const post: RequestHandler = async (request) => {
             body: { message: 'Email sent successfully' }
         };
     } catch (error) {
+        console.error("Mailgun Error:", error);
         return {
             status: 500,
             body: { error: 'Failed to send email' }

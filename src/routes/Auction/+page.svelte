@@ -1,0 +1,26 @@
+<script>
+  import logowithtype from "$lib/images/RSMC-logo-white-type.svg?raw";
+  import AuctionBox from "$lib/components/AuctionBox.svelte"
+</script>
+
+
+<div class="flex flex-col items-center justify-center">
+
+  <div class="flex flex-col mt-32 text-left w-3/5">
+    <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">End Fiat Auction </h1>
+    <span class="flex flex-col font-incon text-white text-sm mb-4">See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.</span>
+  </div>
+<AuctionBox />
+  <div class="flex flex-col items-center justify-center w-3/5 mt-2">
+    <div class="w-3/6 my-14">{@html logowithtype}</div>
+    <h2 class="text-white font-bahiana text-5xl tracking-wider uppercase text-center mt-8 mb-4 antialiased">"RARE SATOSHI MINTING CELL"</h2>
+    <h3 class="text-white subpixel-antialiased font-incon text-xl tracking-wider uppercase text-center mt-2 mb-2">Permissionless Bitcoin Pirate sHIP</h3>
+    <p class="text-white antialiased font-incon text-base tracking-wider text-center leading-loose px-14">RSMC was born in the Bitcoin Magazine warehouse in Nashville, TN.* As a Bitcoin Agency, RSMC is building towards a future of Hyperbitcoinization. Complete Manifesto coming soon. To contact us, <a href="/contact" class="underline hover:text-orange-400">fill out this form</a>.<br><br>*RSMC is not directly affiliated with Bitcoin Magazine or BTC Inc.<br><br>#HODL
+    </p>
+  </div>
+</div>
+
+
+
+
+
