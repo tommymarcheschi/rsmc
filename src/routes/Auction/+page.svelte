@@ -8,15 +8,15 @@
 
 <div class="flex flex-col items-center justify-center">
 
-  <div class="flex flex-col mt-32 text-left w-4/5">
+  <div class="flex flex-col mt-32 text-left w-4/5"> 
     <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">End Fiat! Auction</h1>
     <span class="flex flex-col font-incon text-white text-sm mb-4">See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.</span>
   </div>
   
   <div class="flex flex-col items-center justify-center w-3/5 mt-2">
 
-    <div class="grid md:flex w-full mt-7 md:mt-14 mb-10 z-20 md:space-x-10">
-      <div id="auction" class="grid order-2 md:order-1 md:w-1/2 pr-2 scroll-mt-20">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-7 md:mt-14 mb-10 z-20">
+      <div id="auction" class="order-2 md:order-1">
     <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">Artist:</h3>
     <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon">Tommy Marcheschi<br><br> </p>
     <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">Artwork:</h3>
@@ -69,7 +69,7 @@
   </div>
 
 
-  <div class="grid order-1 md:order-2 w-fit md:w-1/2 mb-7 md:mb-0 ">
+  <div class="order-1 md:order-2">
      <AuctionImageGrid />
   </div>
 

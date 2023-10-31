@@ -3,7 +3,7 @@
 </script>
 
 
-<div class=" rounded-none bg-black flex flex-col mt-6 w-full">
+<div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-orange-500"> Current bid: </h3>
 		<h2 class="text-center text-2xl font-anon text-white"> 0 BTC </h2>
