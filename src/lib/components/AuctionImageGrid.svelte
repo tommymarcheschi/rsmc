@@ -1,12 +1,4 @@
 <script>
-  import main from "$lib/images/auction/IMG_MAIN.jpeg";
-  import detail from "$lib/images/auction/IMG_0616.jpeg";
-  import detailtwo from "$lib/images/auction/IMG_0617.jpeg";
-  import detailthree from "$lib/images/auction/IMG_0618.jpeg";
-  import detailfour from "$lib/images/auction/IMG_0619.jpeg";
-  import detailfive from "$lib/images/auction/IMG_0620.jpeg";
-  import detailsix from "$lib/images/auction/IMG_0621.jpeg";
-
 
   let selectedImage = 1;
   let scrollAmount = 0;
