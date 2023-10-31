@@ -63,7 +63,7 @@
         {#if isOpen}
           <Icon src={XIcon} size="24px" theme="solid" class="swap-on" />
         {:else}
-          <Icon src={MenuIcon} size="24px" theme="solid" class="swap-off" />
+          <Icon src={MenuIcon} size="24px" theme="mini" class="swap-off" />
         {/if}
       </button>
 

@@ -39,6 +39,12 @@
   	showLightbox = !showLightbox;
   }
 
+  function closeLightbox(event) {
+    if (event.target.classList.contains('lightbox-background') || event.target.classList.contains('close-button')) {
+      showLightbox = false;
+    }
+  }
+
 </script>
 
 
@@ -54,10 +60,10 @@
   </div>
 
   {#if showLightbox}
-<div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+<div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-md lightbox-background" on:click={closeLightbox}>
   <div class="relative">
     <img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="max-w-full max-h-[80vh]">
-    <button on:click={toggleLightbox} class="absolute top-2 right-2 text-white text-2xl">&times;</button>
+    <button on:click|stopPropagation={toggleLightbox} class="absolute top-2 -right-[30px] text-white text-2xl close-button">&times;</button>
   </div>
 </div>
 {/if}
