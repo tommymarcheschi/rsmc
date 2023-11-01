@@ -7,7 +7,7 @@
 	<div class="m-2">
 		<h3 class="text-center text-xl text-orange-500"> Current bid: </h3>
 		<p class="text-center text-lg font-anon text-white">( $highest bid username )</p>
-		<h2 class="text-center text-2xl font-anon text-white"> 0 BTC </h2>
+		<h2 class="text-center text-2xl font-anon text-white leading-10"> 0 BTC </h2>
 		<p class="text-center text-lg font-anon">( $dollarprice )</p>
 	</div>
 	<div class="m-2">

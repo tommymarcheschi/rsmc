@@ -11,6 +11,13 @@
 
   $: images = [
     { id: 1, src: `/auction/${data.slug}/main.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 2, src: `/auction/${data.slug}/main2.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 3, src: `/auction/${data.slug}/detail.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 4, src: `/auction/${data.slug}/detail2.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 5, src: `/auction/${data.slug}/detail3.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 6, src: `/auction/${data.slug}/detail4.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+    { id: 7, src: `/auction/${data.slug}/detail5.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
+
   ]
 </script>
 
@@ -108,7 +115,7 @@
 
       </div>
     <div class="w-full">
-    <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10"> Bidding History: </h2>
+    <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10 mb-4"> Bidding History: </h2>
 
     <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
       <p> $username </p>

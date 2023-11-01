@@ -19,8 +19,26 @@
 
     const data = await res.json();
     responseMessage = data.message || data.error;
+
+        if (res.status === 200) {
+      toast({ 
+        title: "Success", 
+        description: responseMessage, 
+        color: "green" 
+      });
+    } else {
+      toast({ 
+        title: "Error", 
+        description: responseMessage, 
+        color: "red" 
+      });
+    }
+  
   }
 </script>
+
+<div class="toasts top-right">test</div>
+
 
 <div class="flex flex-col items-center justify-center ">
   <div class="flex flex-col mt-32 text-left w-4/5">  
@@ -50,3 +68,4 @@
     <p class="mt-4 text-white">{responseMessage}</p>
   {/if}
 </div>
+
