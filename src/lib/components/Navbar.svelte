@@ -51,7 +51,7 @@
       <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1">Contact</a></li>
       <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1">Donate</a></li>
       <li><a href="/store" class="hover:text-orange-400 mx-4 px-1">Store</a></li>
-      <li><a href="/Auction" class="hover:text-orange-400 mx-4 px-1 bg-white text-black">Auction</a></li>
+      <li><a href="/auctions" class="hover:text-orange-400 mx-4 px-1 bg-white text-black">Auction</a></li>
 
     </ul>
 

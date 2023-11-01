@@ -9,7 +9,7 @@
 <div class="flex flex-col items-center justify-center">
 
   <div class="flex flex-col mt-32 text-left w-4/5"> 
-    <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">End Fiat! Auction</h1>
+    <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">End Fiat! Auction (static)</h1>
     <span class="flex flex-col font-incon text-white text-sm mb-4">See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.</span>
   </div>
   

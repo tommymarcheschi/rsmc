@@ -1,0 +1,31 @@
+{
+  "total": 1,
+  "limit": 10,
+  "skip": 0,
+  "data": [
+    {
+      "id": 1,
+      "title": "END FIAT! (BEFORE FIAT ENDS US)",
+      "slug": "end-fiat",
+      "startBidAmount": 100000,
+      "minPrice": 500000,
+      "startDate": "2023-11-03T04:09:00.253Z",
+      "endDate": "2023-11-10T04:09:00.253Z",
+      "meta": {
+        "year": 2023,
+        "token": {
+          "link": "https://xchain.io/asset/ENDFIAT",
+          "name": "ENDFIAT"
+        },
+        "artist": "Tommy Marcheschi",
+        "medium": "Mixed media on canvas",
+        "dimensions": "24 in. × 36 in.",
+        "description": "We find ourselves at the brink of war that we all agree could be our last. While the talking heads in the U.S. Corporation Federal Gov't stoke conflict in Europe, Tommy imagines an easy way out. END FIAT! BEFORE IT ENDS US.\nThis is the latest painting in the Bitcoin War Bonds collection.\nStarted as a live painting at the second-annual HODLween in Charlotte, NC on October 21, 2023 and finished days later at block height #813659.\nPainted using mixed media such as spray paints, gouache, solid oil sticks, oil pastel sticks, acrylic paint markers, and Sign Painters' ONESHOT® (the same yellow and red from the original BITCOIN WAR BONDS painting).\nSigned on verso.\nIncludes Coinkite® Satschip affixed to the back of the canvas holding ENDFIAT, the 1/1 edition Counterparty token referencing on-chain image of the painting (Ordinals). Satschip PIN will be transferred to the buyer.\nAlso includes official Bitcoin War Bonds paper COA.\nOrdinal inscription NOT INCLUDED, only the original painting and ENDFIAT token are included in this auction.\nThis painting is unframed.\nBuyer pays shipping from Nashville, TN, USA.",
+        "primary_sale": true
+      },
+      "item_status": "INACTIVE",
+      "createdAt": "2023-11-01T04:08:57.253Z",
+      "updatedAt": "2023-11-01T04:08:57.253Z"
+    }
+  ]
+}
