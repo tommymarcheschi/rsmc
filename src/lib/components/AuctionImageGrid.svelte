@@ -3,14 +3,14 @@
   let selectedImage = 1;
   let scrollAmount = 0;
   const images = [
-    { id: 1, src: "/auction/IMG_MAIN.jpeg", alt: 'Description 1' },
-    { id: 2, src: "/auction/IMG_MAIN2.jpeg", alt: 'Description 2' },
-    { id: 3, src: "/auction/IMG_0616.jpeg", alt: 'Description 2' },
-    { id: 4, src: "/auction/IMG_0617.jpeg", alt: 'Description 3' },
-    { id: 5, src: "/auction/IMG_0618.jpeg", alt: 'Description 4' },
-    { id: 6, src: "/auction/IMG_0619.jpeg", alt: 'Description 3' },
-    { id: 7, src: "/auction/IMG_0620.jpeg", alt: 'Description 4' },
-    { id: 8, src: "/auction/IMG_0621.jpeg", alt: 'Description 4' },
+    { id: 1, src: "/auction/IMG_MAIN.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting' },
+    { id: 2, src: "/auction/IMG_MAIN2.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 2' },
+    { id: 3, src: "/auction/IMG_0616.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 3' },
+    { id: 4, src: "/auction/IMG_0617.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 4' },
+    { id: 5, src: "/auction/IMG_0618.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 5' },
+    { id: 6, src: "/auction/IMG_0619.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 6' },
+    { id: 7, src: "/auction/IMG_0620.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 7' },
+    { id: 8, src: "/auction/IMG_0621.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 8' },
 
   ];
 
@@ -45,7 +45,7 @@
   <div class="h-auto rounded-none bg-black m-0">
     {#each images as image (image.id)}
       {#if image.id === selectedImage}
-       <img src={image.src} alt={image.alt} class="h-fit w-full object-contain rounded-none mb-0 cursor-pointer" on:click={toggleLightbox} />
+       <img src={image.src} alt={image.alt} class="h-auto w-full object-contain rounded-none mb-0 cursor-pointer" on:click={toggleLightbox} />
 
       {/if}
     {/each}
