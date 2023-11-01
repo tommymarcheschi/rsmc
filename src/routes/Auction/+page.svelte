@@ -48,7 +48,7 @@
 
     This is the latest painting in the Bitcoin War Bonds collection.<br><br>
 
-    Started as a live painting at the second-annual HODLween in Charlotte, NC on October 21, 2023 and finished days later at block height #813659.<br><br>
+    Started as a live painting at the third annual <a href="https://hodlween.party" target="_blank" class="link hover:no-underline text-orange-400">HODLween</a> in Charlotte, NC on October 21, 2023 and finished days later at block height #813659.<br><br>
 
     Painted using mixed media such as spray paints, gouache, solid oil sticks, oil pastel sticks, acrylic paint markers, and Sign Painters' ONESHOT® (the same yellow and red from the original BITCOIN WAR BONDS painting).<br><br>
 
