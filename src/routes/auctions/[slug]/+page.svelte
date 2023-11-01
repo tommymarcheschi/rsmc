@@ -51,10 +51,10 @@
             </div>
             <div>
               <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">
-                Media:
+                Medium:
               </h3>
               <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-                {data.meta.media}<br><br> 
+                {data.meta.medium}<br><br> 
               </p>
             </div>
             <div>

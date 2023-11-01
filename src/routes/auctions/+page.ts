@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit'
+// import { error } from '@sveltejs/kit'
 import fixture from './fixture.json'
 
 const API_URL = 'https://rsmc-apis-735bc316de10.herokuapp.com'
