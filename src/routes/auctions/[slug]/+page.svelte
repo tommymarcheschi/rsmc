@@ -19,6 +19,10 @@
     { id: 7, src: `/auction/${data.slug}/detail5.jpeg`, alt: `${data.meta.artist}: ${data.title}` },
 
   ]
+
+  function formatDesc(txt: string) {
+    return txt.replaceAll('\n', '<br><br>')
+  }
 </script>
 
 <div class="flex flex-col items-center justify-center">
@@ -102,7 +106,7 @@
             Description:
           </h3>
           <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mt-5 font-anon h-64 break-words overflow-y-auto -webkit-overflow-scrolling: touch;">
-            {data.meta.description}
+            {@html formatDesc(data.meta.description)}
           </p>
 
           <AuctionBox />
