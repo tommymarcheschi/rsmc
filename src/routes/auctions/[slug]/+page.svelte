@@ -2,7 +2,9 @@
   /** @type {import('./$types').PageData} */
 
   import AuctionImageGrid from "$lib/components/AuctionImageGrid.svelte"
-  
+  import AuctionBox from "$lib/components/AuctionBox.svelte"
+	import Countdown from "$lib/components/Countdown.svelte";
+
   export let data: any
 
   console.log(`data::`, data)
@@ -95,7 +97,9 @@
           <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mt-5 font-anon h-64 break-words overflow-y-auto -webkit-overflow-scrolling: touch;">
             {data.meta.description}
           </p>
-          
+
+          <AuctionBox />
+
         </div>
 
         <div class="order-1 md:order-2">
@@ -103,8 +107,31 @@
         </div>
 
       </div>
+    <div class="w-full">
+    <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10"> Bidding History: </h2>
 
+    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+      <p> $username </p>
+      <p> $bid </p>
+      <p> $timestamp </p>
+
+    </div>
+    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+      <p> $username </p>
+      <p> $bid </p>
+      <p> $timestamp </p>
+
+    </div>
+    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+      <p> $username </p>
+      <p> $bid </p>
+      <p> $timestamp </p>
+
+    </div>
+  </div>
     </div>
 
   {/if}
+
+
 </div>
