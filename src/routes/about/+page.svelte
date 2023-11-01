@@ -15,7 +15,7 @@
   	<div class="w-3/6 my-14">{@html logowithtype}</div>
   	<h2 class="text-white font-bahiana text-5xl tracking-wider uppercase text-center mt-8 mb-4 antialiased">"RARE SATOSHI MINTING CELL"</h2>
   	<h3 class="text-white subpixel-antialiased font-incon text-xl tracking-wider uppercase text-center mt-2 mb-2">Permissionless Bitcoin Pirate sHIP</h3>
-  	<p class="text-white antialiased font-incon text-base tracking-wider text-center leading-loose px-14">RSMC was born in Nashville, TN.* As a Bitcoin Agency, RSMC is building towards a future of Hyperbitcoinization. Complete Manifesto coming soon. To contact us, <a href="/contact" class="underline hover:text-orange-400">fill out this form</a>.<br><br>*RSMC is not directly affiliated with Bitcoin Magazine or BTC Inc.<br><br>#HODL
+  	<p class="text-white antialiased font-incon text-base tracking-wider text-center leading-loose px-14">RSMC is a Bitcoin Agency born in Nashville, TN. As Bitcoin Agency, RSMC is building towards Hyperbitcoinization by enabling individuals and future oriented companies to use Bitcoin. To contact us, <a href="/contact" class="underline hover:text-orange-400">fill out this form</a>.<br><br>#HODL
   	</p>
   </div>
 </div>
