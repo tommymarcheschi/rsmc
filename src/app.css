@@ -20,3 +20,10 @@
 body {
   background-color: #000000;
 }
+
+.description a {
+  @apply link text-orange-400;
+}
+.description a:hover {
+  @apply no-underline;
+}
