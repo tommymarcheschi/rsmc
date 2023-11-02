@@ -1,7 +1,7 @@
 <script>
-  import leftArrow from '$lib/images/RSMC-leftArrow.svg';
-  import rightArrow from '$lib/images/RSMC-rightArrow.svg';
-  import xicon from '$lib/images/RSMC-XIcon.svg';
+  import leftArrow from '$lib/images/RSMC-leftArrow.svg?raw';
+  import rightArrow from '$lib/images/RSMC-rightArrow.svg?raw';
+  import xicon from '$lib/images/RSMC-XIcon.svg?raw';
 
 
   let selectedImage = 1;
@@ -107,16 +107,16 @@
   aria-label="Previous image"
   role="button"
   tabindex="0">
-  <img src="{leftArrow}" class="w-8 h-fit text-white" alt="Previous" />
+  <div class="w-8 h-8 text-white">{@html leftArrow}</div>
 </button>
-  		<img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="w-10/12 md:w-full max-h-[80vh] mx-auto ">
+  		<img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="w-10/12 md:w-auto max-h-[80vh] object-contain mx-auto ">
   		<button
   class="absolute -right-[5px] md:-right-[35px] top-1/2 transform -translate-y-1/2"
   on:click|stopPropagation={selectNextImage}
   aria-label="Next image"
   role="button"
   tabindex="0">
-  <img src="{rightArrow}" class="w-8 h-fit text-white" alt="Next" />
+  <div class="w-8 h-8 text-white">{@html rightArrow}</div>
 </button>
   		<button
   on:click|stopPropagation={toggleLightbox}
@@ -124,15 +124,15 @@
   aria-label="Close lightbox"
   role="button"
   tabindex="0">
-  <img src="{xicon}" class="w-8 h-fit" alt="Close" />
+  <div class="w-8 h-8">{@html xicon}</div>
 </button>
   	</div>
   </div>
   {/if}
 
   <div class="relative mt-2 md:mt-4 ">
-    <button on:click={() => scrollThumbnails('left')} class="absolute top-1/2 left-0 transform -translate-y-1/2 z-10 text-white bg-black p-2 rounded-r-lg shadow-md">
-    	←
+    <button on:click={() => scrollThumbnails('left')} class="absolute top-1/2 left-0 transform -translate-y-1/2 z-10 text-white bg-black  p-1 pl-0 rounded-r-lg shadow-md">
+    	  <div class="w-4 md:w-6 h-4 md:h-6 text-white object-contain">{@html leftArrow}</div>
     </button>
     <div class="thumbnails-container overflow-x-auto whitespace-nowrap w-full max-w-[100%]">
       {#each images as image (image.id)}
@@ -143,8 +143,8 @@
         </div>
       {/each}
     </div>
-    <button on:click={() => scrollThumbnails('right')} class="absolute top-1/2 right-0 transform -translate-y-1/2 z-10 text-white bg-black p-2 rounded-l-lg shadow-md">
-    	→
+    <button on:click={() => scrollThumbnails('right')} class="absolute top-1/2 right-0 transform -translate-y-1/2 z-10 text-white bg-black pr-0 p-1 rounded-l-lg shadow-md">
+    	<div class="w-4 md:w-6 h-4 md:h-6 text-white object-contain">{@html rightArrow}</div>
     </button>
   </div> 
 </div> 

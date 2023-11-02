@@ -3,8 +3,8 @@
   import { blockHeight, bitcoinPrice } from "../../store/bitcoin";
   // import { Bars2 as MenuIcon, XMark as XIcon } from '@steeze-ui/heroicons';
   // import { Icon } from '@steeze-ui/svelte-icon';
-  import xicon from '$lib/images/RSMC-XIcon.svg';
-  import menuicon from '$lib/images/RSMC-MenuIcon.svg';
+  import xicon from '$lib/images/RSMC-XIcon.svg?raw';
+  import menuicon from '$lib/images/RSMC-MenuIcon.svg?raw';
 
 
   let isOpen = false;
@@ -64,9 +64,9 @@
               on:click|stopPropagation={toggleMenu} 
               on:keydown={handleDropdownKeydown}>
         {#if isOpen}
-          <img src="{xicon}" class="w-6 swap-on" alt="close menu"/>
+          <div class="w-6 swap-on">{@html xicon}</div>
         {:else}
-          <img src="{menuicon}" class="w-6 swap-off" alt="open menu"/>
+          <div class="w-6 swap-on">{@html menuicon}</div>
         {/if}
       </button>
 
