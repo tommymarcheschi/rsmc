@@ -102,16 +102,16 @@
   <div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-md lightbox-background" on:click={closeLightbox}>
   	<div class="relative">
   		<button
-  class="absolute -left-[25px] md:-left-[40px] top-1/2 transform -translate-y-1/2"
+  class="absolute -left-[5px] md:-left-[35px] top-1/2 transform -translate-y-1/2"
   on:click|stopPropagation={selectPreviousImage}
   aria-label="Previous image"
   role="button"
   tabindex="0">
   <img src="{leftArrow}" class="w-8 h-fit text-white" alt="Previous" />
 </button>
-  		<img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="max-w-full max-h-[80vh] mx-1">
+  		<img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="w-10/12 md:w-full max-h-[80vh] mx-auto ">
   		<button
-  class="absolute -right-[25px] md:-right-[40px] top-1/2 transform -translate-y-1/2"
+  class="absolute -right-[5px] md:-right-[35px] top-1/2 transform -translate-y-1/2"
   on:click|stopPropagation={selectNextImage}
   aria-label="Next image"
   role="button"
@@ -120,7 +120,7 @@
 </button>
   		<button
   on:click|stopPropagation={toggleLightbox}
-  class="absolute top-2 -right-[30px] md:-right-[50px] text-white text-2xl close-button"
+  class="absolute -top-[50px] md:top-2 right-0 md:-right-[50px] text-white text-2xl close-button"
   aria-label="Close lightbox"
   role="button"
   tabindex="0">

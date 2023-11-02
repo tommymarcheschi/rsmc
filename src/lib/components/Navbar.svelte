@@ -64,9 +64,9 @@
               on:click|stopPropagation={toggleMenu} 
               on:keydown={handleDropdownKeydown}>
         {#if isOpen}
-          <img src="{xicon}" class="w-6 swap-on" />
+          <img src="{xicon}" class="w-6 swap-on" alt="close menu"/>
         {:else}
-          <img src="{menuicon}" class="w-6 swap-off" />
+          <img src="{menuicon}" class="w-6 swap-off" alt="open menu"/>
         {/if}
       </button>
 
