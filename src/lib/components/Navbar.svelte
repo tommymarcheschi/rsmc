@@ -49,7 +49,7 @@
 
   <div class="flex items-center space-x-4">
     <!-- Desktop Menu (Visible on screens larger than 768px) -->
-    <ul class="menu-horizontal font-rocks text-white text-xl rounded-none tracking-widest m-2 hidden md:flex">
+    <ul class="menu-horizontal font-rocks text-white text-xl rounded-none tracking-widest m-2 hidden lg:flex">
       <li><a href="/about" class="hover:text-orange-400 mx-4 px-1">About</a></li>
       <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1">Contact</a></li>
       <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1">Donate</a></li>
@@ -59,7 +59,7 @@
     </ul>
 
     <!-- Mobile Dropdown Menu using daisyUI -->
-    <div tabindex="-1" class="dropdown md:hidden">
+    <div tabindex="-1" class="dropdown lg:hidden">
       <button class="text-white cursor-pointer" 
               on:click|stopPropagation={toggleMenu} 
               on:keydown={handleDropdownKeydown}>
