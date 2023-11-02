@@ -1,4 +1,8 @@
 <script>
+  import leftArrow from '$lib/images/RSMC-leftArrow.svg';
+  import rightArrow from '$lib/images/RSMC-rightArrow.svg';
+  import xicon from '$lib/images/RSMC-XIcon.svg';
+
 
   let selectedImage = 1;
   let scrollAmount = 0;
@@ -37,6 +41,49 @@
     }
   }
 
+  function selectPreviousImage() {
+    if (selectedImage > 1) {
+      selectedImage--;
+    } else {
+      selectedImage = images.length; // loop back to the last image
+    }
+  }
+
+  function selectNextImage() {
+    if (selectedImage < images.length) {
+      selectedImage++;
+    } else {
+      selectedImage = 1; // loop back to the first image
+    }
+  }
+
+  // Function to handle keydown events
+  function handleKeydown(event) {
+    if (showLightbox) {
+      switch (event.key) {
+        case 'ArrowLeft':
+          selectPreviousImage();
+          break;
+        case 'ArrowRight':
+          selectNextImage();
+          break;
+        case 'Escape':
+          toggleLightbox();
+          break;
+      }
+    }
+  }
+
+  // Add event listener when component mounts and remove when it unmounts
+  import { onMount, onDestroy } from 'svelte';
+
+  onMount(() => {
+    window.addEventListener('keydown', handleKeydown);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener('keydown', handleKeydown);
+  });
 </script>
 
 
@@ -52,13 +99,36 @@
   </div>
 
   {#if showLightbox}
-<div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-md lightbox-background" on:click={closeLightbox}>
-  <div class="relative">
-    <img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="max-w-full max-h-[80vh]">
-    <button on:click|stopPropagation={toggleLightbox} class="absolute top-2 -right-[30px] text-white text-2xl close-button">&times;</button>
+  <div class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-md lightbox-background" on:click={closeLightbox}>
+  	<div class="relative">
+  		<button
+  class="absolute -left-[25px] md:-left-[40px] top-1/2 transform -translate-y-1/2"
+  on:click|stopPropagation={selectPreviousImage}
+  aria-label="Previous image"
+  role="button"
+  tabindex="0">
+  <img src="{leftArrow}" class="w-8 h-fit text-white" alt="Previous" />
+</button>
+  		<img src={images[selectedImage - 1].src} alt={images[selectedImage - 1].alt} class="max-w-full max-h-[80vh] mx-1">
+  		<button
+  class="absolute -right-[25px] md:-right-[40px] top-1/2 transform -translate-y-1/2"
+  on:click|stopPropagation={selectNextImage}
+  aria-label="Next image"
+  role="button"
+  tabindex="0">
+  <img src="{rightArrow}" class="w-8 h-fit text-white" alt="Next" />
+</button>
+  		<button
+  on:click|stopPropagation={toggleLightbox}
+  class="absolute top-2 -right-[30px] md:-right-[50px] text-white text-2xl close-button"
+  aria-label="Close lightbox"
+  role="button"
+  tabindex="0">
+  <img src="{xicon}" class="w-8 h-fit" alt="Close" />
+</button>
+  	</div>
   </div>
-</div>
-{/if}
+  {/if}
 
   <div class="relative mt-2 md:mt-4 ">
     <button on:click={() => scrollThumbnails('left')} class="absolute top-1/2 left-0 transform -translate-y-1/2 z-10 text-white bg-black p-2 rounded-r-lg shadow-md">

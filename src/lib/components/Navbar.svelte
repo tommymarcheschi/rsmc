@@ -1,8 +1,11 @@
 <script>
   import typelogo from "$lib/images/RSMC-logo-text.svg";
   import { blockHeight, bitcoinPrice } from "../../store/bitcoin";
-  import { Bars2 as MenuIcon, XMark as XIcon } from '@steeze-ui/heroicons';
-  import { Icon } from '@steeze-ui/svelte-icon';
+  // import { Bars2 as MenuIcon, XMark as XIcon } from '@steeze-ui/heroicons';
+  // import { Icon } from '@steeze-ui/svelte-icon';
+  import xicon from '$lib/images/RSMC-XIcon.svg';
+  import menuicon from '$lib/images/RSMC-MenuIcon.svg';
+
 
   let isOpen = false;
 
@@ -61,9 +64,9 @@
               on:click|stopPropagation={toggleMenu} 
               on:keydown={handleDropdownKeydown}>
         {#if isOpen}
-          <Icon src={XIcon} size="24px" theme="solid" class="swap-on" />
+          <img src="{xicon}" class="w-6 swap-on" />
         {:else}
-          <Icon src={MenuIcon} size="24px" theme="mini" class="swap-off" />
+          <img src="{menuicon}" class="w-6 swap-off" />
         {/if}
       </button>
 
@@ -74,7 +77,7 @@
           <li><a href="/contact" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Contact</a></li>
           <li><a href="/donate" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Donate</a></li>
           <li><a href="/store" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right">Store</a></li>
-          <li><a href="/Auction" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right bg-white text-black">Auction</a></li>
+          <li><a href="/auctions" class="hover:text-orange-400 block py-2 px-4 font-rocks text-xl text-right bg-white text-black">Auction</a></li>
 
         </ul>
       {/if}
