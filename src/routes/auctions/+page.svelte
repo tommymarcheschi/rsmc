@@ -12,20 +12,26 @@
     <span class="flex flex-col font-incon text-white text-sm mb-4">Join our waitlist to get an email notification each time we have an auction.</span>
   </div>
 
+  {#if data?.isError}
+    <div class="error">Sorry, an error occured [{data.code}: {data.message}]</div>
 
-  <div class="flex flex-row items-start justify-start w-1/3 md:w-1/5 mt-2 text-left">
-    <div class="justify-start items-start mb-10 mt-8">
-    {#each data?.data as item}
-      <div class="border-2 border-white p-2 w-auto flex-1">
-        <a href="/auctions/{item.slug}">
-        <img src="/auction/{item.slug}/main.jpeg" alt={item.title} class="w-full object-contain mx-auto" />
-        </a>
-        <div class="font-anon text-white text-center break-words text-base md:text-lg">{item.meta.artist} <br></div>
+  {:else if data?.data}
 
-        <div class="font-anon text-white text-center text-lg md:text-xl italic break-words font-bold">{item.title}<br></div>
-        <a href="/auctions/{item.slug}" class="btn hover:bg-orange-400 w-full bg-white text-black font-anon text-lg md:text-2xl rounded-none mt-4 uppercase">Bid now</a>
+    <div class="flex flex-row items-start justify-start w-1/3 md:w-1/5 mt-2 text-left">
+      <div class="justify-start items-start mb-10 mt-8">
+        {#each data?.data as item}
+          <div class="border-2 border-white p-2 w-auto flex-1">
+            <a href="/auctions/{item.slug}">
+            <img src="/auction/{item.slug}/main.jpeg" alt={item.title} class="w-full object-contain mx-auto" />
+            </a>
+            <div class="font-anon text-white text-center break-words text-base md:text-lg">{item.meta.artist} <br></div>
+
+            <div class="font-anon text-white text-center text-lg md:text-xl italic break-words font-bold">{item.title}<br></div>
+            <a href="/auctions/{item.slug}" class="btn hover:bg-orange-400 w-full bg-white text-black font-anon text-lg md:text-2xl rounded-none mt-4 uppercase">Bid now</a>
+          </div>
+        {/each}
       </div>
-    {/each}
-  </div>
-</div>
+    </div>
+
+  {/if}    
 </div>

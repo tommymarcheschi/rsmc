@@ -1,4 +1,5 @@
 <script>
+  import { browser } from '$app/environment';
   import leftArrow from '$lib/images/RSMC-leftArrow.svg?raw';
   import rightArrow from '$lib/images/RSMC-rightArrow.svg?raw';
   import xicon from '$lib/images/RSMC-XIcon.svg?raw';
@@ -78,11 +79,15 @@
   import { onMount, onDestroy } from 'svelte';
 
   onMount(() => {
-    window.addEventListener('keydown', handleKeydown);
+    if (browser) {
+      window.addEventListener('keydown', handleKeydown);
+    }
   });
 
   onDestroy(() => {
-    window.removeEventListener('keydown', handleKeydown);
+    if (browser) {
+      window.removeEventListener('keydown', handleKeydown);
+    }
   });
 </script>
 
