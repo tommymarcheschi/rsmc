@@ -12,8 +12,8 @@
     <span class="font-incon text-white text-left text-sm mb-4">Buy us a coffee. It makes us buidl more.</span>
   </div>
 
-  <div class="flex flex-col items-center justify-center w-3/5 mt-2 text-left">
-    <div class="w-3/5 mb-10 mt-8">
+  <div class="flex flex-col items-center justify-center w-4/5 lg:w-3/5 mt-2 text-left">
+    <div class="w-3/4 lg:w-3/5 mb-10 mt-8">
 
     <h2 class="text-white font-incon text-2xl tracking-widest uppercase mt-0 mb-2 antialiased">// ANON DONATION FORM</h2>
     <h3 class="text-white subpixel-antialiased font-incon text-2xl tracking-wider uppercase text-left mt-2 mb-2">

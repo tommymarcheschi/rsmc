@@ -11,7 +11,7 @@
   	<span class="flex flex-col font-incon text-white text-sm mb-4">Building with Bitcoin, Lightning, Nostr, Ordinals, Counterparty, Cashu, RGB, etc.!</span>
   </div>
 
-  <div class="flex flex-col items-center justify-center w-3/5 mt-2">
+  <div class="flex flex-col items-center justify-center w-4/5 md:w-3/5 lg:w-3/5 mt-2">
   	<div class="w-3/6 my-14">{@html logowithtype}</div>
   	<h2 class="text-white font-bahiana text-5xl tracking-wider uppercase text-center mt-8 mb-4 antialiased">"RARE SATOSHI MINTING CELL"</h2>
   	<h3 class="text-white subpixel-antialiased font-incon text-xl tracking-wider uppercase text-center mt-2 mb-2">Permissionless Bitcoin Pirate sHIP</h3>

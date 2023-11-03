@@ -36,7 +36,7 @@
       </span>
     </div>
     
-    <div class="flex flex-col items-center justify-center w-3/5 mt-2">
+    <div class="flex flex-col items-center justify-center w-4/5 md:w-3/5 lg:w-3/5 mt-2">
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-7 md:mt-14 mb-10 z-20">
         <div id="auction" class="order-2 md:order-1">

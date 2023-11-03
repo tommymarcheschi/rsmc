@@ -17,7 +17,7 @@
 
   {:else if data?.data}
 
-    <div class="flex flex-row items-start justify-start w-1/3 md:w-1/5 mt-2 text-left">
+    <div class="flex flex-row items-start justify-start w-3/5 md:w-2/5 lg:w-1/5 mt-2 text-left">
       <div class="justify-start items-start mb-10 mt-8">
         {#each data?.data as item}
           <div class="border-2 border-white p-2 w-auto flex-1">
