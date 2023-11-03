@@ -1,7 +1,7 @@
 <script>
   import AuctionBox from "$lib/components/AuctionBox.svelte"
   import AuctionImageGrid from "$lib/components/AuctionImageGrid.svelte"
-	import Footer from "$lib/components/Footer.svelte";
+  import Footer from "$lib/components/Footer.svelte";
 
 </script>
 
@@ -44,7 +44,7 @@
     <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon"><a href="https://xchain.io/asset/ENDFIAT" target="_blank" class="link text-orange-400 hover:no-underline"> ENDFIAT </a><br><br> </p>
     
     <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">Description:</h3>
-    <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mt-5 font-anon h-64 break-words overflow-y-auto -webkit-overflow-scrolling: touch;">We find ourselves at the brink of war that we all agree could be our last. While the talking heads in the U.S. Corporation Federal Gov't stoke conflict in Europe, Tommy imagines an easy way out. <strong> FIAT! BEFORE IT ENDS US. </strong><br><br>
+    <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mt-5 font-anon h-64 break-words overflow-y-auto -webkit-overflow-scrolling: touch;">We find ourselves at the brink of war that we all agree could be our last. While the talking heads in the U.S. Corporation Federal Gov't stoke conflict in Europe, Tommy imagines an easy way out. <strong> END FIAT! BEFORE IT ENDS US. </strong><br><br>
 
     This is the latest painting in the Bitcoin War Bonds collection.<br><br>
 
