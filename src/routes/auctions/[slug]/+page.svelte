@@ -50,7 +50,7 @@
             Artwork:
           </h3>
           <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon italic font-bold uppercase">
-            {data.title}<br><br> 
+            {data.auctionItem.title}<br><br> 
           </p>
 
           <div class="grid grid-cols-2 grid-flow-row">
