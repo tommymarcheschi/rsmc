@@ -8,16 +8,22 @@
 	let email = ''
 	let amountSats = minBid // default to minBid
 
+	let isProcessing = false
 	let error = ''
-
+	let successMessage = ''
 
 	async function onBidClick() {
 		error = ''
+		successMessage = ''
 		if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
+			isProcessing = true
 			const result = await createBid({ displayName, email, amountSats })
 			if (result?.isError) {
 				error = result.message
+			} else {
+				successMessage = 'BID has been created!'
 			}
+			isProcessing = false
 		} else {
 			console.log('not enough data', displayName, email, amountSats)
 		}
@@ -66,11 +72,19 @@
 			class="btn _btn-disabled _cursor-not-allowed bg-orange-400 border-1 border-orange-400 rounded-none text-white w-full"
 			on:click={onBidClick}
 		>
-			Bid soon!
+			{#if isProcessing}
+				<span class="loading loading-dots loading-md"></span>
+			{:else}
+				Bid soon!
+			{/if}
 		</button>
 
 		{#if error}
 			<div class="my-4 text-error">{error}</div>
+		{/if}
+
+		{#if successMessage}
+			<div class="my-4 text-success">{successMessage}</div>
 		{/if}
 
 	</div>
