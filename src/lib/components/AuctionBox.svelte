@@ -6,11 +6,17 @@
 	let email = ''
 	let amountSats = 0
 
+	let error = ''
+
 	const minBid = 100000
 
-	function onBidClick() {
+	async function onBidClick() {
+		error = ''
 		if (displayName?.length > 2 && Number(amountSats) >= minBid) {
-			createBid({ displayName, email, amountSats })
+			const result = await createBid({ displayName, email, amountSats })
+			if (result?.isError) {
+				error = result.message
+			}
 		} else {
 			console.log('not enough data', displayName, email, amountSats)
 		}
@@ -58,6 +64,10 @@
 		>
 			Bid soon!
 		</button>
+
+		{#if error}
+			<div class="my-4 text-error">{error}</div>
+		{/if}
 
 	</div>
 </div>

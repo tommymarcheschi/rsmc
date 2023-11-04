@@ -4,6 +4,8 @@
   import AuctionImageGrid from "$lib/components/AuctionImageGrid.svelte"
   import AuctionBox from "$lib/components/AuctionBox.svelte"
 	import Countdown from "$lib/components/Countdown.svelte";
+	import { onMount } from "svelte";
+	import { currentAuctionItem } from "../../../store/auction-store";
 
   export let data: any
 
@@ -21,6 +23,10 @@
     { id: 6, src: `/auction/${slug}/detail4.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
     { id: 7, src: `/auction/${slug}/detail5.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
   ]
+
+  onMount(() => {
+    currentAuctionItem.set(data.auctionItem)
+  })
 
   function formatDesc(txt: string) {
     return txt.replaceAll('\n', '<br><br>')
