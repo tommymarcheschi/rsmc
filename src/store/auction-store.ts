@@ -15,6 +15,7 @@ export async function createBid({ displayName, email, amountSats }: any) {
       deposit_amount: Math.round(Number(amountSats) / 100),
       item_id: auctionItem?.id,
     })
+    loadBids()
   } catch (e) {
     console.log(`Error creating a bid`, e)
     return {
