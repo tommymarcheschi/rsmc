@@ -130,23 +130,13 @@
       <div class="w-full">
         <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10 mb-4"> Bidding History: </h2>
 
-        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-          <p> $username </p>
-          <p> $bid </p>
-          <p> $timestamp </p>
-        </div>
-
-        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-          <p> $username </p>
-          <p> $bid </p>
-          <p> $timestamp </p>
-        </div>
-
-        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-          <p> $username </p>
-          <p> $bid </p>
-          <p> $timestamp </p>
-        </div>
+        {#each bids as bid}
+          <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+            <p> {bid.nickname} </p>
+            <p> {bid.bid_amount} </p>
+            <p> {bid.createdAt} </p>
+          </div>
+        {/each}
 
       </div>
     </div>
