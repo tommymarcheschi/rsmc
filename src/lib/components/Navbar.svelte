@@ -42,7 +42,7 @@
   <div class="flex items-center space-x-4">
     <a href="/" class="link"><img src="{typelogo}" alt="logotype" class="w-20 md:ml-2" /></a>
     <div class="flex items-center space-x-2 md:space-x-4">
-      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-orange-500 whitespace-nowrap">Block #{ $blockHeight || 'Loading...' }</h2>
+      <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-btcorange whitespace-nowrap">Block #{ $blockHeight || 'Loading...' }</h2>
       <h2 class="font-bahiana text-xl sm:text-2xl md:text-3xl text-green-600 whitespace-nowrap">1 BTC= ${ $bitcoinPrice ? `${$bitcoinPrice.toFixed(0)}` : 'Loading...' }</h2>
     </div>
   </div>
@@ -50,11 +50,11 @@
   <div class="flex items-center space-x-4">
     <!-- Desktop Menu (Visible on screens larger than 768px) -->
     <ul class="menu-horizontal font-rocks text-white text-xl rounded-none tracking-widest m-2 hidden lg:flex">
-      <li><a href="/about" class="hover:text-orange-400 mx-4 px-1">About</a></li>
-      <li><a href="/contact" class="hover:text-orange-400 mx-4 px-1">Contact</a></li>
-      <li><a href="/donate" class="hover:text-orange-400 mx-4 px-1">Donate</a></li>
-      <li><a href="/store" class="hover:text-orange-400 mx-4 px-1">Store</a></li>
-      <li><a href="/auctions" class="hover:text-orange-400 mx-4 px-1 bg-white text-black">Auction</a></li>
+      <li><a href="/about" class="hover:text-btcorange mx-4 px-1">About</a></li>
+      <li><a href="/contact" class="hover:text-btcorange mx-4 px-1">Contact</a></li>
+      <li><a href="/donate" class="hover:text-btcorange mx-4 px-1">Donate</a></li>
+      <li><a href="/store" class="hover:text-btcorange mx-4 px-1">Store</a></li>
+      <li><a href="/auctions" class="hover:text-btcorange mx-4 px-1 bg-white text-black">Auction</a></li>
 
     </ul>
 

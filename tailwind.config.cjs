@@ -3,6 +3,9 @@ export default {
   content: ['./src/**/*.{html,js,svelte,ts}'],
   theme: {
     extend: {
+      colors: {
+        'btcorange': '#ff9900',
+      },
       fontFamily: {
         'rocks': ['Chinese Rocks', 'sans-serif'],
         'incon': ['"Inconsolata Variable"'],

@@ -45,13 +45,13 @@
 
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
-		<h3 class="text-center text-xl text-orange-500"> Current bid: </h3>
+		<h3 class="text-center text-xl text-btcorange"> Current bid: </h3>
 		<p class="text-center text-lg font-anon text-white">( {highestBid.nickname} )</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
 		<p class="text-center text-lg font-anon">( $dollarprice )</p>
 	</div>
 	<div class="m-2">
-		<h3 class="text-center text-xl text-orange-500"> Auction starting: </h3>
+		<h3 class="text-center text-xl text-btcorange"> Auction starting: </h3>
 		<h2 class="text-center text-2xl font-anon text-white"> <Countdown /> </h2>
 	</div>	
 	
@@ -61,7 +61,7 @@
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm">display name:</span>
 		</label>
-		<input type="text" placeholder="Satoshi" class="input bg-white rounded-none w-full" 
+		<input type="text" placeholder="Satoshi" class="input placeholder:font-anon bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full" 
 				bind:value={displayName} />
 	</div>
 
@@ -69,7 +69,7 @@
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm">email address:</span>
 		</label>
-		<input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-orange-400 focus:border-2 focus:border-orange-400 rounded-none w-full"
+		<input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
 				bind:value={email} />
 	</div>
 	
@@ -78,12 +78,12 @@
 			<span class="label-text text-white font-anon text-xs md:text-sm">bid:</span>
 		</label>
 		<form id="auction-form" name="auction-form" data-name="Auction Form" method="get" data-wf-page-id="65396d2c02ecf45338528637" data-wf-element-id="efc08962-f955-2525-ab9c-74c60fc84837" aria-label="Auction Form">
-			<input type="text" placeholder="0.001 BTC" class="input input-bordered  rounded-none bg-white w-full"
+			<input type="text" placeholder="0.001 BTC" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
 				bind:value={amountSats} />
 		</form>
 
 		<button 
-			class="btn _btn-disabled _cursor-not-allowed bg-orange-400 border-1 border-orange-400 rounded-none text-white w-full"
+			class="btn _btn-disabled _cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full"
 			on:click={onBidClick}
 		>
 			{#if isProcessing}

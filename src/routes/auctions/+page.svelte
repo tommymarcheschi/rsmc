@@ -27,7 +27,7 @@
             <div class="font-anon text-white text-center break-words text-base md:text-lg">{item.meta.artist} <br></div>
 
             <div class="font-anon text-white text-center text-lg md:text-xl italic break-words font-bold">{item.title}<br></div>
-            <a href="/auctions/{item.slug}" class="btn hover:bg-orange-400 w-full bg-white text-black font-anon text-lg md:text-2xl rounded-none mt-4 uppercase">Bid now</a>
+            <a href="/auctions/{item.slug}" class="btn hover:bg-btcorange w-full bg-white text-black font-anon text-lg md:text-2xl rounded-none mt-4 uppercase">Bid now</a>
           </div>
         {/each}
       </div>

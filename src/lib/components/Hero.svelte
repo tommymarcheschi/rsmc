@@ -11,7 +11,7 @@ import CountDown from "$lib/components/Countdown.svelte"
     <h1 class="heading text-5xl text-white font-bold mb-4">Auction Live!</h1>
     <div class="p white text-lg text-white mb-2">END FIAT! by Tommy Marcheschi</div>
     <div class="p white text-lg text-white mb-4"><CountDown /></div>
-    <a href="/auctions" class="btn hover:bg-orange-400 bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
+    <a href="/auctions" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
       Bid Now
     </a>
   </div>
