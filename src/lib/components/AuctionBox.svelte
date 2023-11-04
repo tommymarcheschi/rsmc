@@ -1,18 +1,19 @@
-<script>
+<script lang="ts">
   import Countdown from '$lib/components/Countdown.svelte';
 	import { createBid } from '../../store/auction-store';
 
+	const minBid = 100000
+
 	let displayName = ''
 	let email = ''
-	let amountSats = 0
+	let amountSats = minBid // default to minBid
 
 	let error = ''
 
-	const minBid = 100000
 
 	async function onBidClick() {
 		error = ''
-		if (displayName?.length > 2 && Number(amountSats) >= minBid) {
+		if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
 			const result = await createBid({ displayName, email, amountSats })
 			if (result?.isError) {
 				error = result.message
@@ -20,6 +21,9 @@
 		} else {
 			console.log('not enough data', displayName, email, amountSats)
 		}
+	}
+	function isEmail(email: string): boolean{
+		return email.length > 5 && email.includes('@')
 	}
 </script>
 
