@@ -9,15 +9,17 @@
 
   console.log(`data::`, data)
 
+  $: auctionItem = data.auctionItem || {}
+  $: slug = auctionItem?.slug
+  $: meta = auctionItem?.meta
   $: images = [
-    { id: 1, src: `/auction/${data.auctionItem.slug}/main.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 2, src: `/auction/${data.auctionItem.slug}/main2.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 3, src: `/auction/${data.auctionItem.slug}/detail.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 4, src: `/auction/${data.auctionItem.slug}/detail2.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 5, src: `/auction/${data.auctionItem.slug}/detail3.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 6, src: `/auction/${data.auctionItem.slug}/detail4.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-    { id: 7, src: `/auction/${data.auctionItem.slug}/detail5.jpeg`, alt: `${data.auctionItem.meta.artist}: ${data.auctionItem.title}` },
-
+    { id: 1, src: `/auction/${slug}/main.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 2, src: `/auction/${slug}/main2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 3, src: `/auction/${slug}/detail.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 4, src: `/auction/${slug}/detail2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 5, src: `/auction/${slug}/detail3.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 6, src: `/auction/${slug}/detail4.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 7, src: `/auction/${slug}/detail5.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
   ]
 
   function formatDesc(txt: string) {
@@ -44,13 +46,13 @@
             Artist:
           </h3>
           <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon">
-            {data.auctionItem.meta.artist}<br><br> 
+            {meta.artist}<br><br> 
           </p>
           <h3 class="text-sm md:text-base tracking-wider leading-4 py-1 mb-0 uppercase rounded-none font-anon">
             Artwork:
           </h3>
           <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon italic font-bold uppercase">
-            {data.auctionItem.title}<br><br> 
+            {auctionItem.title}<br><br> 
           </p>
 
           <div class="grid grid-cols-2 grid-flow-row">
@@ -59,7 +61,7 @@
                 Year:
               </h3>
               <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-                {data.auctionItem.meta.year}<br><br>
+                {meta.year}<br><br>
               </p>
             </div>
             <div>
@@ -67,7 +69,7 @@
                 Medium:
               </h3>
               <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-                {data.auctionItem.meta.medium}<br><br> 
+                {meta.medium}<br><br> 
               </p>
             </div>
             <div>
@@ -75,7 +77,7 @@
                 Dimensions:
               </h3>
               <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-                {data.auctionItem.meta.dimensions}.<br><br>
+                {meta.dimensions}.<br><br>
               </p>
             </div>
             <div>
@@ -83,7 +85,7 @@
                 Primary Sale:
               </h3>
               <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-                {#if data.auctionItem.meta.primary_sale}
+                {#if meta.primary_sale}
                   Yes
                 {:else}
                   No
@@ -97,8 +99,8 @@
             Token:
           </h3>
           <p class="text-base md:text-base text-white text-left leading-6 tracking-normal mb-0 font-anon">
-            <a href={data.auctionItem.meta.token.link} target="_blank" class="link text-orange-400 hover:no-underline">
-              {data.auctionItem.meta.token.name}
+            <a href={meta.token.link} target="_blank" class="link text-orange-400 hover:no-underline">
+              {meta.token.name}
             </a><br><br> 
           </p>
 
@@ -106,7 +108,7 @@
             Description:
           </h3>
           <p class="description text-base md:text-base text-white text-left leading-6 tracking-normal mt-5 font-anon h-64 break-words overflow-y-auto -webkit-overflow-scrolling: touch;">
-            {@html formatDesc(data.auctionItem.meta.description)}
+            {@html formatDesc(meta.description)}
           </p>
 
           <AuctionBox />
