@@ -11,6 +11,8 @@
 	let email = ''
 	let amountSats = minBid // default to minBid
 
+	let invoice = ''
+
 	let isProcessing = false
 	let error = ''
 	let successMessage = ''
@@ -18,15 +20,21 @@
 	$: highestBid = bids?.[0] || {}
 
 	async function onBidClick() {
+		invoice = ''
 		error = ''
 		successMessage = ''
 		if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
 			isProcessing = true
 			const result = await createBid({ displayName, email, amountSats })
+			console.log(`result`, result)
+
 			if (result?.isError) {
 				error = result.message
+
+				// Emulate success response with invoice ({ payment_link })
 			} else {
 				successMessage = 'BID has been created!'
+				invoice = result?.payment_link
 			}
 			isProcessing = false
 		} else {
@@ -91,6 +99,10 @@
 
 		{#if successMessage}
 			<div class="my-4 text-success">{successMessage}</div>
+		{/if}
+
+		{#if invoice}
+			<div class="my-4">Please pay this invoice: {invoice}</div>
 		{/if}
 
 	</div>

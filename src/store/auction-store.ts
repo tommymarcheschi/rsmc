@@ -8,7 +8,7 @@ export async function createBid({ displayName, email, amountSats }: any) {
   const auctionItem = get(currentAuctionItem)
   console.log(`[createBid] for ${auctionItem?.id}`)
   try {
-    await feathersClient.service('auction-bids').create({
+    const result = await feathersClient.service('auction-bids').create({
       email,
       nickname: displayName,
       bid_amount: Number(amountSats),
@@ -16,6 +16,7 @@ export async function createBid({ displayName, email, amountSats }: any) {
       item_id: auctionItem?.id,
     })
     loadBids()
+    return result
   } catch (e) {
     console.log(`Error creating a bid`, e)
     return {
