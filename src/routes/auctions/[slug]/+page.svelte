@@ -112,36 +112,35 @@
           </p>
 
           <AuctionBox />
-
         </div>
 
         <div class="order-1 md:order-2">
           <AuctionImageGrid {images} />
         </div>
+      </div>
+
+      <div class="w-full">
+        <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10 mb-4"> Bidding History: </h2>
+
+        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+          <p> $username </p>
+          <p> $bid </p>
+          <p> $timestamp </p>
+        </div>
+
+        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+          <p> $username </p>
+          <p> $bid </p>
+          <p> $timestamp </p>
+        </div>
+
+        <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
+          <p> $username </p>
+          <p> $bid </p>
+          <p> $timestamp </p>
+        </div>
 
       </div>
-    <div class="w-full">
-    <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10 mb-4"> Bidding History: </h2>
-
-    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-      <p> $username </p>
-      <p> $bid </p>
-      <p> $timestamp </p>
-
-    </div>
-    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-      <p> $username </p>
-      <p> $bid </p>
-      <p> $timestamp </p>
-
-    </div>
-    <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-      <p> $username </p>
-      <p> $bid </p>
-      <p> $timestamp </p>
-
-    </div>
-  </div>
     </div>
 
   {/if}
