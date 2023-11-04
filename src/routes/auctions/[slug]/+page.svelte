@@ -6,6 +6,7 @@
 	import Countdown from "$lib/components/Countdown.svelte";
 	import { onMount } from "svelte";
 	import { currentAuctionItem, currentBids } from "../../../store/auction-store";
+	import { formatDate, formatSats } from "$lib/utils";
 
   export let data: any
 
@@ -133,8 +134,8 @@
         {#each bids as bid}
           <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
             <p> {bid.nickname} </p>
-            <p> {bid.bid_amount} </p>
-            <p> {bid.createdAt} </p>
+            <p> {formatSats(bid.bid_amount)} </p>
+            <p> {formatDate(bid.createdAt)} </p>
           </div>
         {/each}
 
