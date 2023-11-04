@@ -1,4 +1,3 @@
-// import { error } from '@sveltejs/kit';
 import { fetchBids } from '../../../store/auction-store';
 import { feathersClient } from '../../../store/feathersClient';
 

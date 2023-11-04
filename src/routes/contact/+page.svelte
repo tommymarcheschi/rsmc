@@ -37,7 +37,7 @@
   }
 </script>
 
-<div class="toasts top-right">test</div>
+<div class="toasts top-20">test</div>
 
 
 <div class="flex flex-col items-center justify-center ">

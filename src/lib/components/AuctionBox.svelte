@@ -69,10 +69,10 @@
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm">email address:</span>
 		</label>
-		<input type="text" placeholder="satoshi@rsmc.com" class="input bg-white rounded-none w-full"
+		<input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-orange-400 focus:border-2 focus:border-orange-400 rounded-none w-full"
 				bind:value={email} />
 	</div>
-
+	
 	<div class="px-2 w-full">
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm">bid:</span>
