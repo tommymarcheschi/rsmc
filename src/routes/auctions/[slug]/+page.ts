@@ -1,5 +1,4 @@
-import { error } from '@sveltejs/kit';
-import { API_URL, AUTH_TOKEN } from '$lib/config' 
+// import { error } from '@sveltejs/kit';
 import { feathersClient } from '../../../store/feathersClient';
 
 /** @type {import('./$types').PageLoad} */
