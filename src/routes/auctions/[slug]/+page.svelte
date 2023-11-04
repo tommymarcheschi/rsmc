@@ -5,11 +5,13 @@
   import AuctionBox from "$lib/components/AuctionBox.svelte"
 	import Countdown from "$lib/components/Countdown.svelte";
 	import { onMount } from "svelte";
-	import { currentAuctionItem } from "../../../store/auction-store";
+	import { currentAuctionItem, currentBids } from "../../../store/auction-store";
 
   export let data: any
 
   console.log(`data::`, data)
+
+  $: bids = $currentBids.length > 0 ? $currentBids : data.bids
 
   $: auctionItem = data.auctionItem || {}
   $: slug = auctionItem?.slug
@@ -37,7 +39,7 @@
   {#if data}
     <div class="flex flex-col mt-32 text-left w-4/5"> 
       <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">
-        AUCTION LIVE NOW!
+        AUCTION LIVE NOW! ({bids.length})
       </h1>
       <span class="flex flex-col font-incon text-white text-sm mb-4">
         See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.

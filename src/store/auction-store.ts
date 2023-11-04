@@ -2,7 +2,7 @@ import { writable, get } from "svelte/store";
 import { feathersClient } from "./feathersClient";
 
 export const currentAuctionItem = writable(null)
-export const bids = writable([])
+export const currentBids = writable([])
 
 export async function createBid({ displayName, email, amountSats }: any) {
   const auctionItem = get(currentAuctionItem)
@@ -20,6 +20,37 @@ export async function createBid({ displayName, email, amountSats }: any) {
     return {
       isError: true,
       message: e.message,
+    }
+  }
+}
+
+export async function loadBids() {
+  const auctionItem = get(currentAuctionItem)
+  if (auctionItem?.id) {
+    const result = await fetchBids(auctionItem?.id)
+    if (result.data.length){
+      currentBids.set(result.data)
+    }
+  }
+}
+
+export async function fetchBids(itemId: string) {
+  // Implement the logic to fetch bids for the item sorted by amount
+  try {
+    const response = await feathersClient.service('auction-bids').find({
+      query: {
+        item_id: itemId,
+        $limit: 20,
+      }
+    })
+    console.log(`\n>>>feathers client response bids`, response)
+    return response
+  } catch(e: any){
+    console.log(`Error page load auction bids:`, e)
+    return {
+      isError: true,
+      message: e.message,
+      code: e.code
     }
   }
 }
