@@ -1,5 +1,6 @@
 <script lang="ts">
   import Countdown from '$lib/components/Countdown.svelte';
+	import { formatSats, isEmail } from '$lib/utils';
 	import { createBid } from '../../store/auction-store';
 
 	export let bids = []
@@ -32,16 +33,13 @@
 			console.log('not enough data', displayName, email, amountSats)
 		}
 	}
-	function isEmail(email: string): boolean{
-		return email.length > 5 && email.includes('@')
-	}
 </script>
 
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-orange-500"> Current bid: </h3>
-		<p class="text-center text-lg font-anon text-white">( {highestBid.nickname}: {highestBid.bid_amount} )</p>
-		<h2 class="text-center text-2xl font-anon text-white leading-10"> 0 BTC </h2>
+		<p class="text-center text-lg font-anon text-white">( {highestBid.nickname} )</p>
+		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
 		<p class="text-center text-lg font-anon">( $dollarprice )</p>
 	</div>
 	<div class="m-2">
