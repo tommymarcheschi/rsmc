@@ -33,5 +33,8 @@
       </div>
     </div>
 
+  {:else}
+    <div class="error">Sorry, something went wrong. Please try again later</div>
+
   {/if}    
 </div>

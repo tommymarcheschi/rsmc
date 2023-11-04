@@ -35,6 +35,8 @@
 	"type": "module",
 	"dependencies": {
 		"@bitjson/qr-code": "^1.0.2",
+		"@feathersjs/feathers": "^5.0.11",
+		"@feathersjs/rest-client": "^5.0.11",
 		"@fontsource-variable/inconsolata": "^5.0.8",
 		"@fontsource/anonymous-pro": "^5.0.8",
 		"@fontsource/bahiana": "^5.0.12",
