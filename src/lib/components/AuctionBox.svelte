@@ -2,6 +2,8 @@
   import Countdown from '$lib/components/Countdown.svelte';
 	import { createBid } from '../../store/auction-store';
 
+	export let bids = []
+
 	const minBid = 100000
 
 	let displayName = ''
@@ -11,6 +13,8 @@
 	let isProcessing = false
 	let error = ''
 	let successMessage = ''
+
+	$: highestBid = bids?.[0] || {}
 
 	async function onBidClick() {
 		error = ''
@@ -36,7 +40,7 @@
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-orange-500"> Current bid: </h3>
-		<p class="text-center text-lg font-anon text-white">( $highest bid username )</p>
+		<p class="text-center text-lg font-anon text-white">( {highestBid.nickname}: {highestBid.bid_amount} )</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> 0 BTC </h2>
 		<p class="text-center text-lg font-anon">( $dollarprice )</p>
 	</div>

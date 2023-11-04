@@ -42,6 +42,9 @@ export async function fetchBids(itemId: string) {
       query: {
         item_id: itemId,
         $limit: 20,
+        $sort: {
+          createdAt: -1
+        }
       }
     })
     console.log(`\n>>>feathers client response bids`, response)

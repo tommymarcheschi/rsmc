@@ -11,7 +11,7 @@
 
   console.log(`data::`, data)
 
-  $: bids = $currentBids.length > 0 ? $currentBids : data.bids
+  $: bids = $currentBids?.length > 0 ? $currentBids : data?.bids || []
 
   $: auctionItem = data.auctionItem || {}
   $: slug = auctionItem?.slug
@@ -119,7 +119,7 @@
             {@html formatDesc(meta.description)}
           </p>
 
-          <AuctionBox />
+          <AuctionBox {bids} />
         </div>
 
         <div class="order-1 md:order-2">
