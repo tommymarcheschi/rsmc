@@ -6,10 +6,14 @@
 	let email = ''
 	let amountSats = 0
 
+	const minBid = 100000
+
 	function onBidClick() {
-		if (displayName?.length > 2 && amountSats > 100000) {
+		if (displayName?.length > 2 && Number(amountSats) >= minBid) {
 			createBid({ displayName, email, amountSats })
-		} 
+		} else {
+			console.log('not enough data', displayName, email, amountSats)
+		}
 	}
 </script>
 
@@ -49,7 +53,7 @@
 		</form>
 
 		<button 
-			class="btn _btn-disabled cursor-not-allowed bg-orange-400 border-1 border-orange-400 rounded-none text-white w-full"
+			class="btn _btn-disabled _cursor-not-allowed bg-orange-400 border-1 border-orange-400 rounded-none text-white w-full"
 			on:click={onBidClick}
 		>
 			Bid soon!
