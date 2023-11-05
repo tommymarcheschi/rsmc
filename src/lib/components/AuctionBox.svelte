@@ -46,9 +46,9 @@
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-btcorange"> Current bid: </h3>
-		<p class="text-center text-lg font-anon text-white">( {highestBid.nickname} )</p>
+		<p class="text-center text-lg font-anon text-white">{highestBid.nickname}</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
-		<p class="text-center text-lg font-anon">( $dollarprice )</p>
+		<p class="text-center text-lg font-anon"> $dollarprice </p>
 	</div>
 	<div class="m-2">
 		<h3 class="text-center text-xl text-btcorange"> Auction starting: </h3>
@@ -83,8 +83,8 @@
 		</form>
 
 		<button 
-			class="btn _btn-disabled _cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full"
-			on:click={onBidClick}
+			class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full"
+			on:click={onBidClick} disabled
 		>
 			{#if isProcessing}
 				<span class="loading loading-dots loading-md"></span>

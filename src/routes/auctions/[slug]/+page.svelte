@@ -40,7 +40,7 @@
   {#if data}
     <div class="flex flex-col mt-32 text-left w-4/5"> 
       <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">
-        AUCTION LIVE NOW! ({bids.length})
+        AUCTION LIVE NOW!
       </h1>
       <span class="flex flex-col font-incon text-white text-sm mb-4">
         See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.
@@ -129,7 +129,7 @@
       </div>
 
       <div class="w-full">
-        <h2 class="text-white font-bahiana text-5xl text-center uppercase mt-10 mb-4"> Bidding History: </h2>
+        <h2 class="text-white font-bahiana text-5xl text-center  mt-10 mb-4"> BIDDING HISTORY ({bids.length} total bids): </h2>
 
         {#each bids as bid}
           <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">

@@ -1,5 +1,4 @@
 <script>
-  import Countdown from "$lib/components/Countdown.svelte";
 import CountDown from "$lib/components/Countdown.svelte"
 
 </script>
@@ -7,10 +6,10 @@ import CountDown from "$lib/components/Countdown.svelte"
 
 
 <a href="/auctions" class="no-underline w-inline-block mt-32">
-  <div class="w-[80vw] h-[60vh] flex flex-col justify-end items-start transition-all duration-300 ease-in mb-20 p-5" style="background-image: url(/auction/end-fiat/main.jpeg)">
-    <h1 class="heading text-5xl text-white font-bold mb-4">Auction Live!</h1>
-    <div class="p white text-lg text-white mb-2">END FIAT! by Tommy Marcheschi</div>
-    <div class="p white text-lg text-white mb-4"><CountDown /></div>
+  <div class="w-[80vw] h-[60vh] flex flex-col justify-end items-start p-2 mb-20 transition-all duration-300 ease-in bg-hero-pattern bg-[auto,_120%] hover:bg-[auto,_115%] scale-100 hover:p-5 hover:scale-[101%]" style="background-position: 0 0, 20% 30%; background-image: linear-gradient(to right, #000 5%, rgba(219, 219, 219, .14) 55%, rgba(255, 255, 255, 0)), url(/auction/end-fiat/ENDFIAT-inscribe.png)">
+    <h1 class="heading text-5xl text-white font-bold font-rocks mb-4 tracking-wide">Auction Live!</h1>
+    <p class="text-sm md:text-base text-white font-anon ">END FIAT! by Tommy Marcheschi</p>
+    <p class="text-sm md:text-base text-white font-anon "><CountDown /></p>
     <a href="/auctions" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
       Bid Now
     </a>
