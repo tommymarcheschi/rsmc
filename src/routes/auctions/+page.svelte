@@ -18,12 +18,16 @@
   {:else if data?.data}
 
     <div class="flex flex-row items-start justify-start w-3/5 md:w-2/5 lg:w-1/5 mt-2 text-left">
+
       <div class="justify-start items-start mb-10 mt-8">
         {#each data?.data as item}
+
           <div class="border-2 border-white p-2 w-auto flex-1">
             <a href="/auctions/{item.slug}">
+
             <img src="/auction/{item.slug}/main.jpeg" alt={item.title} class="w-full object-contain mx-auto" />
             </a>
+            
             <div class="font-anon text-white text-center break-words text-base md:text-lg">{item.meta.artist} <br></div>
 
             <div class="font-anon text-white text-center text-lg md:text-xl italic break-words font-bold">{item.title}<br></div>
