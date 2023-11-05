@@ -17,7 +17,7 @@
     </div>
   </nav> 
   <span>
-    <p class="font-bahianita text-white text-base tracking-widest">COPYRIGHT © 2023 RSMC. ALL RIGHTS RESERVED. <a href="/terms" class="underline hover:text-btcorange">TERMS OF SERVICE</a>.</p>
+    <p class="font-bahianita text-white text-base tracking-widest">COPYRIGHT © 2023 RSMC. ALL RIGHTS RESERVED. <a href="/tos" class="underline hover:text-btcorange">TERMS OF SERVICE</a>.</p>
   </span>
 </footer>
 
