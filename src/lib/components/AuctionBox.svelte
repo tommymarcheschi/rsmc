@@ -2,6 +2,7 @@
   import Countdown from '$lib/components/Countdown.svelte';
 	import { formatSats, isEmail } from '$lib/utils';
 	import { createBid } from '../../store/auction-store';
+  import { bitcoinPrice } from "../../store/bitcoin";
 
 	export let bids = []
 
@@ -18,6 +19,8 @@
 	let successMessage = ''
 
 	$: highestBid = bids?.[0] || {}
+
+
 
 	async function onBidClick() {
 		invoice = ''
@@ -41,14 +44,17 @@
 			console.log('not enough data', displayName, email, amountSats)
 		}
 	}
-</script>
 
+	$: dollarPrice = $bitcoinPrice * (highestBid && highestBid.bid_amount ? highestBid.bid_amount : 0);
+
+</script>
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-btcorange"> Current bid: </h3>
 		<p class="text-center text-lg font-anon text-white">{highestBid.nickname}</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
-		<p class="text-center text-lg font-anon"> $dollarprice </p>
+		<p class="text-center text-lg font-anon">  { dollarPrice ? `${dollarPrice.toFixed(0)}` : '0' } $
+ </p>
 	</div>
 	<div class="m-2">
 		<h3 class="text-center text-xl text-btcorange"> Auction starting: </h3>
@@ -112,7 +118,7 @@
 			<span class="label-text text-white font-anon text-sm md:text-xs whitespace-nowrap">Enter your PIN:</span>
 		</label>
 		<div class="join join-horizontal rounded-none border-2 border-btcorange">
-		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-sm md:input-md w-full join-item " /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
+		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item flex-wrap" /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
 	</div>
 	</div>
 </div>

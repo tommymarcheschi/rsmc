@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import { fetchBitcoinData } from './bitcoin-api';
 
 export const blockHeight = writable(null);
-export const bitcoinPrice = writable(null);
+export const bitcoinPrice = writable(0);
 
 async function init() {
   try {
