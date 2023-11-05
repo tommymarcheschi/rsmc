@@ -77,7 +77,7 @@
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm">bid:</span>
 		</label>
-		<form id="auction-form" name="auction-form" data-name="Auction Form" method="get" data-wf-page-id="65396d2c02ecf45338528637" data-wf-element-id="efc08962-f955-2525-ab9c-74c60fc84837" aria-label="Auction Form">
+		<form id="bid-form" name="bid-form" data-name="Auction Form" method="get" data-wf-page-id="65396d2c02ecf45338528637" data-wf-element-id="efc08962-f955-2525-ab9c-74c60fc84837" aria-label="Auction Form">
 			<input type="text" placeholder="0.001 BTC" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
 				bind:value={amountSats} />
 		</form>
@@ -105,6 +105,15 @@
 			<div class="my-4">Please pay this invoice: {invoice}</div>
 		{/if}
 
+	</div>
+
+	<div class="form-control px-2 flex-row w-full space-x-1 justify-between">
+		<label class="label ">
+			<span class="label-text text-white font-anon text-sm md:text-xs whitespace-nowrap">Enter your PIN:</span>
+		</label>
+		<div class="join join-horizontal rounded-none border-2 border-btcorange">
+		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-sm md:input-md w-full join-item " /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
+	</div>
 	</div>
 </div>
 
