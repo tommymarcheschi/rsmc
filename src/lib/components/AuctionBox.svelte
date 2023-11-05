@@ -3,6 +3,8 @@
 	import { formatSats, isEmail } from '$lib/utils';
 	import { createBid } from '../../store/auction-store';
   import { bitcoinPrice } from "../../store/bitcoin";
+  import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
+  import arrowDown from '$lib/images/RSMC-downArrow.svg?raw';
 
 	export let bids = []
 
@@ -47,6 +49,21 @@
 
 	$: dollarPrice = $bitcoinPrice * (highestBid && highestBid.bid_amount ? highestBid.bid_amount : 0);
 
+   function increaseAmount() {
+       if (amountSats < 10000000) {
+           amountSats += 100000;
+       } else if (amountSats < 50000000) {
+           amountSats += 500000;
+       } else {
+           amountSats += 1000000;
+       }
+   }
+
+   function decreaseAmount() {
+       if (amountSats > 100000) {
+           amountSats -= 100000;
+       }
+   }
 </script>
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
@@ -84,8 +101,18 @@
 			<span class="label-text text-white font-anon text-xs md:text-sm">bid:</span>
 		</label>
 		
-			<input type="text" placeholder="0.001 BTC" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
-				bind:value={amountSats} />
+		<div class="join join-horizontal w-full rounded-none flex-row">
+       <input type="text" placeholder="100.000 sats" class="input bg-white text-black font-anon border-2 border-black focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full flex"
+           bind:value={amountSats} />
+       <button class="rounded-none border-2 border-black bg-white join-item focus:border-2 focus:border-btcorange"
+           on:click={() => increaseAmount()}>
+           <div class="p-1 w-8 text-white bg-transparent"> {@html arrowUp} </div>
+       </button>
+       <button class="rounded-none border-2 border-black bg-white join-item focus:border-2 focus:border-btcorange"
+           on:click={() => decreaseAmount()}>
+           <div class="p-1 w-8 text-white bg-transparent"> {@html arrowDown} </div>
+       </button>
+   </div>
 
 		<button 
 			class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full"

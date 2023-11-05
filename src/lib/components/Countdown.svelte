@@ -3,7 +3,7 @@
   // import { TARGET_DATE } from '../config'
   import { isPublishActivated } from '../../store/countdown'
 
-  let targetDate = new Date("November 5, 2023 16:20:00 EST");
+  let targetDate = new Date("November 5, 2023 17:20:00 EST");
   let days, hours, minutes, seconds;
 
   onMount(() => {
