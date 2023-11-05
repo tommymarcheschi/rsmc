@@ -115,7 +115,7 @@
    </div>
 
 		<button 
-			class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full"
+			class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
 			on:click={onBidClick} disabled
 		>
 			{#if isProcessing}
@@ -139,13 +139,15 @@
 
 	</div>
 
-	<div class="form-control p-2 flex-row w-full space-x-1 justify-between">
+	<div class="form-control p-2 flex-row w-full space-x-1 justify-end flex-wrap">
 		<label class="label">
 			<span class="label-text text-white font-anon text-xs md:text-sm whitespace-nowrap">Enter your PIN:</span>
 		</label>
-		<div class="join join-horizontal rounded-none border-2 border-btcorange">
-		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item flex-wrap" /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
+		<div class="join join-horizontal rounded-none border-2 border-btcorange flex ">
+		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item " /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
 	</div>
 	</div>
+		<p class="text-center text-sm font-anon break-words px-2 mt-4">*by submitting a bid you agree to our <a href="/tos" class="link text-btcorange font-anon text-xs md:text-sm hover:no-underline">terms</a>.</p>
+
 </div>
 

@@ -11,9 +11,10 @@
 
 {#if showModal}
 <dialog open class="modal">
-  <div class="modal-box p-10 border border-white bg-black rounded-none items-center border-box font-incon flex flex-col w-full z-[100]">
+  <div class="modal-box p-10 border border-black bg-black rounded-none items-center border-box font-incon flex flex-col w-full z-[100]">
+    <h3 class="font-bold antialiased text-lg">$auctionItem.title</h3>
     <h3 class="font-bold text-lg">Bid</h3>
-    <p class="py-4">Place deposit to confirm bid.</p>
+    <p class="py-4 font-bold font-anon">Place 1% deposit to confirm bid.</p>
           <button class="link {selectedPaymentMethod === 'BTC' ? 'no-underline' : ''}" 
     on:click={() => selectedPaymentMethod = 'BTC'}>Bitcoin</button> or <button class="link {selectedPaymentMethod === 'BTC-LightningNetwork' ? 'no-underline' : ''}" on:click={() => selectedPaymentMethod = 'BTC-LightningNetwork'}>Lightning</button>:
     <BidQR paymentMethod={selectedPaymentMethod} />
