@@ -42,6 +42,9 @@ export async function fetchBids(itemId: string) {
     const response = await feathersClient.service('auction-bids').find({
       query: {
         item_id: itemId,
+        status: {
+          $in: ['INVOICE_CREATED', 'PAYMENT_PROCESSING', 'PAYMENT_RECEIVED']
+        },
         $limit: 20,
         $sort: {
           createdAt: -1

@@ -134,7 +134,7 @@
         {#each bids as bid}
           <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
             <p> {bid.nickname} </p>
-            <p> {formatSats(bid.bid_amount)} </p>
+            <p> {formatSats(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}</p>
             <p> {formatDate(bid.createdAt)} </p>
           </div>
         {/each}
