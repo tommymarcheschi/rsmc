@@ -16,7 +16,7 @@
     qrContents = paymentMethod === 'BTC' ? btcAddress : lightningInvoice;
     addressOrInvoice = qrContents.split(':')[1];
   }
-  
+
   onMount(() => {
     qr.defineCustomElements(window);
   });
@@ -56,7 +56,6 @@
   <img src="{qrcodeLogo}" slot="icon" alt="QR Code Icon" class="invert"/>
   </qr-code>
 
-  <!-- Display the truncated address or invoice -->
   <!-- Display the truncated address or invoice -->
   <span class="text-xs mb-1" on:click={copyAddressOrInvoice}>
     {addressOrInvoice.substring(0, 8)}...{addressOrInvoice.substring(addressOrInvoice.length - 8)}
