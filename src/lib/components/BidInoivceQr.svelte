@@ -9,8 +9,14 @@
 
   export let paymentMethod = 'BTC'; // Default to BTC
 
-  $: qrContents = paymentMethod === 'BTC' ? btcAddress : lightningInvoice;
+  let qrContents;
+  let addressOrInvoice;
 
+  $: {
+    qrContents = paymentMethod === 'BTC' ? btcAddress : lightningInvoice;
+    addressOrInvoice = qrContents.split(':')[1];
+  }
+  
   onMount(() => {
     qr.defineCustomElements(window);
   });
@@ -32,14 +38,29 @@
     const qrElement = event.currentTarget;
     fadeIn(qrElement);
   }
+  // Function to copy the full address or invoice to the clipboard
+  function copyAddressOrInvoice() {
+    navigator.clipboard.writeText(addressOrInvoice);
+  }
 </script>
-<qr-code
+
+<div class="flex flex-col justify-center items-center ">  
+  <qr-code
   id="qr1"
   on:codeRendered={handleCodeRendered}
   contents="{qrContents}"
   moduleColor="#000000" 
   positionRingColor="#ffffff" 
   positionCenterColor="#ffffff" 
-  style="width: 200px; height: 200px; margin: 0em auto; background-color: #ffffff; filter: invert(2);"> 
+  style="width: 200px; height: 200px; margin: 0.2em auto; background-color: #ffffff; filter: invert(2);"> 
   <img src="{qrcodeLogo}" slot="icon" alt="QR Code Icon" class="invert"/>
-</qr-code>
+  </qr-code>
+
+  <!-- Display the truncated address or invoice -->
+  <!-- Display the truncated address or invoice -->
+  <span class="text-xs mb-1" on:click={copyAddressOrInvoice}>
+    {addressOrInvoice.substring(0, 8)}...{addressOrInvoice.substring(addressOrInvoice.length - 8)}
+  </span>
+
+  <button on:click={copyAddressOrInvoice} class="hover:text-btcorange hover:bg-black mx-4  px-2 bg-white text-black font-rocks text-lg md:text-xl">copy invoice</button>
+</div>
