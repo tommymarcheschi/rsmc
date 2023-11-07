@@ -1,0 +1,16 @@
+{
+  "data": [
+    {
+      "paymentMethod": "BTC",
+      "paymentLink": "bitcoin:bc1pdsjr9n2n2v64g5enp688yykxmgh688au58fnw49yvjjdvpdu4gnsw6acfg?amount=0.00009"
+    },
+    {
+      "paymentMethod": "BTC-LNURLPAY",
+      "paymentLink": "lightning:lnurl1dp68gurn8ghj7cn5vdcxz7fs9emx7mr5v9nk2ctswqhxjme0gf2yxt64f9xyu42jfshhqcte9a5j7n29xdu4g7n589sk2nzwdpzny7jp2qm5kmj4lvmnc0"
+    },
+    {
+      "paymentMethod": "BTC-LightningNetwork",
+      "paymentLink": "lightning:lnbc90u1pj5wf49pp5q2uudsk0jeuf2xse28xl8cuug4h6cmvle0th8hv0s2xwsruhx4lqdp52pskjepqw3hjq56gg96kxarfdahzq2z0wfjx2u3qf9zr5gp3xy5scqzzsxqzuysp5fsngjger8k58kkm80h42mtxcyfevhufvjzpkmzk0g3h2a4hz02jq9qyyssqnxfkt9eagxh546d2t5vujw40303p8pqa2rc8vkn8q4j82zdgpa49qeun22puxzwcrhp6yr3l529skycq6507t9plv8f6hyeuxlr6thsqlxy4ye"
+    }
+  ]
+}

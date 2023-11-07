@@ -4,8 +4,22 @@ import { feathersClient } from "./feathersClient";
 export const currentAuctionItem = writable(null)
 export const currentBids = writable([])
 
+export const pinHash = writable({
+  pin: '',
+  hash: ''
+})
+
 export async function createBid({ displayName, email, amountSats }: any) {
   const auctionItem = get(currentAuctionItem)
+  const pinObj = get(pinHash)
+
+  if (!pinObj.pin || !pinObj.hash) {
+    return {
+      isError: true,
+      message: 'Email verification required',
+    }
+  }
+
   console.log(`[createBid] for ${auctionItem?.id}`)
   try {
     const result = await feathersClient.service('auction-bids').create({
@@ -14,6 +28,10 @@ export async function createBid({ displayName, email, amountSats }: any) {
       bid_amount: Number(amountSats),
       deposit_amount: Math.round(Number(amountSats) / 100),
       item_id: auctionItem?.id,
+    }, {
+      headers: {
+        'x-ev': `${pinObj.pin}:${pinObj.hash}`
+      }
     })
     loadBids()
     return result
@@ -55,6 +73,29 @@ export async function fetchBids(itemId: string) {
     return response
   } catch(e: any){
     console.log(`Error page load auction bids:`, e)
+    return {
+      isError: true,
+      message: e.message,
+      code: e.code
+    }
+  }
+}
+
+export async function verifyEmail(email: string) {
+  try {
+    const response = await feathersClient.service('email-verify').create({
+      email
+    })
+    console.log(`\n>>>feathers client response email-verify`, response)
+    if (response.hash) {
+      pinHash.set({
+        pin: '',
+        hash: response.hash
+      })
+    }
+    return true
+  } catch(e: any){
+    console.log(`[verifyEmail] Error:`, e)
     return {
       isError: true,
       message: e.message,

@@ -1,20 +1,27 @@
 <script lang="ts">
   import Countdown from '$lib/components/Countdown.svelte';
+  import BidInvoiceModal from '$lib/components/BidInvoiceModal.svelte';
 	import { formatSats, isEmail } from '$lib/utils';
-	import { createBid } from '../../store/auction-store';
+	import { createBid, pinHash, verifyEmail } from '../../store/auction-store';
   import { bitcoinPrice } from "../../store/bitcoin";
   import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
   import arrowDown from '$lib/images/RSMC-downArrow.svg?raw';
+  import fixturePaymentMethods from './fixture-payment-methods.json'
 
 	export let bids = []
+	export let auctionItem = {}
 
-	const minBid = 100000
+	let minBid = 100000
+	let showPinInput = false
 
 	let displayName = ''
 	let email = ''
 	let amountSats = minBid // default to minBid
+  let pinValue = ''
 
-	let invoice = ''
+	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
+  let paymentMethods: any = null // fixturePaymentMethods.data
+	let showModal = false
 
 	let isProcessing = false
 	let error = ''
@@ -22,32 +29,56 @@
 
 	$: highestBid = bids?.[0] || {}
 
+  async function onBidClick() {
+    // showModal = !showModal
+    // return ''
 
+    paymentMethods = null
+    error = ''
+    successMessage = ''
+    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
+      // Send email for verification
+      const result = await verifyEmail(email)
+      if (result === true) {
+        // Show PIN input
+        showPinInput = true
+      }
+    }
+  }
 
-	async function onBidClick() {
-		invoice = ''
-		error = ''
-		successMessage = ''
-		if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
-			isProcessing = true
-			const result = await createBid({ displayName, email, amountSats })
-			console.log(`result`, result)
+  async function letsCreateBid() {
+    // Save pin
+    pinHash.update(obj => ({
+      ...obj,
+      pin: pinValue
+    }))
 
-			if (result?.isError) {
-				error = result.message
+    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid && pinValue.length === 4) {
+      isProcessing = true
+      const result = await createBid({ displayName, email, amountSats })
+      console.log(`result`, result)
 
-				// Emulate success response with invoice ({ payment_link })
-			} else {
-				successMessage = 'BID has been created!'
-				invoice = result?.payment_link
-			}
-			isProcessing = false
-		} else {
-			console.log('not enough data', displayName, email, amountSats)
-		}
-	}
+      if (result?.isError) {
+        error = result.message
 
-	$: dollarPrice = $bitcoinPrice * (highestBid && highestBid.bid_amount ? highestBid.bid_amount : 0);
+        // Emulate success response with invoice ({ payment_link })
+      } else {
+        // successMessage = 'BID has been created!'
+        // invoice = result?.payment_link
+        paymentMethods = result?.payment_methods.data
+        showModal = true
+      }
+      isProcessing = false
+    } else {
+      console.log('not enough data', displayName, email, amountSats)
+    }
+  }
+
+	$: dollarPrice = $bitcoinPrice / 1e8 * (highestBid && highestBid.bid_amount ? highestBid.bid_amount : 0);
+  $: dollarPriceFormatted = dollarPrice.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 
    function increaseAmount() {
        if (amountSats < 10000000) {
@@ -70,7 +101,7 @@
 		<h3 class="text-center text-xl text-btcorange"> Current bid: </h3>
 		<p class="text-center text-lg font-anon text-white">{highestBid.nickname}</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
-		<p class="text-center text-lg font-anon">  { dollarPrice ? `${dollarPrice.toFixed(0)}` : '0' } $
+		<p class="text-center text-lg font-anon">  { dollarPrice ? `${dollarPriceFormatted}` : '0' } $
  </p>
 	</div>
 	<div class="m-2">
@@ -116,7 +147,7 @@
 
 		<button 
 			class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
-			on:click={onBidClick} disabled
+			on:click={onBidClick}
 		>
 			{#if isProcessing}
 				<span class="loading loading-dots loading-md"></span>
@@ -133,21 +164,31 @@
 			<div class="my-4 text-success">{successMessage}</div>
 		{/if}
 
-		{#if invoice}
+		<!-- {#if invoice}
 			<div class="my-4">Please pay this invoice: {invoice}</div>
-		{/if}
+		{/if} -->
+
+    {#if paymentMethods?.length}
+      <BidInvoiceModal bind:showModal {auctionItem} {amountSats} {paymentMethods} /> 
+    {/if}
 
 	</div>
 
-	<div class="form-control p-2 flex-row w-full space-x-1 justify-end flex-wrap">
-		<label class="label">
-			<span class="label-text text-white font-anon text-xs md:text-sm whitespace-nowrap">Enter your PIN:</span>
-		</label>
-		<div class="join join-horizontal rounded-none border-2 border-btcorange flex ">
-		<input type="text" placeholder="PIN" class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item " /><button class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
-	</div>
-	</div>
-		<p class="text-center text-sm font-anon break-words px-2 mt-4">*by submitting a bid you agree to our <a href="/tos" class="link text-btcorange font-anon text-xs md:text-sm hover:no-underline">terms</a>.</p>
+  {#if showPinInput && !paymentMethods}
+    <div class="px-2 text-sm font-anon">Please check your email for PIN</div>
+    <div class="form-control p-2 flex-row w-full space-x-1 justify-end flex-wrap">
+      <label class="label">
+        <span class="label-text text-white font-anon text-xs md:text-sm whitespace-nowrap">Enter your PIN:</span>
+      </label>
+      <div class="join join-horizontal rounded-none border-2 border-btcorange flex ">
+        <input class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item "
+          bind:value={pinValue} type="text" placeholder="PIN" />
+        <button on:click={letsCreateBid} class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
+      </div>
+    </div>
+  {/if}
+
+  <p class="text-center text-sm font-anon break-words px-2 mt-4">*by submitting a bid you agree to our <a href="/tos" class="link text-btcorange font-anon text-xs md:text-sm hover:no-underline">terms</a>.</p>
 
 </div>
 
