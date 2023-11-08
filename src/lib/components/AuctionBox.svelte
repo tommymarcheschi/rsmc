@@ -6,17 +6,22 @@
   import { bitcoinPrice } from "../../store/bitcoin";
   import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
   import arrowDown from '$lib/images/RSMC-downArrow.svg?raw';
-  import fixturePaymentMethods from './fixture-payment-methods.json'
+  // import fixturePaymentMethods from './fixture-payment-methods.json'
+
+  const BID_STEP_1 = 100000
+  const BID_STEP_BORDER_1 = 10000000
+  const BID_STEP_2 = 500000
+  const BID_STEP_BORDER_2 = 50000000
+  const BID_STEP_3 = 1000000
 
 	export let bids = []
 	export let auctionItem = {}
 
-	let minBid = 100000
+	let amountSats =  BID_STEP_1 // default to minBid
 	let showPinInput = false
 
 	let displayName = ''
 	let email = ''
-	let amountSats = minBid // default to minBid
   let pinValue = ''
 
 	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
@@ -27,7 +32,18 @@
 	let error = ''
 	let successMessage = ''
 
-	$: highestBid = bids?.[0] || {}
+	$: highestBid = bids?.find(bid => bid.status === 'PAYMENT_RECEIVED') || {}
+  $: highestBidAmount = Number(highestBid.bid_amount) || 0
+  $: MINIMUM_BID_STEP = highestBidAmount < BID_STEP_BORDER_1 
+    ? BID_STEP_1 
+    : (highestBidAmount < BID_STEP_BORDER_2
+      ? BID_STEP_2
+      : BID_STEP_3
+    )
+  $: minAvailAmount = (highestBidAmount) + MINIMUM_BID_STEP
+  $: if (amountSats < minAvailAmount) {
+    amountSats = minAvailAmount
+  }
 
   async function onBidClick() {
     // showModal = !showModal
@@ -36,7 +52,7 @@
     paymentMethods = null
     error = ''
     successMessage = ''
-    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid) {
+    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount) {
       // Send email for verification
       const result = await verifyEmail(email)
       if (result === true) {
@@ -53,7 +69,7 @@
       pin: pinValue
     }))
 
-    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minBid && pinValue.length === 4) {
+    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount && pinValue.length === 4) {
       isProcessing = true
       const result = await createBid({ displayName, email, amountSats })
       console.log(`result`, result)
@@ -80,25 +96,35 @@
     maximumFractionDigits: 2,
   })
 
-   function increaseAmount() {
-       if (amountSats < 10000000) {
-           amountSats += 100000;
-       } else if (amountSats < 50000000) {
-           amountSats += 500000;
-       } else {
-           amountSats += 1000000;
-       }
+  function increaseAmount() {
+    const amount = Number(amountSats)
+    if (amount < BID_STEP_BORDER_1) {
+      amountSats = amount + BID_STEP_1;
+    } else if (amount < BID_STEP_BORDER_2) {
+      amountSats = amount + BID_STEP_2;
+    } else {
+      amountSats = amount + BID_STEP_3;
+    }
    }
 
    function decreaseAmount() {
-       if (amountSats > 100000) {
-           amountSats -= 100000;
-       }
+    const amount = Number(amountSats)
+    if (amount <= BID_STEP_1) {
+      return
+    }
+
+    if (amount < BID_STEP_BORDER_1) {
+      amountSats = amount - BID_STEP_1;
+    } else if (amount < BID_STEP_BORDER_2) {
+      amountSats = amount - BID_STEP_2;
+    } else {
+      amountSats = amount - BID_STEP_3;
+    }
    }
 </script>
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
-		<h3 class="text-center text-xl text-btcorange"> Current bid: </h3>
+		<h3 class="text-center text-xl text-btcorange"> Current bid:</h3>
 		<p class="text-center text-lg font-anon text-white">{highestBid.nickname}</p>
 		<h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
 		<p class="text-center text-lg font-anon">  { dollarPrice ? `${dollarPriceFormatted}` : '0' } $
@@ -129,7 +155,9 @@
 	
 	<div class="px-2 w-full">
 		<label class="label">
-			<span class="label-text text-white font-anon text-xs md:text-sm">bid:</span>
+			<span class="label-text text-white font-anon text-xs md:text-sm">
+        bid:  (min {minAvailAmount.toLocaleString()} sats)
+      </span>
 		</label>
 		
 		<div class="join join-horizontal w-full rounded-none flex-row">

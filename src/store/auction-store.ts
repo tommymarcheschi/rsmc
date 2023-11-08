@@ -60,7 +60,7 @@ export async function fetchBidsWithPending(itemId: string) {
   }
   const resultPending = await fetchPendingBids(itemId)
   // Add pending to the start of the list only if its bid amount is greater than the biggest paid bid.
-  if (result.data.length && (!bids[0] || resultPending.data[0].bid_amount > bids[0].bid_amount)){
+  if (resultPending.data.length && (!bids[0] || resultPending.data[0].bid_amount > bids[0].bid_amount)){
     bids.unshift(resultPending.data[0])
   }
   return bids
