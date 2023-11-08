@@ -67,7 +67,7 @@
             <p class="text-lg md:text-2xl text-white text-left leading-6 tracking-normal mb-0 font-anon">
             {meta.artist} <br><br> 
             </p>
-            <div class="flex flex-row py-1 pl-4 space-x-2">
+            <div class="flex flex-row md:py-1 pl-4 space-x-2 ">
             <a href="https://tommy.studio" target="_blank" ><img src="{socialwebsite}" class="w-6 items-baseline align-bottom" alt="tommy.studio"></a>
             <a href="https://twitter.com/yungguccit" target="_blank" ><img src="{socialx}" class="w-6" alt="x.com"></a>
             <a href="https://iris.to/npub15uql845ve3vkl7pnm7p5342qyxq9f0j85xvkxc7waepxxwe0tn6ssr6hfz" target="_blank" ><img src="{socialnostr}" class="w-6" alt="nostr"></a>

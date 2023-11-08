@@ -29,7 +29,7 @@
 
 {#if showModal}
 <dialog open class="modal">
-  <div class="modal-box w-full md:max-w-xl p-10 border-2 border-black bg-black rounded-none items-center border-box font-incon flex flex-col z-[100] ">
+  <div class="modal-box w-full md:max-w-xl px-5 py-2 md:px-10 md:py-4 border-2 border-black bg-black rounded-none items-center border-box font-incon flex flex-col z-[100] ">
     <h3 class="font-bold antialiased md:text-lg text-white font-rocks">{auctionItem.title}</h3>
     <h2 class=" text-2xl md:text-4xl text-btcorange pt-4 font-anon whitespace-nowrap">Bid {Number(amountSats).toLocaleString()} sats!</h2>
     <p class="pb-2 font-bold font-anon">{dollarPriceFormatted} $</p>
@@ -46,7 +46,7 @@
       amount={Math.round(Number(amountSats) / 100)} 
       {paymentLink} /> 
 
-    <div class="font-incon text-white py-6 text-sm md:text-base">
+    <div class="font-incon text-white pt-4 pb-1 text-sm md:text-base">
       By placing a bid you agree to our <a href="/tos" class="link hover:no-underline">terms</a>.
     </div>
   </div>

@@ -66,7 +66,7 @@
     {addressOrInvoice.substring(0, 8)}...{addressOrInvoice.substring(addressOrInvoice.length - 8)}
   </span>
 
-  <button on:click={copyAddressOrInvoice} class="hover:text-btcorange hover:bg-black mx-4  px-2 bg-white text-black font-rocks text-lg md:text-xl">
+  <button on:click={copyAddressOrInvoice} class="hover:text-btcorange hover:bg-black mx-4 mb-2 px-2 bg-white text-black font-rocks text-lg md:text-xl">
     copy invoice
   </button>
 </div>
