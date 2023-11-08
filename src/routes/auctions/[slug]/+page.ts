@@ -1,4 +1,4 @@
-import { fetchBids } from '../../../store/auction-store';
+import { fetchBidsWithPending } from '../../../store/auction-store';
 import { feathersClient } from '../../../store/feathersClient';
 
 /** @type {import('./$types').PageLoad} */
@@ -9,8 +9,7 @@ export async function load({ params, fetch }) {
 
   const auctionItemResponse = await fetchAuctionItem(slug);
   const auctionItem = auctionItemResponse?.data?.[0]
-  const bidsResponse = await fetchBids(auctionItem.id); // Pass the fetch function to use it inside fetchBids
-  const bids = bidsResponse.data;
+  const bids = await fetchBidsWithPending(auctionItem.id); // Pass the fetch function to use it inside fetchBids
   return { auctionItem, bids };
 }
 

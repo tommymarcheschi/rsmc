@@ -47,11 +47,23 @@ export async function createBid({ displayName, email, amountSats }: any) {
 export async function loadBids() {
   const auctionItem = get(currentAuctionItem)
   if (auctionItem?.id) {
-    const result = await fetchBids(auctionItem?.id)
-    if (result.data.length){
-      currentBids.set(result.data)
-    }
+    const bids = await fetchBidsWithPending(auctionItem?.id)
+    currentBids.set(bids)
   }
+}
+
+export async function fetchBidsWithPending(itemId: string) {
+  let bids = []
+  const result = await fetchBids(itemId)
+  if (result.data.length){
+    bids = result.data
+  }
+  const resultPending = await fetchPendingBids(itemId)
+  // Add pending to the start of the list only if its bid amount is greater than the biggest paid bid.
+  if (result.data.length && (!bids[0] || resultPending.data[0].bid_amount > bids[0].bid_amount)){
+    bids.unshift(resultPending.data[0])
+  }
+  return bids
 }
 
 export async function fetchBids(itemId: string) {
@@ -61,7 +73,7 @@ export async function fetchBids(itemId: string) {
       query: {
         item_id: itemId,
         status: {
-          $in: ['INVOICE_CREATED', 'PAYMENT_PROCESSING', 'PAYMENT_RECEIVED']
+          $in: ['PAYMENT_RECEIVED']
         },
         $limit: 20,
         $sort: {
@@ -70,6 +82,36 @@ export async function fetchBids(itemId: string) {
       }
     })
     console.log(`\n>>>feathers client response bids`, response)
+    return response
+  } catch(e: any){
+    console.log(`Error page load auction bids:`, e)
+    return {
+      isError: true,
+      message: e.message,
+      code: e.code
+    }
+  }
+}
+
+export async function fetchPendingBids(itemId: string) {
+  const now = Math.floor(Date.now() / 1000)
+  try {
+    const response = await feathersClient.service('auction-bids').find({
+      query: {
+        item_id: itemId,
+        status: {
+          $in: ['INVOICE_CREATED', 'PAYMENT_PROCESSING']
+        },
+        invoice_expiration: {
+          $gt: now
+        },
+        $limit: 1,
+        $sort: {
+          bid_amount: -1
+        }
+      }
+    })
+    console.log(`\n>>>feathers client response pendingBids`, response)
     return response
   } catch(e: any){
     console.log(`Error page load auction bids:`, e)
