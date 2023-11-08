@@ -59,7 +59,7 @@
     <img src="{qrcodeLogo}" slot="icon" alt="QR Code Icon" class="invert"/>
   </qr-code>
 
-  <div class="text-2xl font-bold my-2">Your paying {amount} sats</div>
+  <!-- <div class="text-2xl font-bold my-2">Your paying {amount} sats</div> -->
 
   <!-- Display the truncated address or invoice -->
   <span class="text-xs mb-1" on:click={copyAddressOrInvoice}>

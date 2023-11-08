@@ -6,8 +6,9 @@
   export let amountSats = 0
   export let showModal = false;
   export let paymentMethods = []
+  export let amount = 0
 
-  let selectedPaymentMethod = 'BTC'; // Default to BTC
+  let selectedPaymentMethod = 'BTC-LightningNetwork'; // Default to Lightning
 
   $: paymentLink = paymentByMethod(selectedPaymentMethod)?.paymentLink || ''
 
@@ -32,7 +33,8 @@
     <h3 class="font-bold antialiased md:text-lg text-white font-rocks">{auctionItem.title}</h3>
     <h2 class=" text-2xl md:text-4xl text-btcorange pt-4 font-anon whitespace-nowrap">Bid {Number(amountSats).toLocaleString()} sats!</h2>
     <p class="pb-2 font-bold font-anon">{dollarPriceFormatted} $</p>
-    <p class="pt-4 pb-4 font-bold font-incon text-white">Place 1% deposit to confirm bid.</p>
+    <p class="pt-4  font-bold font-incon text-white">Place 1% deposit to confirm bid.</p>
+    <p class="text-sm md:text-base font-bold pb-4 font-incon text-white">({amount} sats)</p>
 
   <div class="text-white font-incon subpixel-antialiased text-center">
     Pay with 

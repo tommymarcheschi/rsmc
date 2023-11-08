@@ -7,9 +7,9 @@
 	import { onMount } from "svelte";
 	import { currentAuctionItem, currentBids } from "../../../store/auction-store";
 	import { formatDate, formatSats } from "$lib/utils";
-
+  import BidModal from '$lib/components/BidInvoiceModal.svelte';
   export let data: any
-
+  let showModal = false;
   console.log(`data::`, data)
 
   $: bids = $currentBids?.length > 0 ? $currentBids : data?.bids || []
@@ -49,8 +49,8 @@
     
 
     <div class="flex flex-col items-center justify-center w-4/5 md:w-3/5 lg:w-3/5 mt-2">
-      <!-- <button on:click={() => showModal = true} class="btn btn-squareflex items-center bg-white"></button> -->
-      <!-- <BidModal bind:showModal />  -->
+       <button on:click={() => showModal = true} class="btn btn-squareflex items-center bg-white"></button>
+       <BidModal bind:showModal={showModal} /> 
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-7 md:mt-14 mb-10 z-20">
         <div id="auction" class="order-2 md:order-1">

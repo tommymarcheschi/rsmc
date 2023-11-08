@@ -122,6 +122,7 @@
     }
    }
 </script>
+
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 	<div class="m-2">
 		<h3 class="text-center text-xl text-btcorange"> Current bid:</h3>
