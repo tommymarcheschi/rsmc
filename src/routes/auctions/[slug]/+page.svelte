@@ -149,11 +149,11 @@
       </div>
 
       <div class="w-full">
-        <h2 class="text-white font-bahiana text-5xl text-center  mt-10 mb-4"> BIDDING HISTORY ({bids.length} total bids): </h2>
+        <h2 class="text-white font-bahiana text-5xl text-center mt-10 mb-4"> BIDDING HISTORY ({bids.length} total bids): </h2>
 
         {#each bids as bid}
-          <div class="bg-white rounded-none text-black font-anon flex-row flex justify-between my-2 p-2 px-4">
-            <p> {bid.nickname} </p>
+          <div class="bg-white rounded-none text-black font-anon flex flex-row justify-between my-2 p-2 px-4 text-left">
+            <p class="w-1/3"> {bid.nickname} </p>
             <p> {formatSats(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}</p>
             <p> {formatDate(bid.createdAt)} </p>
           </div>
