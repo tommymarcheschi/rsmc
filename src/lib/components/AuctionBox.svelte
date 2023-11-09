@@ -242,16 +242,18 @@
         </button>
       </div>
 
-      <button 
-        class="btn {isProcessing ? 'btn-disabled cursor-not-allowed' : ''} bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
-        on:click={onBidClick}
-      >
-        {#if isProcessing}
-          <span class="loading loading-dots loading-md"></span>
-        {:else}
-          Bid now
-        {/if}
-      </button>
+      {#if !showPinInput}
+        <button 
+          class="btn {isProcessing ? 'btn-disabled cursor-not-allowed' : ''} bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
+          on:click={onBidClick}
+        >
+          {#if isProcessing}
+            <span class="loading loading-dots loading-md"></span>
+          {:else}
+            Bid now
+          {/if}
+        </button>
+      {/if}
 
       {#if error}
         <div class="my-4 text-error">{error}</div>
@@ -273,8 +275,9 @@
 
     </div>
 
-    {#if showPinInput && !paymentMethods}
-      <div class="px-2 text-sm font-anon">Please check your email for PIN</div>
+    {#if showPinInput}
+      <div class="px-2 text-sm font-anon mt-2">Please check your email for PIN</div>
+      <div class="px-2 text-sm font-anon cursor-pointer text-btcorange" on:click={() => showPinInput = false}>(change email)</div>
       <div class="form-control p-2 flex-row w-full space-x-1 justify-end flex-wrap">
         <label class="label">
           <span class="label-text text-white font-anon text-xs md:text-sm whitespace-nowrap">Enter your PIN:</span>
@@ -282,7 +285,13 @@
         <div class="join join-horizontal rounded-none border-2 border-btcorange flex ">
           <input class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item "
             bind:value={pinValue} type="text" placeholder="PIN" />
-          <button on:click={letsCreateBid} class="btn bg-btcorange join-item rounded-none text-black font-anon"> > </button>
+          <button on:click={letsCreateBid} class="btn bg-btcorange join-item rounded-none text-black font-anon">
+            {#if isProcessing}
+              <span class="loading loading-dots loading-sm"></span>
+            {:else}
+              &gt; 
+            {/if}
+          </button>
         </div>
       </div>
     {/if}
