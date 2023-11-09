@@ -3,7 +3,7 @@
   import BidInvoiceModal from '$lib/components/BidInvoiceModal.svelte';
   import Reserve from '$lib/components/AuctionReserve.svelte';
 	import { formatSats, isEmail } from '$lib/utils';
-	import { bidStatus, createBid, loadBids, pinHash, pollBidStatus, verifyEmail } from '../../store/auction-store';
+	import { bidStatus, createBid, currentDisplayName, currentEmail, loadBids, pinHash, pollBidStatus, verifyEmail } from '../../store/auction-store';
   import { bitcoinPrice } from "../../store/bitcoin";
   import { isPublishActivated, isAuctionFinished } from '../../store/countdown';
   import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
@@ -22,9 +22,10 @@
 	let amountSats =  BID_STEP_1 // default to minBid
 	let showPinInput = false
 
-	let displayName = ''
-	let email = ''
+  let displayName = $currentDisplayName
+  let email = $currentEmail
   let pinValue = ''
+  let userVerified = !!$currentEmail
 
 	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
   let paymentMethods: any = null // fixturePaymentMethods.data
@@ -52,13 +53,16 @@
 
   function resetForm() {
     console.log(`[resetForm].`)
-    displayName = ''
-    email = ''
     amountSats = BID_STEP_1
     showPinInput = false
     pinValue = ''
     error = ''
     successMessage = ''
+    // displayName = ''
+    // email = ''
+    currentEmail.set(email)
+    currentDisplayName.set(displayName)
+    userVerified = true
 
     // Store:
     bidStatus.set('')
@@ -74,6 +78,12 @@
     paymentMethods = null
     error = ''
     successMessage = ''
+
+    if (userVerified) {
+      letsCreateBid()
+      return
+    }
+
     if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount) {
       // Send email for verification
       const result = await verifyEmail(email, displayName)
@@ -85,13 +95,15 @@
   }
 
   async function letsCreateBid() {
-    // Save pin
-    pinHash.update(obj => ({
-      ...obj,
-      pin: pinValue
-    }))
+    if (!userVerified) {
+      // Save pin
+      pinHash.update(obj => ({
+        ...obj,
+        pin: pinValue
+      }))
+    }
 
-    if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount && pinValue.length === 4) {
+    if (userVerified || displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount && pinValue.length === 4) {
       isProcessing = true
       const result = await createBid({ displayName, email, amountSats })
       console.log(`result`, result)
@@ -189,21 +201,23 @@
   {#if $isPublishActivated === true}
     <p class="text-center text-sm font-anon break-words px-2">new bids in the final minutes add 5min to the auction timer</p>
 
-    <div class="px-2 w-full">
-      <label class="label">
-        <span class="label-text text-white font-anon text-xs md:text-sm">display name:</span>
-      </label>
-      <input type="text" placeholder="Satoshi" class="input placeholder:font-anon bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full" 
-          bind:value={displayName} />
-    </div>
+    {#if !userVerified}
+      <div class="px-2 w-full">
+        <label class="label">
+          <span class="label-text text-white font-anon text-xs md:text-sm">display name:</span>
+        </label>
+        <input type="text" placeholder="Satoshi" class="input placeholder:font-anon bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full" 
+            bind:value={displayName} />
+      </div>
 
-    <div class="px-2 w-full">
-      <label class="label">
-        <span class="label-text text-white font-anon text-xs md:text-sm">email address:</span>
-      </label>
-      <input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
-          bind:value={email} />
-    </div>
+      <div class="px-2 w-full">
+        <label class="label">
+          <span class="label-text text-white font-anon text-xs md:text-sm">email address:</span>
+        </label>
+        <input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
+            bind:value={email} />
+      </div>
+    {/if}
     
     <div class="px-2 w-full">
       <label class="label">
@@ -223,7 +237,7 @@
             on:click={() => decreaseAmount()}>
             <div class="p-1 w-8 text-white bg-transparent"> {@html arrowDown} </div>
         </button>
-    </div>
+      </div>
 
       <button 
         class="btn {isProcessing ? 'btn-disabled cursor-not-allowed' : ''} bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"

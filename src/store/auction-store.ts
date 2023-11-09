@@ -9,6 +9,8 @@ export const pinHash = writable({
   pin: '',
   hash: ''
 })
+export const currentEmail = writable('')
+export const currentDisplayName = writable('')
 
 export async function createBid({ displayName, email, amountSats }: any) {
   const auctionItem = get(currentAuctionItem)
