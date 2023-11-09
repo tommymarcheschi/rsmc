@@ -167,7 +167,7 @@
     <div class="m-2">
       <h3 class="text-center text-xl text-btcorange"> Current bid:</h3>
       <p class="text-center text-lg font-anon text-white">{highestBid.nickname}</p>
-      <h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} SAT </h2>
+      <h2 class="text-center text-2xl font-anon text-white leading-10"> {formatSats(highestBid.bid_amount)} sats </h2>
       <p class="text-center text-lg font-anon">
         { dollarPrice ? `${dollarPriceFormatted}` : '0' } $
       </p>
