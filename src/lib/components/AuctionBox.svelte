@@ -177,11 +177,14 @@
   {#if $isAuctionFinished}
     <div class="m-2">
       <h3 class="text-center text-xl text-btcorange">
-        Auction has finished.
+        Winning Bid:
       </h3>
-      <div class="">Winner:</div>
-      <div class="">{highestBid.nickname}</div>
-      <div class="">{highestBidAmount.toLocaleString()} sats</div>
+
+      <div class="text-center text-lg font-anon text-white ">{highestBid.nickname}</div>
+      <div class="text-center text-2xl font-anon text-white leading-10">{highestBidAmount.toLocaleString()} sats</div>
+            <p class="text-center text-lg font-anon">
+        { dollarPrice ? `${dollarPriceFormatted}` : '0' } $
+      </p>
     </div>
 
   {:else}
