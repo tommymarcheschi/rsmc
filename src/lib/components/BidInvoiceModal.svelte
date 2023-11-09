@@ -1,6 +1,7 @@
 <script lang="ts">
   import BidQR from '$lib/components/BidInoivceQr.svelte';
   import { bitcoinPrice } from "../../store/bitcoin";
+  import { bidStatus } from '../../store/auction-store';
 
   export let auctionItem = {}
   export let amountSats = 0
@@ -10,8 +11,9 @@
   $: amount = Math.round(Number(amountSats) / 100)
 
   let selectedPaymentMethod = 'BTC-LightningNetwork'; // Default to Lightning
-  let paymentReceived = false; // connect to polling
-  let paymentProcessing = true; // Add this line
+  
+  $: paymentProcessing = $bidStatus === 'PAYMENT_PROCESSING'
+  $: paymentReceived = $bidStatus === 'PAYMENT_RECEIVED'
 
   $: paymentLink = paymentByMethod(selectedPaymentMethod)?.paymentLink || ''
 
