@@ -8,16 +8,17 @@
   let selectedImage = 1;
   let scrollAmount = 0;
   export let images = [
-    { id: 1, src: "/auction/end-fiat/main.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting' },
-    { id: 2, src: "/auction/IMG_MAIN2.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 2' },
-    { id: 3, src: "/auction/IMG_0616.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 3' },
-    { id: 4, src: "/auction/IMG_0617.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 4' },
-    { id: 5, src: "/auction/IMG_0618.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 5' },
-    { id: 6, src: "/auction/IMG_0619.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 6' },
-    { id: 7, src: "/auction/IMG_0620.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 7' },
-    { id: 8, src: "/auction/IMG_0621.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 8' },
 
-  ];
+    { id: 1, src: "/auction/end-fiat/END-FIAT-scan.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting' },
+    { id: 2, src: "/auction/end-fiat/main2.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 2' },
+    { id: 3, src: "/auction/end-fiat/IMG_0616.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 3' },
+    { id: 4, src: "/auction/end-fiat/IMG_0617.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 4' },
+    { id: 5, src: "/auction/end-fiat/IMG_0618.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 5' },
+    { id: 6, src: "/auction/end-fiat/IMG_0619.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 6' },
+    { id: 7, src: "/auction/end-fiat/IMG_0620.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 7' },
+    { id: 8, src: "/auction/end-fiat/IMG_0621.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 8' },
+
+    ];
 
 
   function scrollThumbnails(direction) {
