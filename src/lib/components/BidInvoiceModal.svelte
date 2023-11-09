@@ -6,7 +6,8 @@
   export let amountSats = 0
   export let showModal = false;
   export let paymentMethods = []
-  export let amount = 0
+
+  $: amount = Math.round(Number(amountSats) / 100)
 
   let selectedPaymentMethod = 'BTC-LightningNetwork'; // Default to Lightning
   let paymentReceived = false; // connect to polling
@@ -46,29 +47,33 @@
     <h2 class=" text-2xl md:text-4xl text-btcorange pt-4 font-anon whitespace-nowrap">Bid {Number(amountSats).toLocaleString()} sats!</h2>
     <p class="pb-2 font-bold font-anon">{dollarPriceFormatted} $</p>
     <p class="pt-4  font-bold font-incon text-white">Place 1% deposit to confirm bid.</p>
-    <p class="text-sm md:text-base font-bold pb-4 font-incon text-white">({amount} sats)</p>
+    <p class="text-sm md:text-base font-bold pb-4 font-incon text-white">
+      ({amount.toLocaleString()} sats)
+    </p>
 
   <div class="text-white font-incon subpixel-antialiased text-center">
     {#if !paymentReceived && !paymentProcessing}
-    Pay with 
-    <button class="link {selectedPaymentMethod === 'BTC' ? 'no-underline font-bold' : ''}" 
-    on:click={() => selectedPaymentMethod = 'BTC'}>Bitcoin</button>
-    /
-    <button class="link {selectedPaymentMethod === 'BTC-LightningNetwork' ? 'no-underline font-bold' : ''}" on:click={() => selectedPaymentMethod = 'BTC-LightningNetwork'}>Lightning</button>:
+      Pay with 
+      <button class="link {selectedPaymentMethod === 'BTC' ? 'no-underline font-bold' : ''}" 
+      on:click={() => selectedPaymentMethod = 'BTC'}>Bitcoin</button>
+      /
+      <button class="link {selectedPaymentMethod === 'BTC-LightningNetwork' ? 'no-underline font-bold' : ''}" on:click={() => selectedPaymentMethod = 'BTC-LightningNetwork'}>Lightning</button>:
     {/if}
+
     {#if paymentProcessing}
-      <p class="text-center font-rocks text-3xl md:text-6xl mt-5 md:mt-10 ">processing<span class="loading loading-dots loading-sm md:loading-md align-bottom"></span>
-</p>
-<p class="md:text-sm text-xs text-center font-incon mb-5 md:mb-10 "> (waiting for confirmation) </p>
+      <p class="text-center font-rocks text-3xl md:text-6xl mt-5 md:mt-10 ">
+        processing<span class="loading loading-dots loading-sm md:loading-md align-bottom"></span>
+      </p>
+      <p class="md:text-sm text-xs text-center font-incon mb-5 md:mb-10 "> (waiting for confirmation) </p>
     {:else if paymentReceived}
-    <p class="text-center font-rocks text-3xl md:text-6xl my-5 md:my-10 underline">Payment Received!</p>
+
+      <p class="text-center font-rocks text-3xl md:text-6xl my-5 md:my-10 underline">Payment Received!</p>
+
     {:else}
-    <BidQR  
-      amount={Math.round(Number(amountSats) / 100)} 
-      {paymentLink} /> 
-      {/if}
 
+      <BidQR {paymentLink} /> 
 
+    {/if}
 
     <div class="font-incon text-white pt-4 pb-1 text-sm md:text-base">
       By placing a bid you agree to our <a href="/tos" class="link hover:no-underline">terms</a>.
