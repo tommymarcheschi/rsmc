@@ -2,7 +2,7 @@
   import Countdown from '$lib/components/Countdown.svelte';
   import BidInvoiceModal from '$lib/components/BidInvoiceModal.svelte';
 	import { formatSats, isEmail } from '$lib/utils';
-	import { createBid, pinHash, verifyEmail } from '../../store/auction-store';
+	import { createBid, pinHash, pollBidStatus, verifyEmail } from '../../store/auction-store';
   import { bitcoinPrice } from "../../store/bitcoin";
   import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
   import arrowDown from '$lib/images/RSMC-downArrow.svg?raw';
@@ -26,6 +26,7 @@
 
 	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
   let paymentMethods: any = null // fixturePaymentMethods.data
+  let bidId: string = ''
 	let showModal = false
 
 	let isProcessing = false
@@ -82,7 +83,9 @@
         // successMessage = 'BID has been created!'
         // invoice = result?.payment_link
         paymentMethods = result?.payment_methods.data
+        bidId = result.id
         showModal = true
+        pollBidStatus(bidId)
       }
       isProcessing = false
     } else {
