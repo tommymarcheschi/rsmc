@@ -9,7 +9,8 @@
   export let amount = 0
 
   let selectedPaymentMethod = 'BTC-LightningNetwork'; // Default to Lightning
-  let paymentReceived = true; // connect to polling
+  let paymentReceived = false; // connect to polling
+  let paymentProcessing = true; // Add this line
 
   $: paymentLink = paymentByMethod(selectedPaymentMethod)?.paymentLink || ''
 
@@ -27,9 +28,14 @@
     return paymentMethods?.find(m => m.paymentMethod === value)
   }
 
-    // Add a function to simulate a successful payment
+  // Add a function to simulate a successful payment
   function simulatePayment() {
-    paymentReceived = true;
+    paymentProcessing = true;
+    // Simulate delay for payment processing
+    setTimeout(() => {
+      paymentProcessing = false;
+      paymentReceived = true;
+    }, 3000);
   }
 </script>
 
@@ -43,14 +49,18 @@
     <p class="text-sm md:text-base font-bold pb-4 font-incon text-white">({amount} sats)</p>
 
   <div class="text-white font-incon subpixel-antialiased text-center">
-    {#if !paymentReceived}
+    {#if !paymentReceived && !paymentProcessing}
     Pay with 
     <button class="link {selectedPaymentMethod === 'BTC' ? 'no-underline font-bold' : ''}" 
     on:click={() => selectedPaymentMethod = 'BTC'}>Bitcoin</button>
     /
     <button class="link {selectedPaymentMethod === 'BTC-LightningNetwork' ? 'no-underline font-bold' : ''}" on:click={() => selectedPaymentMethod = 'BTC-LightningNetwork'}>Lightning</button>:
     {/if}
-    {#if paymentReceived}
+    {#if paymentProcessing}
+      <p class="text-center font-rocks text-3xl md:text-6xl mt-5 md:mt-10 ">processing<span class="loading loading-dots loading-sm md:loading-md align-bottom"></span>
+</p>
+<p class="md:text-sm text-xs text-center font-incon mb-5 md:mb-10 "> (waiting for confirmation) </p>
+    {:else if paymentReceived}
     <p class="text-center font-rocks text-3xl md:text-6xl my-5 md:my-10 underline">Payment Received!</p>
     {:else}
     <BidQR  
