@@ -2,6 +2,9 @@
   import BidQR from '$lib/components/BidInoivceQr.svelte';
   import { bitcoinPrice } from "../../store/bitcoin";
   import { bidStatus } from '../../store/auction-store';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
   export let auctionItem = {}
   export let amountSats = 0
@@ -26,6 +29,7 @@
 
   function close() {
     showModal = false;
+    dispatch('close')
   }
   function paymentByMethod(value: string) {
     return paymentMethods?.find(m => m.paymentMethod === value)
