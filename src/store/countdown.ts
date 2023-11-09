@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store'
 // import { TARGET_DATE } from '$lib/config'
 
-const startDate = "November 7, 2023 17:20:00 EST"
-const endDate = "November 8, 2023 17:20:00 EST"
+const startDate = "November 9, 2023 17:20:00 EST"
+const endDate = "November 11, 2023 17:20:00 EST"
 
 // !TESTING VALUES:
 // const startDate = "November 9, 2023 13:20:00 EST"
