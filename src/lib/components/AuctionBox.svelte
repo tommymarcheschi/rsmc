@@ -76,7 +76,7 @@
     successMessage = ''
     if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount) {
       // Send email for verification
-      const result = await verifyEmail(email)
+      const result = await verifyEmail(email, displayName)
       if (result === true) {
         // Show PIN input
         showPinInput = true

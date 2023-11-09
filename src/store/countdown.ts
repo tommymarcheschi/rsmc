@@ -30,19 +30,16 @@ function checkTime() {
   console.log(`[checkTime]`)
   const now = Date.now()
   if (now < startTimestamp) {
-    console.log(`- 1`)
     isPublishActivated.set(false)
     isAuctionFinished.set(false)
     targetDate.set(startDate)
 
   } else if (now < endTimestamp) {
-    console.log(`- 2`)
     isPublishActivated.set(true)
     isAuctionFinished.set(false)
     targetDate.set(endDate)
 
   } else if (now > endTimestamp) {
-    console.log(`- 3`)
     isPublishActivated.set(false)
     isAuctionFinished.set(true)
     targetDate.set('')

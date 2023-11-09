@@ -124,10 +124,11 @@ export async function fetchPendingBids(itemId: string) {
   }
 }
 
-export async function verifyEmail(email: string) {
+export async function verifyEmail(email: string, displayName: string) {
   try {
     const response = await feathersClient.service('email-verify').create({
-      email
+      email,
+      displayName,
     })
     console.log(`\n>>>feathers client response email-verify`, response)
     if (response.hash) {
