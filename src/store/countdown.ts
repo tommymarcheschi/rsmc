@@ -4,6 +4,7 @@ import { writable } from 'svelte/store'
 const startDate = "November 9, 2023 17:20:00 EST"
 const endDate = "November 11, 2023 17:20:00 EST"
 
+// !TESTING VALUES:
 // const startDate = "November 9, 2023 13:20:00 EST"
 // const endDate = "November 9, 2023 13:25:00 EST"
 

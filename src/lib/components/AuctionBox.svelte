@@ -48,6 +48,8 @@
     amountSats = minAvailAmount
   }
 
+  $: isMet = auctionItem.minPrice < highestBidAmount
+
   function resetForm() {
     console.log(`[resetForm].`)
     displayName = ''
@@ -148,7 +150,7 @@
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
 
   {#if $isPublishActivated === true}
-    <Reserve />
+    <Reserve {isMet} />
 
     <div class="m-2">
       <h3 class="text-center text-xl text-btcorange"> Current bid:</h3>
@@ -224,13 +226,13 @@
     </div>
 
       <button 
-        class="btn _btn-disabled cursor-not-allowed bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
+        class="btn {isProcessing ? 'btn-disabled cursor-not-allowed' : ''} bg-btcorange border-1 border-btcorange rounded-none text-white w-full my-2"
         on:click={onBidClick}
       >
         {#if isProcessing}
           <span class="loading loading-dots loading-md"></span>
         {:else}
-          Bid soon!
+          Bid now
         {/if}
       </button>
 
