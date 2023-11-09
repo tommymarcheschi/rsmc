@@ -3,7 +3,7 @@
   import * as qr from '@bitjson/qr-code';
   import qrcodeLogo from '$lib/images/RSMC-secondarylogo.svg';
 
-  export let amount = 0
+  // export let amount = 0
   export let paymentLink = ''
 
   // Remove protocol and query params:

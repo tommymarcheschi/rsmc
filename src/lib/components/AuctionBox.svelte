@@ -2,7 +2,7 @@
   import Countdown from '$lib/components/Countdown.svelte';
   import BidInvoiceModal from '$lib/components/BidInvoiceModal.svelte';
 	import { formatSats, isEmail } from '$lib/utils';
-	import { createBid, pinHash, verifyEmail } from '../../store/auction-store';
+	import { bidStatus, createBid, loadBids, pinHash, pollBidStatus, verifyEmail } from '../../store/auction-store';
   import { bitcoinPrice } from "../../store/bitcoin";
   import arrowUp from '$lib/images/RSMC-upArrow.svg?raw';
   import arrowDown from '$lib/images/RSMC-downArrow.svg?raw';
@@ -26,6 +26,7 @@
 
 	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
   let paymentMethods: any = null // fixturePaymentMethods.data
+  let bidId: string = ''
 	let showModal = false
 
 	let isProcessing = false
@@ -45,8 +46,25 @@
     amountSats = minAvailAmount
   }
 
+  function resetForm() {
+    console.log(`[resetForm].`)
+    displayName = ''
+    email = ''
+    amountSats = BID_STEP_1
+    showPinInput = false
+    pinValue = ''
+    error = ''
+    successMessage = ''
+
+    // Store:
+    bidStatus.set('')
+    loadBids()
+  }
+
   async function onBidClick() {
-    // showModal = !showModal
+    // console.log(`onBidClick...`)
+    // paymentMethods = fixturePaymentMethods.data
+    // showModal = true
     // return ''
 
     paymentMethods = null
@@ -82,7 +100,9 @@
         // successMessage = 'BID has been created!'
         // invoice = result?.payment_link
         paymentMethods = result?.payment_methods.data
+        bidId = result.id
         showModal = true
+        pollBidStatus(bidId)
       }
       isProcessing = false
     } else {
@@ -107,7 +127,7 @@
     }
    }
 
-   function decreaseAmount() {
+  function decreaseAmount() {
     const amount = Number(amountSats)
     if (amount <= BID_STEP_1) {
       return
@@ -120,7 +140,7 @@
     } else {
       amountSats = amount - BID_STEP_3;
     }
-   }
+  }
 </script>
 
 <div class="rounded-none bg-black flex flex-col mt-6 w-full">
@@ -198,7 +218,9 @@
 		{/if} -->
 
     {#if paymentMethods?.length}
-      <BidInvoiceModal bind:showModal {auctionItem} {amountSats} {paymentMethods} /> 
+      <BidInvoiceModal
+        bind:showModal on:close={resetForm}
+        {auctionItem} {amountSats} {paymentMethods} />
     {/if}
 
 	</div>

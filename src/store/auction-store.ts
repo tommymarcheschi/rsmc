@@ -3,6 +3,7 @@ import { feathersClient } from "./feathersClient";
 
 export const currentAuctionItem = writable(null)
 export const currentBids = writable([])
+export const bidStatus = writable('')
 
 export const pinHash = writable({
   pin: '',
@@ -144,4 +145,43 @@ export async function verifyEmail(email: string) {
       code: e.code
     }
   }
+}
+
+export function pollBidStatus(bidId: string) {
+  // Give user 5 minutes
+  const numberOfMinutes = 10
+  const interval = 5000
+  const times = numberOfMinutes * 12
+  const service = 'auction-bids'
+  const onSuccess = (status: string) => bidStatus.set(status)
+
+  pollForStatus(bidId, ['PAYMENT_PROCESSING', 'PAYMENT_RECEIVED'], { interval, times, service, onSuccess })
+}
+
+type PollOptions = {
+  interval: number
+  times: number
+  service: string
+  onSuccess: (status: string) => void
+}
+
+function pollForStatus(id: string, statusesToWatch: string[], { interval, times, service, onSuccess }: PollOptions) {
+  // Check status for 'PAYMENT_RECEIVED'
+  setTimeout(async () => {
+    console.log(`- [pollForStatus,${service}] ${id}, ${times}...`)
+    if (id) {
+      const result = await feathersClient.service(service).get(id)
+      if (statusesToWatch.includes(result.status)) {
+
+        console.log(`- received status ${result.status}`)
+        onSuccess(result.status)
+
+        if (statusesToWatch.length > 1 && result.status === statusesToWatch[0]) {
+          pollForStatus(id, [statusesToWatch[1]], { interval, times: times - 1, service, onSuccess })
+        }
+      } else if (times > 0) {
+        pollForStatus(id, statusesToWatch, { interval, times: times - 1, service, onSuccess })
+      }
+    }
+  }, interval)
 }
