@@ -80,7 +80,7 @@ export async function fetchBids(itemId: string) {
         },
         $limit: 20,
         $sort: {
-          createdAt: -1
+          bid_amount: -1
         }
       }
     })
