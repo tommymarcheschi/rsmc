@@ -4,8 +4,8 @@
   import AuctionImageGrid from "$lib/components/AuctionImageGrid.svelte"
   import AuctionBox from "$lib/components/AuctionBox.svelte"
 	import Countdown from "$lib/components/Countdown.svelte";
-	import { onMount } from "svelte";
-	import { currentAuctionItem, currentBids } from "../../../store/auction-store";
+	import { onDestroy, onMount } from "svelte";
+	import { currentAuctionItem, currentBids, loadBids } from "../../../store/auction-store";
 	import { formatDate, formatSats } from "$lib/utils";
   import BidModal from '$lib/components/BidInvoiceModal.svelte';
   import socialx from "$lib/images/RSMC-X.svg"
@@ -32,8 +32,13 @@
     { id: 7, src: `/auction/${slug}/detail5.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
   ]
 
+  let interval: number | undefined
   onMount(() => {
     currentAuctionItem.set(data.auctionItem)
+    interval = setInterval(loadBids, 30000)
+  })
+  onDestroy(() => {
+    clearInterval(interval)
   })
 
   function formatDesc(txt: string) {
