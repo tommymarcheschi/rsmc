@@ -88,4 +88,8 @@
   .modal-backdrop {
     backdrop-filter: saturate(0) blur(8px);
   }
+
+  .loading {
+    border-radius: 0px;
+  }
 </style>
