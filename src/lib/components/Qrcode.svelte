@@ -40,6 +40,6 @@
   moduleColor="#000000" 
   positionRingColor="#ffffff" 
   positionCenterColor="#ffffff" 
-  style="width: 200px; height: 200px; margin: 2em auto; background-color: #ffffff; filter: invert(2);"> 
+  style="border: 8px; border-color: #fff; width: 200px; height: 200px; margin: 2em auto; background-color: #ffffff; filter: invert(2);"> 
   <img src="{qrcodeLogo}" slot="icon" alt="QR Code Icon" class="invert"/>
 </qr-code>
