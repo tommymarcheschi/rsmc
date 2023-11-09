@@ -9,7 +9,7 @@
   let scrollAmount = 0;
   export let images = [
 
-    { id: 1, src: "/auction/end-fiat/END-FIAT-scan.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting' },
+    { id: 1, src: "/auction/end-fiat/main.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting' },
     { id: 2, src: "/auction/end-fiat/main2.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 2' },
     { id: 3, src: "/auction/end-fiat/IMG_0616.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 3' },
     { id: 4, src: "/auction/end-fiat/IMG_0617.jpeg", alt: 'Tommy Marcheschi: END FIAT! painting 4' },

@@ -24,12 +24,13 @@
   $: meta = auctionItem?.meta
   $: images = [
     { id: 1, src: `/auction/${slug}/main.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 2, src: `/auction/${slug}/main2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 3, src: `/auction/${slug}/detail.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 4, src: `/auction/${slug}/detail2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 5, src: `/auction/${slug}/detail3.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 6, src: `/auction/${slug}/detail4.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
-    { id: 7, src: `/auction/${slug}/detail5.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 2, src: `/auction/${slug}/END-FIAT-scan.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 3, src: `/auction/${slug}/main2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 4, src: `/auction/${slug}/detail.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 5, src: `/auction/${slug}/detail2.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 6, src: `/auction/${slug}/detail3.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 7, src: `/auction/${slug}/detail4.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
+    { id: 8, src: `/auction/${slug}/detail5.jpeg`, alt: `${meta.artist}: ${auctionItem.title}` },
   ]
 
   let interval: number | undefined
@@ -142,6 +143,7 @@
           </p>
 
           <AuctionBox {bids} {auctionItem} />
+
         </div>
 
         <div class="order-1 md:order-2">
