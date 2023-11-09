@@ -12,7 +12,10 @@
 
     {#if $isAuctionFinished}
       <h1 class="text-5xl text-white font-bold font-rocks mb-4 tracking-wide">Auction ended!</h1>
-      <p class="text-sm md:text-base text-white font-anon ">END FIAT! by Tommy Marcheschi</p>
+      <p class="text-sm md:text-base text-white font-anon mb-4 ">END FIAT! by Tommy Marcheschi</p>
+      <a href="/auctions/end-fiat" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
+        View Auction
+      </a>
 
     {:else if $isPublishActivated}
 
@@ -20,19 +23,23 @@
       <span class="loading loading-ring loading-sm md:loading-lg bg-btcorange">  
       </span>
     </div>
-    
+
       <h1 class="text-5xl text-white font-bold font-rocks mb-4 tracking-wide">Auction Live</h1>
       <p class="text-sm md:text-base text-white font-anon ">END FIAT! by Tommy Marcheschi</p>
 
-      <a href="/auctions/end-fiat" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
-        Bid Now
-      </a>
+
       {#if $targetDate !== ''}
         <p class="text-sm md:text-base text-white font-anon"><CountDown /></p>
+        <a href="/auctions/end-fiat" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
+        Bid Now
+      </a>
       {/if}
     {:else}
       <h1 class="text-5xl text-white font-bold font-rocks mb-4 tracking-wide">Auction starting soon</h1>
-      <p class="text-sm md:text-base text-white font-anon ">END FIAT! by Tommy Marcheschi</p>
+      <p class="text-sm md:text-base text-white font-anon mb-4 ">END FIAT! by Tommy Marcheschi</p>
+        <a href="/auctions/end-fiat" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
+        View Auction
+      </a>
 
       {#if $targetDate !== ''}
         <p class="text-sm md:text-base text-white font-anon"><CountDown /></p>
