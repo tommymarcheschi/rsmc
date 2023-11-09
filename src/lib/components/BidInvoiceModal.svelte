@@ -31,6 +31,7 @@
     showModal = false;
     dispatch('close')
   }
+  
   function paymentByMethod(value: string) {
     return paymentMethods?.find(m => m.paymentMethod === value)
   }
