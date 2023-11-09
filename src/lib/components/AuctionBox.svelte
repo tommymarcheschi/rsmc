@@ -85,12 +85,14 @@
     }
 
     if (displayName?.length > 2 && isEmail(email) && Number(amountSats) >= minAvailAmount) {
+      isProcessing = true
       // Send email for verification
       const result = await verifyEmail(email, displayName)
       if (result === true) {
         // Show PIN input
         showPinInput = true
       }
+      isProcessing = false
     }
   }
 
@@ -156,6 +158,11 @@
     } else {
       amountSats = amount - BID_STEP_3;
     }
+  }
+
+  function changeEmail(){
+    error = ''
+    showPinInput = false
   }
 </script>
 
@@ -255,10 +262,6 @@
         </button>
       {/if}
 
-      {#if error}
-        <div class="my-4 text-error">{error}</div>
-      {/if}
-
       {#if successMessage}
         <div class="my-4 text-success">{successMessage}</div>
       {/if}
@@ -277,7 +280,7 @@
 
     {#if showPinInput}
       <div class="px-2 text-sm font-anon mt-2">Please check your email for PIN</div>
-      <div class="px-2 text-sm font-anon cursor-pointer text-btcorange" on:click={() => showPinInput = false}>(change email)</div>
+      <div class="px-2 text-sm font-anon cursor-pointer text-btcorange" on:click={changeEmail}>(change email)</div>
       <div class="form-control p-2 flex-row w-full space-x-1 justify-end flex-wrap">
         <label class="label">
           <span class="label-text text-white font-anon text-xs md:text-sm whitespace-nowrap">Enter your PIN:</span>
@@ -285,7 +288,7 @@
         <div class="join join-horizontal rounded-none border-2 border-btcorange flex ">
           <input class="input bg-black text-white font-anon focus:caret-btcorange focus:border-1 focus:border-btcorange rounded-none input-md w-full join-item "
             bind:value={pinValue} type="text" placeholder="PIN" />
-          <button on:click={letsCreateBid} class="btn bg-btcorange join-item rounded-none text-black font-anon">
+          <button on:click={letsCreateBid} class="btn bg-btcorange join-item rounded-none text-black font-anon hover:text-white">
             {#if isProcessing}
               <span class="loading loading-dots loading-sm"></span>
             {:else}
@@ -294,6 +297,10 @@
           </button>
         </div>
       </div>
+    {/if}
+
+    {#if error}
+      <div class="text-error text-center">{error}</div>
     {/if}
 
     <p class="text-center text-sm font-anon break-words px-2 mt-4">*by submitting a bid you agree to our <a href="/tos" class="link text-btcorange font-anon text-xs md:text-sm hover:no-underline">terms</a>.</p>
