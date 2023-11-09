@@ -1,5 +1,6 @@
 <script>
-import CountDown from "$lib/components/Countdown.svelte"
+  import CountDown from "$lib/components/Countdown.svelte"
+  import { isAuctionFinished, isPublishActivated, targetDate } from "../../store/countdown";
 
 </script>
 
@@ -11,10 +12,24 @@ import CountDown from "$lib/components/Countdown.svelte"
 
     <h1 class=" text-5xl text-white font-bold font-rocks mb-4 tracking-wide">Auction Delayed</h1>
     <p class="text-sm md:text-base text-white font-anon ">END FIAT! by Tommy Marcheschi</p>
-    <p class="text-sm md:text-base text-white font-anon "><CountDown /></p>
-    <a href="/auctions/end-fiat" class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
-      Bid Now
-    </a>
+
+
+    {#if $isAuctionFinished}
+      <p>Auction has finished</p>
+
+    {:else}
+      {#if $targetDate !== ''}
+        <p class="text-sm md:text-base text-white font-anon "><CountDown /></p>
+      {/if}
+
+      {#if $isPublishActivated}
+        <a href="/auctions/end-fiat" 
+          class="btn hover:bg-btcorange bg-white text-black font-anon text-lg md:text-2xl rounded-none mb-4 uppercase py-2 px-4 transition duration-300 ease-in-out cursor-pointer">
+          Bid Now
+        </a>
+      {/if}
+    {/if}
+
   </div>
 </a>
 

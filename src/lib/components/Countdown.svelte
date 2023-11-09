@@ -1,15 +1,20 @@
-<script>
-  import { onMount } from 'svelte';
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+	import { targetDate } from '../../store/countdown';
   // import { TARGET_DATE } from '../config'
-  import { isPublishActivated } from '../../store/countdown'
+  // import { isPublishActivated } from '../../store/countdown'
 
-  let targetDate = new Date("November 9, 2023 17:20:00 EST");
+  $: date = $targetDate
+
+  $: targetDateTime = new Date(date).getTime();
+
   let days, hours, minutes, seconds;
 
+  let interval: integer | undefined
   onMount(() => {
-     const interval = setInterval(() => {
+    interval = setInterval(() => {
        const now = new Date().getTime();
-       const distance = targetDate - now;
+       const distance = targetDateTime - now;
 
        days = Math.floor(distance / (1000 * 60 * 60 * 24));
        hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -23,14 +28,21 @@
          minutes = 0;
          seconds = 0;
 
-         isPublishActivated.set(true)
+        //  if (onFinish) {
+        //   onFinish()
+        //  } else {
+        //     isPublishActivated.set(true)
+        //  }
        }
-     }, 1000);
+    }, 1000);
     
-     return () => {
-       clearInterval(interval);
-     };
-   });
+    return () => {
+      clearInterval(interval);
+    };
+  });
+  onDestroy(() => {
+    clearInterval(interval);
+  })
 </script>
 
 <div class="flex flex-row justify-center mb-4 text-center text-white text-base md:text-2xl md:my-4 my-2 tracking-tighter">

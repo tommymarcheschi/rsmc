@@ -1,10 +1,53 @@
 import { writable } from 'svelte/store'
 // import { TARGET_DATE } from '$lib/config'
 
-export const isPublishActivated = writable(true)
+const startDate = "November 9, 2023 17:20:00 EST"
+const endDate = "November 11, 2023 17:20:00 EST"
 
-// const now = new Date().getTime();
-// const distance = TARGET_DATE - now;
-// if (distance < 0) {
-//   isPublishActivated.set(true)
-// }
+// const startDate = "November 9, 2023 13:20:00 EST"
+// const endDate = "November 9, 2023 13:25:00 EST"
+
+const startTimestamp = new Date(startDate).getTime()
+const endTimestamp = new Date(endDate).getTime()
+
+export const targetDate = writable('')
+
+export const isPublishActivated = writable(false)
+export const isAuctionFinished = writable(false)
+
+let interval: number | undefined
+function startTimer() {
+  const now = Date.now()
+  if (now < endTimestamp) {
+    interval = setInterval(checkTime, 1000)
+  } else {
+    checkTime()
+  }
+}
+
+function checkTime() {
+  console.log(`[checkTime]`)
+  const now = Date.now()
+  if (now < startTimestamp) {
+    console.log(`- 1`)
+    isPublishActivated.set(false)
+    isAuctionFinished.set(false)
+    targetDate.set(startDate)
+
+  } else if (now < endTimestamp) {
+    console.log(`- 2`)
+    isPublishActivated.set(true)
+    isAuctionFinished.set(false)
+    targetDate.set(endDate)
+
+  } else if (now > endTimestamp) {
+    console.log(`- 3`)
+    isPublishActivated.set(false)
+    isAuctionFinished.set(true)
+    targetDate.set('')
+    clearInterval(interval)
+  }
+}
+
+startTimer()
+
