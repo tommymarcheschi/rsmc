@@ -62,7 +62,9 @@
 <dialog open class="modal" >
   <div class="modal-box w-full md:max-w-xl px-5 py-2 md:px-10 md:py-4 border-2 border-black bg-black rounded-none items-center border-box font-incon flex flex-col z-[100] ">
     <h3 class="font-bold antialiased md:text-lg text-white font-rocks">{auctionItem.title}</h3>
+    <!-- 
       <button on:click={simulatePayment} class="test-button">Simulate Payment</button>
+    --> 
 
     {#if !paymentReceived}
       <h2 class=" text-2xl md:text-4xl text-btcorange pt-4 font-anon whitespace-nowrap">Bid {Number(amountSats).toLocaleString()} sats!</h2>
