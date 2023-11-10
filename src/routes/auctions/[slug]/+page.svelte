@@ -44,6 +44,22 @@
   function formatDesc(txt: string) {
     return txt.replaceAll('\n', '<br><br>')
   }
+
+  function formatSatsForMobile(sats) {
+    if (sats >= 100000000) {
+      return (sats / 100000000).toFixed(3) + ' btc';
+    } else if (sats >= 1000000) {
+      return (sats / 1000000).toFixed(1) + 'm';
+    } else if (sats >= 1000) {
+      return Math.round(sats / 1000) + 'k';
+    }
+    return sats + ' sats';
+  }
+
+  function formatDateForMobile(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString();
+  }
 </script>
 
 <div class="flex flex-col items-center justify-center">
@@ -59,6 +75,10 @@
     
 
     <div class="flex flex-col items-center justify-center w-4/5 md:w-3/5 lg:w-3/5 mt-2">
+    <!--
+      <button on:click={() => showModal = true} class="btn btn-squareflex items-center bg-white"></button>
+      <BidModal bind:showModal={showModal} /> 
+    -->
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-7 md:mt-14 mb-10 z-20">
         <div id="auction" class="order-2 md:order-1">
@@ -149,15 +169,19 @@
       </div>
 
       <div class="w-full">
-        <h2 class="text-white font-bahiana text-5xl text-center mt-10 mb-4"> BIDDING HISTORY ({bids.length} total bids): </h2>
+        <h2 class="text-white font-bahiana text-2xl md:text-5xl text-center mt-6 md:mt-10 mb-2 md:mb-4"> BIDDING HISTORY ({bids.length} total bids): </h2>
 
         {#each bids as bid}
-          <div class="bg-white rounded-none text-black font-anon flex flex-row justify-between my-2 p-2 px-4 text-left">
-            <p class="w-1/3"> {bid.nickname} </p>
-            <p> {formatSats(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}</p>
-            <p> {formatDate(bid.createdAt)} </p>
-          </div>
-        {/each}
+              <div class="bg-white rounded-none text-black text-xs md:text-sm lg:text-base font-anon flex flex-row justify-between my-2 p-2 px-4 text-left">
+                <p class="truncate w-1/3"> 
+                  {bid.nickname} 
+                </p>
+                <p class="hidden lg:block"> {formatSats(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}sats</p>
+                <p class="block lg:hidden"> {formatSatsForMobile(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}sats</p>
+                <p class="hidden md:block"> {formatDate(bid.createdAt)} </p>
+                <p class="block md:hidden"> {formatDateForMobile(bid.createdAt)} </p>
+              </div>
+              {/each}
 
       </div>
     </div>

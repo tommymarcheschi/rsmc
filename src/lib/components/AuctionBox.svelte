@@ -224,7 +224,7 @@
         <label class="label">
           <span class="label-text text-white font-anon text-xs md:text-sm">email address:</span>
         </label>
-        <input type="text" placeholder="satoshi@rsmc.com" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
+        <input type="text" placeholder="satoshi@rsmc.tech" class="input bg-white text-black font-anon focus:caret-btcorange focus:border-2 focus:border-btcorange rounded-none w-full"
             bind:value={email} />
       </div>
     {/if}
