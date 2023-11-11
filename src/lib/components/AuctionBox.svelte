@@ -186,9 +186,16 @@
 
   {#if $isAuctionFinished}
     <div class="m-2">
-      <h3 class="text-center text-xl text-btcorange">
-        Winning Bid:
-      </h3>
+      {#if isMet}
+        <h3 class="text-center text-xl text-btcorange">
+          Winning Bid:
+        </h3>
+      {:else}
+        <Reserve {isMet} />
+        <h3 class="text-center text-xl text-btcorange mt-4">
+          Highest Bid:
+        </h3>
+      {/if}
 
       <div class="text-center text-lg font-anon text-white ">{highestBid.nickname}</div>
       <div class="text-center text-2xl font-anon text-white leading-10">{highestBidAmount.toLocaleString()} sats</div>
