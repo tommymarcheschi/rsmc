@@ -29,6 +29,7 @@
 
 	// let invoice = 'bitcoin:bc1qrsmca2c8xxnl5f0ddsddeekcysn77069885cgm'
   let paymentMethods: any = null // fixturePaymentMethods.data
+  let depositAmount: number = 0
   let bidId: string = ''
 	let showModal = false
 
@@ -54,6 +55,7 @@
   function resetForm() {
     console.log(`[resetForm].`)
     amountSats = BID_STEP_1
+    depositAmount = 0
     showPinInput = false
     pinValue = ''
     error = ''
@@ -118,6 +120,7 @@
         // successMessage = 'BID has been created!'
         // invoice = result?.payment_link
         paymentMethods = result?.payment_methods.data
+        depositAmount = result?.deposit_amount
         bidId = result.id
         showModal = true
         pollBidStatus(bidId)
@@ -273,7 +276,7 @@
       {#if paymentMethods?.length}
         <BidInvoiceModal
           bind:showModal on:close={resetForm}
-          {auctionItem} {amountSats} {paymentMethods} />
+          {auctionItem} {amountSats} {paymentMethods} {depositAmount} />
       {/if}
 
     </div>

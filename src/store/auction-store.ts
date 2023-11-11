@@ -29,7 +29,6 @@ export async function createBid({ displayName, email, amountSats }: any) {
       email,
       nickname: displayName,
       bid_amount: Number(amountSats),
-      deposit_amount: Math.round(Number(amountSats) / 100),
       item_id: auctionItem?.id,
     }, {
       headers: {

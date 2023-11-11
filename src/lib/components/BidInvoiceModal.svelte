@@ -1,23 +1,21 @@
 <script lang="ts">
-  import BidQR from '$lib/components/BidInoivceQr.svelte';
-  import { bitcoinPrice } from "../../store/bitcoin";
-  import { bidStatus } from '../../store/auction-store';
-  import { createEventDispatcher } from 'svelte';
+  import BidQR from '$lib/components/BidInoivceQr.svelte'
+  import { bitcoinPrice } from "../../store/bitcoin"
+  import { bidStatus } from '../../store/auction-store'
+  import { createEventDispatcher } from 'svelte'
 
-  const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher()
 
-  export let auctionItem = {};
-  export let amountSats = 0;
-  export let showModal = false;
-  export let paymentMethods = [];
-
-  $: amount = Math.round(Number(amountSats) / 100);
+  export let auctionItem = {}
+  export let amountSats = 0
+  export let depositAmount = 0
+  export let showModal = false
+  export let paymentMethods = []
 
   let selectedPaymentMethod = 'BTC-LightningNetwork'; // Default to Lightning
   
   $: paymentProcessing = $bidStatus === 'PAYMENT_PROCESSING';
   $: paymentReceived = $bidStatus === 'PAYMENT_RECEIVED';
-
 
   $: paymentLink = paymentByMethod(selectedPaymentMethod)?.paymentLink || '';
 
@@ -71,7 +69,7 @@
       <p class="pb-2 font-bold font-anon">{dollarPriceFormatted} $</p>
       <p class="pt-4  font-bold font-incon text-white">Place 1% deposit to confirm bid.</p>
       <p class="text-sm md:text-base font-bold pb-4 font-incon text-white">
-        ({amount.toLocaleString()} sats)
+        ({depositAmount.toLocaleString()} sats)
       </p>
     {/if}
 

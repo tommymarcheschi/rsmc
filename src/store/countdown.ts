@@ -27,7 +27,6 @@ function startTimer() {
 }
 
 function checkTime() {
-  console.log(`[checkTime]`)
   const now = Date.now()
   if (now < startTimestamp) {
     isPublishActivated.set(false)
