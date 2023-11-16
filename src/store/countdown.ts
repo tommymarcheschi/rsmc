@@ -1,37 +1,25 @@
-import { get, writable, derived } from 'svelte/store'
-import { feathersClient } from './feathersClient'
+import { writable } from 'svelte/store'
 // import { TARGET_DATE } from '$lib/config'
 
 const startDate = "November 9, 2023 17:20:00 EST"
-// const endDate = "November 11, 2023 17:20:00 EST"
-
-export const endDate = writable('November 11, 2023 17:20:00 EST')
-const endTimestamp = derived(endDate, ($endDate) => new Date($endDate).getTime());
+const endDate = "November 11, 2023 17:20:00 EST"
 
 // !TESTING VALUES:
 // const startDate = "November 9, 2023 13:20:00 EST"
 // const endDate = "November 9, 2023 13:25:00 EST"
 
 const startTimestamp = new Date(startDate).getTime()
-// const endTimestamp = new Date(endDate).getTime()
+const endTimestamp = new Date(endDate).getTime()
 
 export const targetDate = writable('')
 
 export const isPublishActivated = writable(false)
 export const isAuctionFinished = writable(false)
 
-async function getEndDate() {
-  const auctionItem = await feathersClient.service('auction-items').get(1)
-  endDate.set(auctionItem.endDate)
-  console.log(`- new auctionItem.endDate: ${auctionItem.endDate}`)
-}
-getEndDate()
-setInterval(getEndDate, 10000)
-
 let interval: number | undefined
-async function startTimer() {
+function startTimer() {
   const now = Date.now()
-  if (now < get(endTimestamp)) {
+  if (now < endTimestamp) {
     interval = setInterval(checkTime, 1000)
   } else {
     checkTime()
@@ -39,18 +27,19 @@ async function startTimer() {
 }
 
 function checkTime() {
+  console.log(`[checkTime]`)
   const now = Date.now()
   if (now < startTimestamp) {
     isPublishActivated.set(false)
     isAuctionFinished.set(false)
     targetDate.set(startDate)
 
-  } else if (now < get(endTimestamp)) {
+  } else if (now < endTimestamp) {
     isPublishActivated.set(true)
     isAuctionFinished.set(false)
-    targetDate.set(get(endDate))
+    targetDate.set(endDate)
 
-  } else if (now > get(endTimestamp)) {
+  } else if (now > endTimestamp) {
     isPublishActivated.set(false)
     isAuctionFinished.set(true)
     targetDate.set('')

@@ -10,3 +10,7 @@ export function isEmail(email: string): boolean{
 export function formatDate(date: string) {
   return new Date(date).toLocaleString()
 }
+
+export function isMessageValid(message: string): boolean {
+  return message.length >= 20;
+}
