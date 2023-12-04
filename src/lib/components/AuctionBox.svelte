@@ -37,7 +37,7 @@
 	let error = ''
 	let successMessage = ''
 
-	$: highestBid = bids?.find(bid => bid.status === 'PAYMENT_RECEIVED') || {}
+	$: highestBid = bids?.find(bid => ['PAYMENT_RECEIVED', 'REFUND_SENT'].includes(bid.status)) || {}
   $: highestBidAmount = Number(highestBid.bid_amount) || 0
   $: MINIMUM_BID_STEP = highestBidAmount < BID_STEP_BORDER_1 
     ? BID_STEP_1 

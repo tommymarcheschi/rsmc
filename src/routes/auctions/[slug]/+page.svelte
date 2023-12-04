@@ -11,6 +11,7 @@
   import socialx from "$lib/images/RSMC-X.svg"
   import socialnostr from "$lib/images/RSMC-nostr.svg"
   import socialwebsite from "$lib/images/RSMC-website.svg"
+  import { isAuctionFinished } from "../../../store/countdown"
 
 
   export let data: any
@@ -60,13 +61,21 @@
     const date = new Date(dateString);
     return date.toLocaleTimeString();
   }
+
+  function isPending(status: string): boolean {
+    return !['PAYMENT_RECEIVED', 'REFUND_SENT'].includes(status)
+  }
 </script>
 
 <div class="flex flex-col items-center justify-center">
   {#if data}
     <div class="flex flex-col mt-32 text-left w-4/5"> 
       <h1 class="font-rocks text-white text-left uppercase text-6xl mb-2">
-        AUCTION Live!
+        {#if $isAuctionFinished}
+          Auction ended!
+        {:else}
+          AUCTION Live!
+        {/if}
       </h1>
       <span class="flex flex-col font-incon text-white text-sm mb-4">
         See rules and details below. This auction uses BITCOIN-ONLY and a deposit may be required to place bids.
@@ -176,8 +185,8 @@
                 <p class="truncate w-1/3"> 
                   {bid.nickname} 
                 </p>
-                <p class="hidden lg:block"> {formatSats(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}sats</p>
-                <p class="block lg:hidden"> {formatSatsForMobile(bid.bid_amount)} {bid.status !== 'PAYMENT_RECEIVED' ? '(PENDING)' : ''}sats</p>
+                <p class="hidden lg:block"> {formatSats(bid.bid_amount)} {isPending(bid.status) ? '(PENDING)' : ''}sats</p>
+                <p class="block lg:hidden"> {formatSatsForMobile(bid.bid_amount)} {isPending(bid.status) ? '(PENDING)' : ''}sats</p>
                 <p class="hidden md:block"> {formatDate(bid.createdAt)} </p>
                 <p class="block md:hidden"> {formatDateForMobile(bid.createdAt)} </p>
               </div>
