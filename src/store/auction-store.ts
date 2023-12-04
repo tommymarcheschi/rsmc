@@ -75,7 +75,8 @@ export async function fetchBids(itemId: string) {
       query: {
         item_id: itemId,
         status: {
-          $in: ['PAYMENT_RECEIVED']
+          // Note: when auction is finished then all bids got refunded and thus their status gets changed to 'REFUND_SENT'
+          $in: ['PAYMENT_RECEIVED', 'REFUND_SENT']
         },
         $limit: 20,
         $sort: {
