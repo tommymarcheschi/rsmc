@@ -101,21 +101,21 @@
 		Back to Browse
 	</a>
 
-	<div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-5 sm:gap-8 lg:grid-cols-3">
 		<!-- Card Image -->
 		<div class="flex items-start justify-center lg:col-span-1">
-			<div class="sticky top-8 w-full max-w-sm">
+			<div class="sticky top-8 mx-auto w-full max-w-[240px] sm:max-w-sm">
 				<img src={card.images.large} alt={card.name} class="w-full rounded-xl shadow-2xl shadow-vault-purple/10" />
 			</div>
 		</div>
 
 		<!-- Card Details -->
-		<div class="space-y-6 lg:col-span-2">
+		<div class="space-y-4 sm:space-y-6 lg:col-span-2">
 			<!-- Header -->
-			<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
-				<div class="flex items-start justify-between">
-					<div>
-						<h1 class="text-3xl font-bold text-white">{card.name}</h1>
+			<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h1 class="truncate text-2xl font-bold text-white sm:text-3xl">{card.name}</h1>
 						<p class="mt-1 text-vault-text-muted">
 							{card.set.name} · #{card.number}/{card.set.printedTotal} · {card.rarity ?? 'Unknown'}
 						</p>
@@ -165,7 +165,7 @@
 
 			<!-- Multi-Marketplace Pricing (PokeTrace) -->
 			{#if hasPokeTrace}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-semibold text-white">Multi-Marketplace Prices</h2>
 						<span class="rounded-full bg-vault-green/10 px-2.5 py-0.5 text-xs font-medium text-vault-green">
@@ -272,7 +272,7 @@
 
 			<!-- TCGPlayer Prices (fallback from card data) -->
 			{#if card.tcgplayer?.prices && !hasPokeTrace}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-semibold text-white">Market Prices</h2>
 						{#if card.tcgplayer.url}
@@ -312,14 +312,14 @@
 
 			<!-- Graded Prices -->
 			{#if hasGradedPrices}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<h2 class="text-lg font-semibold text-white">Graded Prices</h2>
 					<p class="mt-1 text-xs text-vault-text-muted">Recent sale prices by grade</p>
 					<div class="mt-4 space-y-4">
 						{#each Object.entries(gradedByService) as [service, prices]}
 							<div>
 								<p class="mb-2 text-sm font-medium text-vault-gold">{service}</p>
-								<div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
+								<div class="grid grid-cols-3 gap-1.5 sm:grid-cols-5 sm:gap-2 lg:grid-cols-10">
 									{#each prices as gp}
 										<div class="rounded-lg border border-vault-border bg-vault-bg p-2 text-center">
 											<p class="text-xs text-vault-text-muted">{gp.grade}</p>
@@ -337,14 +337,14 @@
 			{/if}
 
 			<!-- Price History Chart -->
-			<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 				<h2 class="text-lg font-semibold text-white">Price History</h2>
 				<PriceChart {priceHistory} height={280} />
 			</div>
 
 			<!-- Attacks -->
 			{#if card.attacks?.length}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<h2 class="text-lg font-semibold text-white">Attacks</h2>
 					<div class="mt-4 space-y-4">
 						{#each card.attacks as attack}
@@ -373,8 +373,8 @@
 
 			<!-- Weaknesses / Resistances / Retreat -->
 			{#if card.weaknesses?.length || card.resistances?.length || card.retreatCost?.length}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
-					<div class="grid grid-cols-3 gap-4 text-center">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="grid grid-cols-3 gap-2 text-center sm:gap-4">
 						<div>
 							<h3 class="text-sm font-medium text-vault-text-muted">Weakness</h3>
 							{#if card.weaknesses?.length}
@@ -407,7 +407,7 @@
 
 			<!-- PokéAPI Enrichment -->
 			{#if pokedexData}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<h2 class="text-lg font-semibold text-white">Pokédex Data</h2>
 					<div class="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
 						<div><span class="text-vault-text-muted">National Dex #</span><p class="font-medium text-white">#{pokedexData.id}</p></div>
@@ -426,7 +426,7 @@
 
 			<!-- Evolution Chain -->
 			{#if evolutions.length > 1}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<h2 class="text-lg font-semibold text-white">Evolution Chain</h2>
 					<div class="mt-4 flex flex-wrap items-center gap-3">
 						{#each evolutions as evo, i}

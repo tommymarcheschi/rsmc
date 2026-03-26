@@ -8,7 +8,7 @@
 
 <div class="space-y-8">
 	<div>
-		<h1 class="text-3xl font-bold text-gradient">Style Guide</h1>
+		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Style Guide</h1>
 		<p class="mt-1 text-vault-text-muted">PokéVault design system reference</p>
 	</div>
 

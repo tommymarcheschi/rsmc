@@ -18,12 +18,12 @@
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-3xl font-bold text-gradient">Market Insights</h1>
+		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Market Insights</h1>
 		<p class="mt-1 text-vault-text-muted">Analytics, trends, and arbitrage opportunities</p>
 	</div>
 
 	<!-- Portfolio Summary -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Portfolio Invested</p>
 			<p class="mt-1 text-2xl font-bold text-vault-gold">${portfolio.totalInvested.toFixed(2)}</p>
@@ -42,19 +42,19 @@
 	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 		<button
 			onclick={() => (insightTab = 'trending')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Trending Cards
 		</button>
 		<button
 			onclick={() => (insightTab = 'arbitrage')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'arbitrage' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'arbitrage' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			US vs EU Arbitrage
 		</button>
 		<button
 			onclick={() => (insightTab = 'movers')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'movers' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'movers' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Biggest Movers
 		</button>
@@ -66,7 +66,7 @@
 			{#if trending.length > 0}
 				<div class="divide-y divide-vault-border">
 					{#each trending as card, i}
-						<div class="flex items-center gap-4 px-6 py-4">
+						<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
 							<span class="w-6 text-center text-sm font-bold text-vault-text-muted">#{i + 1}</span>
 							{#if card.image_url}
 								<img src={card.image_url} alt={card.card_name} class="h-14 w-10 rounded-lg object-cover" />
@@ -106,7 +106,7 @@
 			{#if arbitrage.length > 0}
 				<div class="divide-y divide-vault-border">
 					{#each arbitrage as opp}
-						<div class="flex items-center gap-4 px-6 py-4">
+						<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
 							{#if opp.image_url}
 								<img src={opp.image_url} alt={opp.card_name} class="h-14 w-10 rounded-lg object-cover" />
 							{/if}
@@ -114,7 +114,7 @@
 								<p class="font-medium text-white">{opp.card_name}</p>
 								<p class="text-xs text-vault-text-muted">{opp.set_name}</p>
 							</div>
-							<div class="grid grid-cols-3 gap-4 text-right text-sm">
+							<div class="grid grid-cols-3 gap-2 text-right text-xs sm:gap-4 sm:text-sm">
 								<div>
 									<p class="text-vault-text-muted">TCGPlayer</p>
 									<p class="font-semibold text-white">${opp.us_price.toFixed(2)}</p>
@@ -154,7 +154,7 @@
 				{#if moversUp.length > 0}
 					<div class="divide-y divide-vault-border">
 						{#each moversUp as card}
-							<div class="flex items-center gap-4 px-6 py-3">
+							<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6">
 								<div class="min-w-0 flex-1">
 									<p class="text-sm font-medium text-white">{card.card_name}</p>
 									<p class="text-xs text-vault-text-muted">{card.set_name}</p>
@@ -179,7 +179,7 @@
 				{#if moversDown.length > 0}
 					<div class="divide-y divide-vault-border">
 						{#each moversDown as card}
-							<div class="flex items-center gap-4 px-6 py-3">
+							<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6">
 								<div class="min-w-0 flex-1">
 									<p class="text-sm font-medium text-white">{card.card_name}</p>
 									<p class="text-xs text-vault-text-muted">{card.set_name}</p>

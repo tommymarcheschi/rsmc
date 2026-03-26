@@ -163,7 +163,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-gradient">My Collection</h1>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">My Collection</h1>
 			<p class="mt-1 text-vault-text-muted">Track every card you own</p>
 		</div>
 		<button
@@ -175,7 +175,7 @@
 	</div>
 
 	<!-- Summary -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Cards</p>
 			<p class="mt-1 text-2xl font-bold text-white">{totalCards}</p>
@@ -196,7 +196,7 @@
 
 	<!-- Collection Table -->
 	<div class="rounded-2xl border border-vault-border bg-vault-surface">
-		<div class="border-b border-vault-border px-6 py-4">
+		<div class="border-b border-vault-border px-3 py-3 sm:px-6 sm:py-4">
 			<input
 				type="text"
 				bind:value={searchQuery}
@@ -209,7 +209,7 @@
 			<div class="divide-y divide-vault-border">
 				{#each filteredEntries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
-					<div class="flex items-center gap-4 px-6 py-4">
+					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
 						<!-- Card thumbnail -->
 						{#if card}
 							<a href="/card/{card.id}" class="flex-shrink-0">
@@ -256,14 +256,14 @@
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateQuantity(entry, -1)}
-								class="flex h-8 w-8 items-center justify-center rounded-lg border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
 							>
 								-
 							</button>
 							<span class="w-8 text-center text-sm font-bold text-white">{entry.quantity}</span>
 							<button
 								onclick={() => updateQuantity(entry, 1)}
-								class="flex h-8 w-8 items-center justify-center rounded-lg border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
 							>
 								+
 							</button>
@@ -305,7 +305,7 @@
 {#if showAddModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button aria-label="Close modal" class="fixed inset-0 bg-black/60" onclick={closeAddModal}></button>
-		<div class="relative w-full max-w-lg rounded-2xl border border-vault-border bg-vault-surface p-6 shadow-2xl">
+		<div class="relative w-full max-w-sm rounded-2xl border border-vault-border bg-vault-surface p-4 shadow-2xl sm:max-w-lg sm:p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-white">Add Card to Collection</h2>
 				<button onclick={closeAddModal} class="text-vault-text-muted hover:text-white" aria-label="Close">

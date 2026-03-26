@@ -167,13 +167,13 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-gradient">Grading Center</h1>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Grading Center</h1>
 			<p class="mt-1 text-vault-text-muted">Calculate ROI and track your grading submissions</p>
 		</div>
 	</div>
 
 	<!-- Stats -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Submissions</p>
 			<p class="mt-1 text-2xl font-bold text-white">{submissions.length}</p>
@@ -242,7 +242,7 @@
 					</div>
 				{/if}
 
-				<div class="grid grid-cols-3 gap-3">
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="roi-service">Service</label>
 						<select id="roi-service" bind:value={roiService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
@@ -281,7 +281,7 @@
 								{estimatedProfit >= 0 ? '+' : ''}${estimatedProfit.toFixed(2)}
 							</span>
 						</div>
-						<div class="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
+						<div class="mt-3 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
 							<div>
 								<p class="text-vault-text-muted">Raw Value</p>
 								<p class="mt-0.5 font-bold text-white">${rawValue.toFixed(2)}</p>
@@ -414,7 +414,7 @@
 {#if showSubmitModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button aria-label="Close modal" class="fixed inset-0 bg-black/60" onclick={closeSubmitModal}></button>
-		<div class="relative w-full max-w-md rounded-2xl border border-vault-border bg-vault-surface p-6 shadow-2xl">
+		<div class="relative w-full max-w-sm rounded-2xl border border-vault-border bg-vault-surface p-4 shadow-2xl sm:max-w-md sm:p-6">
 			<h2 class="text-lg font-semibold text-white">New Grading Submission</h2>
 			<div class="mt-4 space-y-4">
 				<div class="relative">

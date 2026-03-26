@@ -112,7 +112,7 @@
 			<div class="hidden lg:block"></div>
 
 			<!-- Search bar -->
-			<form onsubmit={handleGlobalSearch} class="mx-4 flex max-w-md flex-1">
+			<form onsubmit={handleGlobalSearch} class="mx-2 flex max-w-md flex-1 sm:mx-4">
 				<div class="relative w-full">
 					<input
 						type="text"
@@ -133,7 +133,7 @@
 		</header>
 
 		<!-- Page content -->
-		<main class="flex-1 overflow-y-auto p-4 lg:p-8">
+		<main class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
 			{@render children()}
 		</main>
 	</div>
@@ -143,7 +143,7 @@
 {#if mobileMenuOpen}
 	<div class="fixed inset-0 z-50 lg:hidden">
 		<button aria-label="Close menu" class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick={() => (mobileMenuOpen = false)}></button>
-		<div class="fixed inset-y-0 left-0 w-72 bg-vault-surface shadow-2xl">
+		<div class="fixed inset-y-0 left-0 w-64 max-w-[80vw] bg-vault-surface shadow-2xl">
 			<div class="flex h-16 items-center gap-3 border-b border-vault-border px-6">
 				<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-vault-accent to-vault-purple">
 					<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">

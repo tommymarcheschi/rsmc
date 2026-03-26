@@ -8,7 +8,7 @@
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-3xl font-bold text-gradient">Settings</h1>
+		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Settings</h1>
 		<p class="mt-1 text-vault-text-muted">Configure your PokéVault experience</p>
 	</div>
 

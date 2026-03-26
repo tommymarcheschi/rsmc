@@ -132,7 +132,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-gradient">Browse Cards</h1>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Browse Cards</h1>
 			<p class="mt-1 text-vault-text-muted">
 				{totalCount.toLocaleString()} cards found
 			</p>
@@ -148,7 +148,7 @@
 	</div>
 
 	<!-- Search + Filters -->
-	<div class="flex flex-wrap gap-3">
+	<div class="flex flex-wrap gap-2 sm:gap-3">
 		<form onsubmit={handleSearch} class="flex-1" style="min-width: 200px;">
 			<div class="relative">
 				<input
@@ -166,7 +166,7 @@
 		<select
 			bind:value={selectedSet}
 			onchange={handleFilterChange}
-			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
+			class="w-full rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
 		>
 			<option value="">All Sets</option>
 			{#each sets as s}
@@ -177,7 +177,7 @@
 		<select
 			bind:value={selectedType}
 			onchange={handleFilterChange}
-			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
+			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
 		>
 			<option value="">All Types</option>
 			<option value="Colorless">Colorless</option>
@@ -196,7 +196,7 @@
 		<select
 			bind:value={selectedRarity}
 			onchange={handleFilterChange}
-			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
+			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
 		>
 			<option value="">All Rarities</option>
 			<option value="Common">Common</option>
