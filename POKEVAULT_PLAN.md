@@ -33,6 +33,8 @@ Personal Pokémon TCG Collector Intelligence App
 | `/watchlist` | Watchlist (alert toggle, market prices, remove) | ✅ Full CRUD |
 | `/grading` | Grading center (ROI calculator, fee reference, submission tracker with status flow) | ✅ Full feature |
 | `/insights` | Market insights (trending, arbitrage, biggest movers — tabbed view) | ✅ Full feature |
+| `/analytics` | Analytics (value scanner, card comparison, comp analysis) | ✅ Full feature |
+| `/sets` | Set completion tracker (owned vs missing, cost to complete) | ✅ Full feature |
 | `/settings` | API connections, preferences, currency | ✅ Scaffolded |
 
 ## Supabase Schema (defined in `supabase/migrations/001_initial_schema.sql`)
@@ -52,6 +54,9 @@ price_cache (id, card_id, source, raw_price, graded_prices, cached_at)
 | `/api/collection` | GET, POST, PATCH, DELETE | Collection CRUD |
 | `/api/watchlist` | GET, POST, PATCH, DELETE | Watchlist CRUD |
 | `/api/grading` | GET, POST, PATCH, DELETE | Grading submissions CRUD |
+| `/api/ebay-sold` | GET | eBay sold listings scraper (with Supabase caching) |
+| `/api/tcgplayer-sales` | GET | TCGPlayer recent sales scraper (with caching) |
+| `/api/psa` | GET | PSA cert lookup + pop report scraper (with caching) |
 
 ## Reusable Components (in `src/lib/components/`)
 
@@ -60,6 +65,7 @@ price_cache (id, card_id, source, raw_price, graded_prices, cached_at)
 - `PriceChart` — Chart.js line chart for price history (green up / red down, dark theme)
 - `SetProgress` — Set completion progress bar
 - `GradeROICard` — Grading ROI summary card (grade vs sell raw)
+- `ComparisonChart` — Multi-dataset Chart.js overlay for comparing card price trends
 
 ## API Service Modules (in `src/lib/services/`)
 
@@ -67,6 +73,10 @@ price_cache (id, card_id, source, raw_price, graded_prices, cached_at)
 - `pokeapi.ts` — getPokemon, getEvolutionChain
 - `poketrace.ts` — getCardPrices, getArbitrageOpportunities, getTrendingCards, getBiggestMovers
 - `price-tracker.ts` — getGradedPrices, getPopulationReport, getGradingROI, getPriceHistory, getGradingFees
+- `analytics.ts` — Value scoring, comp analysis, trend detection, simulated price history
+- `ebay-scraper.ts` — searchEbaySold (scrapes eBay completed/sold listings)
+- `tcgplayer-scraper.ts` — scrapeTCGPlayerPrices, scrapeTCGPlayerSearch (scrapes TCGPlayer product pages)
+- `psa-scraper.ts` — searchPSAPop, lookupPSACert (scrapes PSA pop reports + cert verification)
 - `supabase.ts` — Supabase client instance
 
 ## Environment Variables Needed (see `.env.example`)
@@ -101,7 +111,13 @@ PRICE_TRACKER_API_KEY=your-api-key-here
 - [x] **Phase 4A** — Market trends: trending cards, biggest gainers/losers (tabbed view on insights page)
 - [ ] **Phase 4B** — Price alerts (Supabase realtime notifications when card hits target price)
 - [ ] **Phase 4C** — Sell optimizer (for each owned card: "sell raw", "grade then sell", or "hold")
-- [ ] **Phase 4D** — Set completion tracker (visual checklist per set: owned vs missing + cost to complete)
+- [x] **Phase 4D** — Set completion tracker (visual checklist per set: owned vs missing + cost to complete)
+
+### Phase 6 — Analytics & Scrapers
+- [x] **Phase 6A** — Analytics page: value scanner (undervalued card scoring), card comparison (multi-chart overlay with trend signals), comp analysis (all printings price comparison)
+- [x] **Phase 6B** — Portfolio valuation on dashboard (current market value, gain/loss %, top holdings)
+- [x] **Phase 6C** — Custom scrapers: eBay sold listings, TCGPlayer sales, PSA pop reports
+- [x] **Phase 6D** — Card detail integration: eBay sold comps section, PSA population data with grade distribution
 
 ### Phase 5 — UI Polish
 - [x] **Phase 5A** — Theme overhaul: warm Pokeball-inspired palette (red/purple/gold), gradient branding, SVG nav icons, card glow effects, style guide page

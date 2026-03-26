@@ -1,4 +1,5 @@
 import { supabase } from '$services/supabase';
+import { getCard } from '$services/tcg-api';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -19,14 +20,66 @@ export const load: PageServerLoad = async () => {
 		0
 	);
 
+	// Portfolio valuation — fetch current market prices for collection cards
+	let portfolioValue = 0;
+	let topHoldings: { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[] = [];
+
+	if (collection.length > 0) {
+		// Fetch prices for up to 20 unique cards (avoid hammering API)
+		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))].slice(0, 20);
+		const cardResults = await Promise.all(
+			uniqueCardIds.map((id) => getCard(id).catch(() => null))
+		);
+
+		const cardMap = new Map<string, { name: string; marketPrice: number; imageUrl: string }>();
+		for (const card of cardResults) {
+			if (!card) continue;
+			let marketPrice = 0;
+			if (card.tcgplayer?.prices) {
+				for (const variant of Object.values(card.tcgplayer.prices)) {
+					if (variant.market) { marketPrice = variant.market; break; }
+					if (variant.mid) { marketPrice = variant.mid; break; }
+				}
+			}
+			cardMap.set(card.id, { name: card.name, marketPrice, imageUrl: card.images.small });
+		}
+
+		for (const entry of collection) {
+			const card = cardMap.get(entry.card_id);
+			if (!card) continue;
+			const totalValue = card.marketPrice * entry.quantity;
+			portfolioValue += totalValue;
+			const costBasis = (entry.purchase_price ?? 0) * entry.quantity;
+			topHoldings.push({
+				card_id: entry.card_id,
+				name: card.name,
+				quantity: entry.quantity,
+				marketPrice: card.marketPrice,
+				totalValue,
+				imageUrl: card.imageUrl,
+				gainLoss: totalValue - costBasis
+			});
+		}
+
+		topHoldings.sort((a, b) => b.totalValue - a.totalValue);
+		topHoldings = topHoldings.slice(0, 5);
+	}
+
+	const gainLoss = portfolioValue - totalInvested;
+	const gainLossPct = totalInvested > 0 ? (gainLoss / totalInvested) * 100 : 0;
+
 	return {
 		stats: {
 			totalCards,
 			uniqueSets,
 			totalInvested,
+			portfolioValue,
+			gainLoss,
+			gainLossPct,
 			watchlistCount: watchlist.length,
 			gradingPending: grading.length
 		},
+		topHoldings,
 		recentCollection: collection.slice(0, 5)
 	};
 };

@@ -5,6 +5,8 @@
 	import type { PokeTracePrice } from '$services/poketrace';
 	import type { GradedPrice } from '$services/price-tracker';
 	import type { PriceHistory } from '$services/price-tracker';
+	import type { EbaySoldResult } from '$services/ebay-scraper';
+	import type { PSAPopData } from '$services/psa-scraper';
 
 	let { data } = $props();
 
@@ -14,6 +16,8 @@
 	let poketracePrice = $derived(data.poketracePrice as PokeTracePrice | null);
 	let gradedPrices = $derived(data.gradedPrices as GradedPrice[]);
 	let priceHistory = $derived(data.priceHistory as PriceHistory | null);
+	let ebaySold = $derived(data.ebaySold as EbaySoldResult);
+	let psaPop = $derived(data.psaPop as PSAPopData | null);
 
 	let addedToCollection = $state(false);
 	let addedToWatchlist = $state(false);
@@ -341,6 +345,91 @@
 				<h2 class="text-lg font-semibold text-white">Price History</h2>
 				<PriceChart {priceHistory} height={280} />
 			</div>
+
+			<!-- eBay Sold Comps -->
+			{#if ebaySold?.listings?.length > 0}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">eBay Sold Comps</h2>
+						<span class="text-xs text-vault-text-muted">{ebaySold.totalSold} recent sales</span>
+					</div>
+					<!-- Stats summary -->
+					<div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+						<div class="rounded-xl bg-vault-bg p-3 text-center">
+							<p class="text-[10px] text-vault-text-muted">Average</p>
+							<p class="text-sm font-bold text-vault-gold">${ebaySold.averagePrice.toFixed(2)}</p>
+						</div>
+						<div class="rounded-xl bg-vault-bg p-3 text-center">
+							<p class="text-[10px] text-vault-text-muted">Median</p>
+							<p class="text-sm font-bold text-white">${ebaySold.medianPrice.toFixed(2)}</p>
+						</div>
+						<div class="rounded-xl bg-vault-bg p-3 text-center">
+							<p class="text-[10px] text-vault-text-muted">Low</p>
+							<p class="text-sm font-bold text-vault-green">${ebaySold.lowPrice.toFixed(2)}</p>
+						</div>
+						<div class="rounded-xl bg-vault-bg p-3 text-center">
+							<p class="text-[10px] text-vault-text-muted">High</p>
+							<p class="text-sm font-bold text-vault-accent">${ebaySold.highPrice.toFixed(2)}</p>
+						</div>
+					</div>
+					<!-- Recent sales list -->
+					<div class="mt-3 max-h-64 divide-y divide-vault-border overflow-y-auto rounded-xl border border-vault-border">
+						{#each ebaySold.listings as listing}
+							<div class="flex items-center gap-3 px-3 py-2">
+								{#if listing.imageUrl}
+									<img src={listing.imageUrl} alt="" class="h-10 w-10 rounded object-cover" loading="lazy" />
+								{/if}
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-xs text-white">{listing.title}</p>
+									{#if listing.soldDate}
+										<p class="text-[10px] text-vault-text-muted">{listing.soldDate}</p>
+									{/if}
+								</div>
+								<div class="text-right">
+									<p class="text-sm font-bold text-vault-gold">${listing.soldPrice.toFixed(2)}</p>
+									{#if listing.shippingCost !== null}
+										<p class="text-[10px] text-vault-text-muted">
+											{listing.shippingCost === 0 ? 'Free ship' : `+$${listing.shippingCost.toFixed(2)}`}
+										</p>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- PSA Population Report -->
+			{#if psaPop}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">PSA Population</h2>
+						<span class="text-xs text-vault-text-muted">{psaPop.totalGraded} total graded</span>
+					</div>
+					<div class="mt-1 flex items-center gap-3 text-xs text-vault-text-muted">
+						<span>{psaPop.setName}</span>
+						<span>Gem Rate: <span class="font-medium text-vault-gold">{psaPop.gemRate.toFixed(1)}%</span></span>
+					</div>
+					<!-- Grade distribution -->
+					<div class="mt-4 grid grid-cols-5 gap-1.5 sm:grid-cols-10 sm:gap-2">
+						{#each Array.from({ length: 10 }, (_, i) => i + 1) as grade}
+							{@const count = psaPop.grades[String(grade)] ?? 0}
+							{@const pct = psaPop.totalGraded > 0 ? (count / psaPop.totalGraded) * 100 : 0}
+							<div class="rounded-lg border border-vault-border bg-vault-bg p-2 text-center {grade === 10 ? 'border-vault-gold/50' : ''}">
+								<p class="text-xs font-bold {grade === 10 ? 'text-vault-gold' : 'text-vault-text-muted'}">PSA {grade}</p>
+								<p class="mt-1 text-sm font-bold text-white">{count}</p>
+								<div class="mx-auto mt-1 h-1 w-full overflow-hidden rounded-full bg-vault-surface">
+									<div
+										class="h-full rounded-full {grade >= 9 ? 'bg-vault-gold' : grade >= 7 ? 'bg-vault-green' : 'bg-vault-text-muted'}"
+										style="width: {Math.min(100, pct * 2)}%"
+									></div>
+								</div>
+								<p class="mt-0.5 text-[9px] text-vault-text-muted">{pct.toFixed(0)}%</p>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 
 			<!-- Attacks -->
 			{#if card.attacks?.length}

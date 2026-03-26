@@ -1,6 +1,7 @@
 <script lang="ts">
 	let { data } = $props();
 	let stats = $derived(data.stats);
+	let topHoldings = $derived(data.topHoldings as { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[]);
 </script>
 
 <svelte:head>
@@ -13,6 +14,30 @@
 		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Dashboard</h1>
 		<p class="mt-1 text-sm text-vault-text-muted sm:text-base">Your Pokémon TCG portfolio at a glance</p>
 	</div>
+
+	<!-- Portfolio Value Banner -->
+	{#if stats.portfolioValue > 0}
+		<div class="rounded-2xl border border-vault-border bg-gradient-to-r from-vault-surface to-vault-bg p-4 sm:p-6">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<p class="text-sm text-vault-text-muted">Portfolio Market Value</p>
+					<p class="mt-1 text-3xl font-bold text-white sm:text-4xl">${stats.portfolioValue.toFixed(2)}</p>
+					<div class="mt-1 flex items-center gap-3 text-sm">
+						<span class="text-vault-text-muted">Cost basis: ${stats.totalInvested.toFixed(2)}</span>
+						<span class="{stats.gainLoss >= 0 ? 'text-vault-green' : 'text-vault-red'} font-semibold">
+							{stats.gainLoss >= 0 ? '+' : ''}{stats.gainLossPct.toFixed(1)}%
+							({stats.gainLoss >= 0 ? '+' : ''}${stats.gainLoss.toFixed(2)})
+						</span>
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<a href="/analytics" class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20">
+						View Analytics
+					</a>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Stats Grid -->
 	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -66,6 +91,33 @@
 			<p class="mt-1 text-sm text-vault-gold">{stats.gradingPending} pending return</p>
 		</div>
 	</div>
+
+	<!-- Top Holdings -->
+	{#if topHoldings.length > 0}
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
+			<div class="flex items-center justify-between border-b border-vault-border px-4 py-3 sm:px-6">
+				<h2 class="font-semibold text-white">Top Holdings</h2>
+				<a href="/collection" class="text-xs text-vault-purple hover:text-vault-purple-hover">View all</a>
+			</div>
+			<div class="divide-y divide-vault-border">
+				{#each topHoldings as holding}
+					<a href="/card/{holding.card_id}" class="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-vault-surface-hover sm:gap-4 sm:px-6">
+						<img src={holding.imageUrl} alt={holding.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-white">{holding.name}</p>
+							<p class="text-xs text-vault-text-muted">Qty: {holding.quantity} &middot; ${holding.marketPrice.toFixed(2)} each</p>
+						</div>
+						<div class="text-right">
+							<p class="text-sm font-bold text-vault-gold">${holding.totalValue.toFixed(2)}</p>
+							<p class="text-xs {holding.gainLoss >= 0 ? 'text-vault-green' : 'text-vault-red'}">
+								{holding.gainLoss >= 0 ? '+' : ''}${holding.gainLoss.toFixed(2)}
+							</p>
+						</div>
+					</a>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Quick Actions + Getting Started -->
 	<div class="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
