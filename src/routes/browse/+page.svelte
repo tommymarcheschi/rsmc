@@ -6,10 +6,14 @@
 
 	let { data } = $props();
 
-	// Mutable state for infinite scroll + form inputs
-	let extraCards = $state<PokemonCard[]>([]);
+	// Card state — loaded client-side
+	let cards = $state<PokemonCard[]>([]);
+	let totalCount = $state(0);
 	let currentPage = $state(1);
 	let loading = $state(false);
+	let initialLoad = $state(true);
+
+	// Filter inputs
 	let searchInput = $state('');
 	let selectedSet = $state('');
 	let selectedType = $state('');
@@ -17,21 +21,8 @@
 
 	const PAGE_SIZE = 24;
 
-	// Derived from server data + client-loaded extras
-	let cards = $derived([...data.cards, ...extraCards]);
-	let totalCount = $derived(data.totalCount);
 	let sets = $derived(data.sets);
 	let hasMore = $derived(cards.length < totalCount);
-
-	// Sync filter inputs when server data changes (URL navigation)
-	$effect(() => {
-		extraCards = [];
-		currentPage = 1;
-		searchInput = data.filters.search;
-		selectedSet = data.filters.set;
-		selectedType = data.filters.type;
-		selectedRarity = data.filters.rarity;
-	});
 
 	// Build query string from current filters
 	function buildQuery(): string {
@@ -43,7 +34,53 @@
 		return parts.length > 0 ? parts.join(' ') : 'set.id:me2pt5';
 	}
 
-	// Apply filters via URL navigation (triggers server load)
+	// Fetch cards from client-side API
+	async function fetchCards(query: string, pg: number, append = false) {
+		loading = true;
+		try {
+			const params = new URLSearchParams({
+				q: query,
+				page: String(pg),
+				pageSize: String(PAGE_SIZE)
+			});
+			const res = await fetch(`/api/cards?${params}`);
+			if (!res.ok) throw new Error('Failed to load cards');
+			const result = await res.json();
+
+			if (append) {
+				cards = [...cards, ...result.data];
+			} else {
+				cards = result.data;
+			}
+			totalCount = result.totalCount;
+			currentPage = pg;
+		} catch (err) {
+			console.error('Error loading cards:', err);
+			if (!append) {
+				cards = [];
+				totalCount = 0;
+			}
+		} finally {
+			loading = false;
+			initialLoad = false;
+		}
+	}
+
+	// Load initial cards + react to filter changes from URL
+	$effect(() => {
+		// Sync filter inputs from server data
+		searchInput = data.filters.search;
+		selectedSet = data.filters.set;
+		selectedType = data.filters.type;
+		selectedRarity = data.filters.rarity;
+
+		// Fetch cards client-side
+		initialLoad = true;
+		const query = buildQuery();
+		fetchCards(query, 1);
+	});
+
+	// Apply filters via URL navigation (triggers server load → re-runs effect)
 	function applyFilters() {
 		const params = new URLSearchParams();
 		if (searchInput) params.set('q', searchInput);
@@ -54,18 +91,15 @@
 		goto(`/browse${qs ? '?' + qs : ''}`, { keepFocus: true });
 	}
 
-	// Handle search form submit
 	function handleSearch(e: Event) {
 		e.preventDefault();
 		applyFilters();
 	}
 
-	// Handle filter change
 	function handleFilterChange() {
 		applyFilters();
 	}
 
-	// Clear all filters
 	function clearFilters() {
 		searchInput = '';
 		selectedSet = '';
@@ -74,34 +108,13 @@
 		goto('/browse');
 	}
 
-	// Infinite scroll — load more cards
+	// Infinite scroll
 	async function loadMore() {
 		if (loading || !hasMore) return;
-		loading = true;
-
-		try {
-			const nextPage = currentPage + 1;
-			const query = buildQuery();
-			const params = new URLSearchParams({
-				q: query,
-				page: String(nextPage),
-				pageSize: String(PAGE_SIZE)
-			});
-
-			const res = await fetch(`/api/cards?${params}`);
-			if (!res.ok) throw new Error('Failed to load more cards');
-			const result = await res.json();
-
-			extraCards = [...extraCards, ...result.data];
-			currentPage = nextPage;
-		} catch (err) {
-			console.error('Error loading more cards:', err);
-		} finally {
-			loading = false;
-		}
+		const query = buildQuery();
+		await fetchCards(query, currentPage + 1, true);
 	}
 
-	// Intersection Observer for infinite scroll
 	let sentinel = $state<HTMLDivElement | null>(null);
 
 	$effect(() => {
@@ -134,7 +147,11 @@
 		<div>
 			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Browse Cards</h1>
 			<p class="mt-1 text-vault-text-muted">
-				{totalCount.toLocaleString()} cards found
+				{#if initialLoad && loading}
+					Searching...
+				{:else}
+					{totalCount.toLocaleString()} cards found
+				{/if}
 			</p>
 		</div>
 		{#if hasActiveFilters}
@@ -217,8 +234,15 @@
 		</select>
 	</div>
 
-	<!-- Card Grid -->
-	{#if cards.length > 0}
+	<!-- Loading state -->
+	{#if initialLoad && loading}
+		<div class="flex flex-col items-center justify-center py-24 text-vault-text-muted">
+			<div class="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-vault-purple border-t-transparent"></div>
+			<p class="text-lg font-medium">Loading cards...</p>
+			<p class="mt-1 text-sm">This may take a few seconds</p>
+		</div>
+	{:else if cards.length > 0}
+		<!-- Card Grid -->
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each cards as card (card.id)}
 				<CardThumbnail {card} showPrice={true} />
