@@ -8,7 +8,7 @@ Personal Pokémon TCG Collector Intelligence App
 |-------|--------|--------|
 | Frontend | Svelte 5 (runes) | ✅ Installed |
 | Styling | Tailwind CSS v4 | ✅ Installed |
-| Backend/DB | Supabase | ⏳ Needs project setup |
+| Backend/DB | Supabase | ✅ Connected (svegxvguwjmixiitneja) |
 | Routing | SvelteKit 2 | ✅ Installed |
 | Charts | Chart.js | ✅ Installed |
 | Deploy | Vercel (adapter-vercel) | ✅ Configured |
@@ -62,7 +62,7 @@ price_cache (id, card_id, source, raw_price, graded_prices, cached_at)
 
 ```
 PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your-publishable-key-here
 POKEMON_TCG_API_KEY=your-api-key-here       # optional, increases rate limit
 POKETRACE_API_KEY=your-api-key-here
 PRICE_TRACKER_API_KEY=your-api-key-here
@@ -93,8 +93,8 @@ PRICE_TRACKER_API_KEY=your-api-key-here
 
 ## What to Do Next
 
-1. **Set up Supabase project** — Create a project at supabase.com, run the migration SQL, grab URL + anon key
-2. **Create `.env`** — Copy `.env.example` to `.env` and fill in Supabase credentials
+1. **~~Set up Supabase project~~** — ✅ Done (credentials in `.env.local`)
+2. **Run schema migration** — Execute `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
 3. **Say "Build Phase 1B"** — Wires up the card browser with live TCG API data (infinite scroll, search, filters)
 
 ## UI Design Direction
