@@ -1,6 +1,7 @@
 import type { PokemonCard, CardSet, PaginatedResponse } from '$types';
 
 const BASE_URL = 'https://api.pokemontcg.io/v2';
+const TIMEOUT_MS = 8000;
 
 function getHeaders(): HeadersInit {
 	const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -17,6 +18,22 @@ function getHeaders(): HeadersInit {
 	return headers;
 }
 
+function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+	return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
+		clearTimeout(timeout)
+	);
+}
+
+// ── In-memory cache for sets (rarely changes, saves ~1 API call per page load) ──
+let setsCache: { data: CardSet[]; expires: number } | null = null;
+const SETS_CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+
+// ── In-memory cache for individual card lookups ──
+const cardCache = new Map<string, { data: PokemonCard; expires: number }>();
+const CARD_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
+
 export async function searchCards(
 	query: string,
 	page = 1,
@@ -29,45 +46,54 @@ export async function searchCards(
 		orderBy: '-set.releaseDate'
 	});
 
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 8000);
-	try {
-		const res = await fetch(`${BASE_URL}/cards?${params}`, {
-			headers: getHeaders(),
-			signal: controller.signal
-		});
-		if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
-		return res.json();
-	} finally {
-		clearTimeout(timeout);
-	}
+	const res = await fetchWithTimeout(`${BASE_URL}/cards?${params}`, {
+		headers: getHeaders()
+	});
+	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
+	return res.json();
 }
 
 export async function getCard(id: string): Promise<PokemonCard> {
-	const res = await fetch(`${BASE_URL}/cards/${id}`, { headers: getHeaders() });
+	// Check cache first
+	const cached = cardCache.get(id);
+	if (cached && cached.expires > Date.now()) {
+		return cached.data;
+	}
+
+	const res = await fetchWithTimeout(`${BASE_URL}/cards/${id}`, {
+		headers: getHeaders()
+	});
 	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
 	const json = await res.json();
+
+	// Cache the result
+	cardCache.set(id, { data: json.data, expires: Date.now() + CARD_CACHE_TTL });
+
 	return json.data;
 }
 
 export async function getSets(): Promise<CardSet[]> {
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), 8000);
-	try {
-		const res = await fetch(`${BASE_URL}/sets?orderBy=-releaseDate`, {
-			headers: getHeaders(),
-			signal: controller.signal
-		});
-		if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
-		const json = await res.json();
-		return json.data;
-	} finally {
-		clearTimeout(timeout);
+	// Return cached sets if fresh
+	if (setsCache && setsCache.expires > Date.now()) {
+		return setsCache.data;
 	}
+
+	const res = await fetchWithTimeout(`${BASE_URL}/sets?orderBy=-releaseDate`, {
+		headers: getHeaders()
+	});
+	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
+	const json = await res.json();
+
+	// Cache for 30 minutes
+	setsCache = { data: json.data, expires: Date.now() + SETS_CACHE_TTL };
+
+	return json.data;
 }
 
 export async function getSet(id: string): Promise<CardSet> {
-	const res = await fetch(`${BASE_URL}/sets/${id}`, { headers: getHeaders() });
+	const res = await fetchWithTimeout(`${BASE_URL}/sets/${id}`, {
+		headers: getHeaders()
+	});
 	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
 	const json = await res.json();
 	return json.data;

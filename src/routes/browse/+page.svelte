@@ -40,7 +40,7 @@
 		if (selectedSet) parts.push(`set.id:${selectedSet}`);
 		if (selectedType) parts.push(`types:${selectedType}`);
 		if (selectedRarity) parts.push(`rarity:"${selectedRarity}"`);
-		return parts.length > 0 ? parts.join(' ') : 'supertype:Pokémon';
+		return parts.length > 0 ? parts.join(' ') : 'set.id:me2pt5';
 	}
 
 	// Apply filters via URL navigation (triggers server load)
