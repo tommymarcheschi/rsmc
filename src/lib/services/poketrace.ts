@@ -52,14 +52,16 @@ export interface TrendingCard {
 
 function getHeaders(): HeadersInit {
 	const headers: HeadersInit = { 'Content-Type': 'application/json' };
-	// API key added at runtime from env if available
 	try {
-		// Dynamic import for server-side only
 		if (typeof window === 'undefined') {
-			// Will be replaced with env-based header injection when key is configured
+			// Dynamic import to avoid client-side errors
+			const key = process.env.POKETRACE_API_KEY ?? '';
+			if (key) {
+				(headers as Record<string, string>)['X-API-Key'] = key;
+			}
 		}
 	} catch {
-		// ignore
+		// ignore — env not available
 	}
 	return headers;
 }

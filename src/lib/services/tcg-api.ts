@@ -4,9 +4,15 @@ const BASE_URL = 'https://api.pokemontcg.io/v2';
 
 function getHeaders(): HeadersInit {
 	const headers: HeadersInit = { 'Content-Type': 'application/json' };
-	if (typeof window === 'undefined') {
-		// Server-side: use private env
-		// API key is optional but increases rate limits
+	try {
+		if (typeof window === 'undefined') {
+			const key = process.env.POKEMON_TCG_API_KEY ?? '';
+			if (key) {
+				(headers as Record<string, string>)['X-Api-Key'] = key;
+			}
+		}
+	} catch {
+		// ignore
 	}
 	return headers;
 }

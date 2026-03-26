@@ -50,7 +50,18 @@ export interface GradingFees {
 }
 
 function getHeaders(): HeadersInit {
-	return { 'Content-Type': 'application/json' };
+	const headers: HeadersInit = { 'Content-Type': 'application/json' };
+	try {
+		if (typeof window === 'undefined') {
+			const key = process.env.PRICE_TRACKER_API_KEY ?? '';
+			if (key) {
+				(headers as Record<string, string>)['X-API-Key'] = key;
+			}
+		}
+	} catch {
+		// ignore — env not available
+	}
+	return headers;
 }
 
 async function fetchPriceTracker(endpoint: string): Promise<Response> {
