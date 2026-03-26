@@ -29,9 +29,18 @@ export async function searchCards(
 		orderBy: '-set.releaseDate'
 	});
 
-	const res = await fetch(`${BASE_URL}/cards?${params}`, { headers: getHeaders() });
-	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
-	return res.json();
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 8000);
+	try {
+		const res = await fetch(`${BASE_URL}/cards?${params}`, {
+			headers: getHeaders(),
+			signal: controller.signal
+		});
+		if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
+		return res.json();
+	} finally {
+		clearTimeout(timeout);
+	}
 }
 
 export async function getCard(id: string): Promise<PokemonCard> {
@@ -42,10 +51,19 @@ export async function getCard(id: string): Promise<PokemonCard> {
 }
 
 export async function getSets(): Promise<CardSet[]> {
-	const res = await fetch(`${BASE_URL}/sets?orderBy=-releaseDate`, { headers: getHeaders() });
-	if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
-	const json = await res.json();
-	return json.data;
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 8000);
+	try {
+		const res = await fetch(`${BASE_URL}/sets?orderBy=-releaseDate`, {
+			headers: getHeaders(),
+			signal: controller.signal
+		});
+		if (!res.ok) throw new Error(`TCG API error: ${res.status}`);
+		const json = await res.json();
+		return json.data;
+	} finally {
+		clearTimeout(timeout);
+	}
 }
 
 export async function getSet(id: string): Promise<CardSet> {

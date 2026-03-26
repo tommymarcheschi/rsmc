@@ -13,11 +13,13 @@ export const load: PageServerLoad = async ({ url }) => {
 	if (type) queryParts.push(`types:${type}`);
 	if (rarity) queryParts.push(`rarity:"${rarity}"`);
 
-	const query = queryParts.length > 0 ? queryParts.join(' ') : 'supertype:Pokémon';
+	// Use a specific recent set as default instead of broad supertype query (which times out)
+	const query = queryParts.length > 0 ? queryParts.join(' ') : 'set.id:me2pt5';
 
+	// Load cards and sets in parallel, but don't let sets failure block the page
 	const [cardsResult, sets] = await Promise.all([
-		searchCards(query, 1, 24),
-		getSets()
+		searchCards(query, 1, 24).catch(() => ({ data: [], totalCount: 0 })),
+		getSets().catch(() => [])
 	]);
 
 	return {
