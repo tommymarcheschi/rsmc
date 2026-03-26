@@ -39,10 +39,22 @@ export interface PriceHistory {
 	period: string;
 }
 
+export interface GradingFees {
+	service: string;
+	tiers: {
+		name: string;
+		cost: number;
+		turnaround_days: number;
+		max_value?: number;
+	}[];
+}
+
+function getHeaders(): HeadersInit {
+	return { 'Content-Type': 'application/json' };
+}
+
 async function fetchPriceTracker(endpoint: string): Promise<Response> {
-	return fetch(`${BASE_URL}${endpoint}`, {
-		headers: { 'Content-Type': 'application/json' }
-	});
+	return fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
 }
 
 export async function getGradedPrices(cardId: string): Promise<GradedPrice[]> {
@@ -96,4 +108,56 @@ export async function getPriceHistory(
 	} catch {
 		return null;
 	}
+}
+
+export async function getGradingFees(): Promise<GradingFees[]> {
+	try {
+		const res = await fetchPriceTracker('/grading/fees');
+		if (!res.ok) return getDefaultGradingFees();
+		const json = await res.json();
+		return json.data ?? getDefaultGradingFees();
+	} catch {
+		return getDefaultGradingFees();
+	}
+}
+
+// Fallback data when API unavailable
+function getDefaultGradingFees(): GradingFees[] {
+	return [
+		{
+			service: 'PSA',
+			tiers: [
+				{ name: 'Economy', cost: 25, turnaround_days: 150 },
+				{ name: 'Regular', cost: 50, turnaround_days: 65 },
+				{ name: 'Express', cost: 100, turnaround_days: 20 },
+				{ name: 'Super Express', cost: 200, turnaround_days: 10 }
+			]
+		},
+		{
+			service: 'CGC',
+			tiers: [
+				{ name: 'Economy', cost: 18, turnaround_days: 120 },
+				{ name: 'Standard', cost: 30, turnaround_days: 50 },
+				{ name: 'Express', cost: 65, turnaround_days: 15 },
+				{ name: 'Walk-Through', cost: 150, turnaround_days: 2 }
+			]
+		},
+		{
+			service: 'BGS',
+			tiers: [
+				{ name: 'Economy', cost: 25, turnaround_days: 120 },
+				{ name: 'Standard', cost: 50, turnaround_days: 50 },
+				{ name: 'Express', cost: 100, turnaround_days: 10 },
+				{ name: 'Premium', cost: 250, turnaround_days: 5 }
+			]
+		},
+		{
+			service: 'SGC',
+			tiers: [
+				{ name: 'Economy', cost: 15, turnaround_days: 90 },
+				{ name: 'Regular', cost: 30, turnaround_days: 30 },
+				{ name: 'Express', cost: 75, turnaround_days: 10 }
+			]
+		}
+	];
 }

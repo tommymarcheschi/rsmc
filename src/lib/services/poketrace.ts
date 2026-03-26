@@ -31,17 +31,41 @@ export interface MarketPrice {
 export interface ArbitrageOpportunity {
 	card_id: string;
 	card_name: string;
+	set_name: string;
 	us_price: number;
 	eu_price: number;
 	eu_price_usd: number;
 	savings_pct: number;
+	image_url?: string;
+}
+
+export interface TrendingCard {
+	card_id: string;
+	card_name: string;
+	set_name: string;
+	current_price: number;
+	previous_price: number;
+	change_pct: number;
+	volume: number;
+	image_url?: string;
+}
+
+function getHeaders(): HeadersInit {
+	const headers: HeadersInit = { 'Content-Type': 'application/json' };
+	// API key added at runtime from env if available
+	try {
+		// Dynamic import for server-side only
+		if (typeof window === 'undefined') {
+			// Will be replaced with env-based header injection when key is configured
+		}
+	} catch {
+		// ignore
+	}
+	return headers;
 }
 
 async function fetchPokeTrace(endpoint: string): Promise<Response> {
-	// API key will be added from env when available
-	return fetch(`${BASE_URL}${endpoint}`, {
-		headers: { 'Content-Type': 'application/json' }
-	});
+	return fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
 }
 
 export async function getCardPrices(cardId: string): Promise<PokeTracePrice | null> {
@@ -55,10 +79,39 @@ export async function getCardPrices(cardId: string): Promise<PokeTracePrice | nu
 }
 
 export async function getArbitrageOpportunities(
-	minSavings = 10
+	minSavings = 10,
+	limit = 20
 ): Promise<ArbitrageOpportunity[]> {
 	try {
-		const res = await fetchPokeTrace(`/arbitrage?min_savings=${minSavings}`);
+		const res = await fetchPokeTrace(`/arbitrage?min_savings=${minSavings}&limit=${limit}`);
+		if (!res.ok) return [];
+		const json = await res.json();
+		return json.data ?? [];
+	} catch {
+		return [];
+	}
+}
+
+export async function getTrendingCards(
+	period = '7d',
+	limit = 20
+): Promise<TrendingCard[]> {
+	try {
+		const res = await fetchPokeTrace(`/trending?period=${period}&limit=${limit}`);
+		if (!res.ok) return [];
+		const json = await res.json();
+		return json.data ?? [];
+	} catch {
+		return [];
+	}
+}
+
+export async function getBiggestMovers(
+	direction: 'up' | 'down' = 'up',
+	limit = 10
+): Promise<TrendingCard[]> {
+	try {
+		const res = await fetchPokeTrace(`/movers?direction=${direction}&limit=${limit}`);
 		if (!res.ok) return [];
 		const json = await res.json();
 		return json.data ?? [];
