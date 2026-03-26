@@ -74,9 +74,9 @@ PRICE_TRACKER_API_KEY=your-api-key-here
 
 ### Phase 1 — Foundation
 - [x] **Phase 1A** — SvelteKit + Svelte 5 + Tailwind v4 + Supabase setup + schema
-- [ ] **Phase 1B** — Card browser with TCG API (infinite scroll grid, live data)
-- [ ] **Phase 1C** — Card detail page + PokéAPI enrichment (flavor text, types, evolutions)
-- [ ] **Phase 1D** — Collection manager (add/remove cards, condition tracking, quantities)
+- [x] **Phase 1B** — Card browser with TCG API (infinite scroll grid, live data, search, filters)
+- [x] **Phase 1C** — Card detail page + PokéAPI enrichment (flavor text, types, evolutions, attacks, weaknesses)
+- [x] **Phase 1D** — Collection manager + watchlist + dashboard with live Supabase data
 
 ### Phase 2 — Pricing Intelligence
 - [ ] **Phase 2A** — Live prices on card detail (PokeTrace: TCGPlayer + eBay + CardMarket)
@@ -94,8 +94,9 @@ PRICE_TRACKER_API_KEY=your-api-key-here
 ## What to Do Next
 
 1. **~~Set up Supabase project~~** — ✅ Done (credentials in `.env.local`)
-2. **Run schema migration** — Execute `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
-3. **Say "Build Phase 1B"** — Wires up the card browser with live TCG API data (infinite scroll, search, filters)
+2. **~~Run schema migration~~** — ✅ Done
+3. **~~Phase 1B/1C/1D~~** — ✅ Done (card browser, detail page, collection, watchlist, dashboard)
+4. **Say "Build Phase 2A"** — Wire up PokeTrace for live multi-marketplace pricing on card detail pages
 
 ## UI Design Direction
 

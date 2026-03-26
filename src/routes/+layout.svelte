@@ -1,5 +1,7 @@
 <script lang="ts">
 	import '../app.css';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -17,6 +19,17 @@
 	];
 
 	let mobileMenuOpen = $state(false);
+	let globalSearch = $state('');
+
+	function handleGlobalSearch(e: Event) {
+		e.preventDefault();
+		if (globalSearch.trim()) {
+			goto(`/browse?q=${encodeURIComponent(globalSearch.trim())}`);
+			globalSearch = '';
+		} else {
+			goto('/browse');
+		}
+	}
 </script>
 
 <div class="flex h-screen overflow-hidden bg-vault-bg">
@@ -65,10 +78,11 @@
 			<div class="hidden lg:block"></div>
 
 			<!-- Search bar -->
-			<div class="mx-4 flex max-w-md flex-1">
+			<form onsubmit={handleGlobalSearch} class="mx-4 flex max-w-md flex-1">
 				<div class="relative w-full">
 					<input
 						type="text"
+						bind:value={globalSearch}
 						placeholder="Search cards..."
 						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 pl-10 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none focus:ring-1 focus:ring-vault-accent"
 					/>
@@ -76,7 +90,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
 				</div>
-			</div>
+			</form>
 
 			<div class="text-sm text-vault-text-muted">PokéVault v0.1</div>
 		</header>
