@@ -1,7 +1,7 @@
 import type { PokemonCard, CardSet, PaginatedResponse } from '$types';
 
 const BASE_URL = 'https://api.pokemontcg.io/v2';
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 15000;
 
 function getHeaders(): HeadersInit {
 	const headers: HeadersInit = { 'Content-Type': 'application/json' };
