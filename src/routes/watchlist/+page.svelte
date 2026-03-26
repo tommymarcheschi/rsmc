@@ -59,18 +59,18 @@
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-3xl font-bold text-white">Watchlist</h1>
+		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Watchlist</h1>
 		<p class="mt-1 text-vault-text-muted">
 			{entries.length} card{entries.length !== 1 ? 's' : ''} tracked
 		</p>
 	</div>
 
 	{#if entries.length > 0}
-		<div class="rounded-xl border border-vault-border bg-vault-surface">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="divide-y divide-vault-border">
 				{#each entries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
-					<div class="flex items-center gap-4 px-6 py-4">
+					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
 						{#if card}
 							<a href="/card/{card.id}" class="flex-shrink-0">
 								<img src={card.images.small} alt={card.name} class="h-20 w-14 rounded-lg object-cover" />
@@ -83,7 +83,7 @@
 
 						<div class="min-w-0 flex-1">
 							{#if card}
-								<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-accent">{card.name}</a>
+								<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-purple">{card.name}</a>
 								<p class="text-xs text-vault-text-muted">{card.set.name} · #{card.number}</p>
 								{#if card.tcgplayer?.prices}
 									{@const firstPrice = Object.values(card.tcgplayer.prices)[0]}
@@ -98,7 +98,7 @@
 							{/if}
 						</div>
 
-						<div class="flex items-center gap-3">
+						<div class="flex flex-shrink-0 items-center gap-2 sm:gap-3">
 							{#if entry.target_price}
 								<span class="rounded-lg bg-vault-bg px-3 py-1 text-sm text-vault-gold">
 									Target: ${entry.target_price}
@@ -107,7 +107,7 @@
 
 							<button
 								onclick={() => toggleAlert(entry.id, entry.alert_enabled)}
-								class="rounded-lg p-2 transition-colors {entry.alert_enabled ? 'text-vault-gold hover:text-vault-gold/70' : 'text-vault-text-muted hover:text-white'}"
+								class="rounded-xl p-2.5 transition-colors {entry.alert_enabled ? 'text-vault-gold hover:text-vault-gold/70' : 'text-vault-text-muted hover:text-white'}"
 								aria-label="Toggle alert"
 								title={entry.alert_enabled ? 'Alert enabled' : 'Alert disabled'}
 							>
@@ -118,7 +118,7 @@
 
 							<button
 								onclick={() => removeFromWatchlist(entry.id)}
-								class="rounded-lg p-2 text-vault-text-muted transition-colors hover:bg-vault-red/10 hover:text-vault-red"
+								class="rounded-xl p-2.5 text-vault-text-muted transition-colors hover:bg-vault-red/10 hover:text-vault-red"
 								aria-label="Remove from watchlist"
 							>
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,12 +131,12 @@
 			</div>
 		</div>
 	{:else}
-		<div class="rounded-xl border border-vault-border bg-vault-surface">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="flex items-center justify-center py-16 text-vault-text-muted">
 				<div class="text-center">
 					<p class="text-lg">Your watchlist is empty</p>
 					<p class="mt-1 text-sm">Add cards from the browser to track their prices!</p>
-					<a href="/browse" class="mt-4 inline-block rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover">
+					<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 						Browse Cards
 					</a>
 				</div>

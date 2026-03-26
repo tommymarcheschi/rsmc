@@ -1,31 +1,41 @@
 @import 'tailwindcss';
 
-/* PokéVault Custom Theme */
+/* PokéVault Custom Theme — Warm, fun, Pokemon-inspired */
 @theme {
-	--color-vault-bg: #0a0e1a;
-	--color-vault-surface: #111827;
-	--color-vault-surface-hover: #1f2937;
-	--color-vault-border: #1e293b;
-	--color-vault-text: #e2e8f0;
-	--color-vault-text-muted: #94a3b8;
-	--color-vault-accent: #3b82f6;
-	--color-vault-accent-hover: #2563eb;
-	--color-vault-gold: #f59e0b;
-	--color-vault-green: #22c55e;
-	--color-vault-red: #ef4444;
+	/* Core palette — warm darks with purple undertones */
+	--color-vault-bg: #12111a;
+	--color-vault-surface: #1c1b27;
+	--color-vault-surface-hover: #2a2940;
+	--color-vault-border: #2e2d42;
+	--color-vault-text: #eee8f5;
+	--color-vault-text-muted: #9b93b0;
+
+	/* Primary accent — Pokeball red energy */
+	--color-vault-accent: #ff5757;
+	--color-vault-accent-hover: #ff3838;
+
+	/* Secondary accent — fun purple */
+	--color-vault-purple: #a78bfa;
+	--color-vault-purple-hover: #8b5cf6;
+
+	/* Functional */
+	--color-vault-gold: #fbbf24;
+	--color-vault-green: #34d399;
+	--color-vault-red: #f87171;
+	--color-vault-cyan: #22d3ee;
 
 	/* Pokemon type colors */
 	--color-type-fire: #f97316;
-	--color-type-water: #3b82f6;
-	--color-type-grass: #22c55e;
-	--color-type-electric: #eab308;
-	--color-type-psychic: #d946ef;
-	--color-type-fighting: #dc2626;
-	--color-type-dark: #57534e;
-	--color-type-fairy: #ec4899;
-	--color-type-dragon: #7c3aed;
+	--color-type-water: #38bdf8;
+	--color-type-grass: #4ade80;
+	--color-type-electric: #facc15;
+	--color-type-psychic: #e879f9;
+	--color-type-fighting: #ef4444;
+	--color-type-dark: #78716c;
+	--color-type-fairy: #f472b6;
+	--color-type-dragon: #a78bfa;
 	--color-type-steel: #94a3b8;
-	--color-type-normal: #a8a29e;
+	--color-type-normal: #d6d3d1;
 
 	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -46,18 +56,79 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-	width: 8px;
+	width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-	background: var(--color-vault-bg);
+	background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
 	background: var(--color-vault-border);
-	border-radius: 4px;
+	border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--color-vault-text-muted);
+}
+
+/* Warm card glow on hover */
+.card-glow:hover {
+	box-shadow: 0 0 20px rgba(255, 87, 87, 0.12), 0 0 40px rgba(167, 139, 250, 0.06);
+}
+
+/* Gradient text helper */
+.text-gradient {
+	background: linear-gradient(135deg, var(--color-vault-accent), var(--color-vault-purple));
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+/* Subtle shimmer animation for special elements */
+@keyframes shimmer {
+	0% { background-position: -200% center; }
+	100% { background-position: 200% center; }
+}
+
+.shimmer {
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(167, 139, 250, 0.08) 50%,
+		transparent 100%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Active nav indicator */
+.nav-active {
+	background: linear-gradient(135deg, rgba(255, 87, 87, 0.15), rgba(167, 139, 250, 0.1));
+	border-left: 3px solid var(--color-vault-accent);
+	color: white;
+}
+
+/* Stat card hover lift */
+.stat-card {
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Button press effect */
+.btn-press:active {
+	transform: scale(0.97);
+}
+
+/* Price tag styles */
+.price-up {
+	color: var(--color-vault-green);
+}
+
+.price-down {
+	color: var(--color-vault-red);
 }

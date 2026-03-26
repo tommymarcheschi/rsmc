@@ -9,20 +9,20 @@
 	let { card, showPrice = false }: Props = $props();
 </script>
 
-<a href="/card/{card.id}" class="group relative overflow-hidden rounded-xl border border-vault-border bg-vault-surface transition-all hover:border-vault-accent hover:shadow-lg hover:shadow-vault-accent/10">
+<a href="/card/{card.id}" class="card-glow group relative overflow-hidden rounded-2xl border border-vault-border bg-vault-surface transition-all duration-300 hover:border-vault-purple/40 hover:-translate-y-1">
 	<div class="aspect-[2.5/3.5] overflow-hidden">
 		<img
 			src={card.images.small}
 			alt={card.name}
 			loading="lazy"
-			class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+			class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
 		/>
 	</div>
 
 	{#if showPrice && card.tcgplayer?.prices}
 		{@const firstPrice = Object.values(card.tcgplayer.prices)[0]}
 		{#if firstPrice?.market}
-			<div class="absolute right-2 top-2 rounded-full bg-vault-bg/90 px-2 py-0.5 text-xs font-bold text-vault-green backdrop-blur-sm">
+			<div class="absolute right-2 top-2 rounded-full bg-vault-bg/90 px-2.5 py-1 text-xs font-bold text-vault-green shadow-lg backdrop-blur-sm">
 				${firstPrice.market.toFixed(2)}
 			</div>
 		{/if}
@@ -32,7 +32,7 @@
 		<p class="truncate text-sm font-medium text-white">{card.name}</p>
 		<p class="truncate text-xs text-vault-text-muted">{card.set.name} · #{card.number}</p>
 		{#if card.rarity}
-			<p class="mt-1 text-xs text-vault-gold">{card.rarity}</p>
+			<p class="mt-1 text-xs font-medium text-vault-gold">{card.rarity}</p>
 		{/if}
 	</div>
 </a>

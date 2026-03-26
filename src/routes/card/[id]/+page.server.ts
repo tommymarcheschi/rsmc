@@ -2,6 +2,8 @@ import { getCard } from '$services/tcg-api';
 import { getPokemon, getEvolutionChain } from '$services/pokeapi';
 import { getCardPrices } from '$services/poketrace';
 import { getGradedPrices, getPriceHistory } from '$services/price-tracker';
+import { searchEbaySold } from '$services/ebay-scraper';
+import { searchPSAPop } from '$services/psa-scraper';
 import { supabase } from '$services/supabase';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -13,13 +15,15 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Fetch all enrichment data in parallel
 	const dexNumber = card.nationalPokedexNumbers?.[0];
 
-	const [pokedexData, evolutionChain, poketracePrice, gradedPrices, priceHistory] =
+	const [pokedexData, evolutionChain, poketracePrice, gradedPrices, priceHistory, ebaySold, psaPop] =
 		await Promise.all([
 			dexNumber ? getPokemon(dexNumber) : Promise.resolve(null),
 			dexNumber ? getEvolutionChain(dexNumber) : Promise.resolve(null),
 			getCardPrices(params.id),
 			getGradedPrices(params.id),
-			getPriceHistory(params.id, '1y')
+			getPriceHistory(params.id, '1y'),
+			searchEbaySold(card.name, card.set?.name, 10),
+			searchPSAPop(card.name, card.set?.name)
 		]);
 
 	// Cache the price data in Supabase if we got PokeTrace data
@@ -46,6 +50,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		evolutionChain,
 		poketracePrice,
 		gradedPrices,
-		priceHistory
+		priceHistory,
+		ebaySold,
+		psaPop
 	};
 };

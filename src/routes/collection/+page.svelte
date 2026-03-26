@@ -163,45 +163,45 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-white">My Collection</h1>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">My Collection</h1>
 			<p class="mt-1 text-vault-text-muted">Track every card you own</p>
 		</div>
 		<button
 			onclick={openAddModal}
-			class="rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover"
+			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 		>
 			+ Add Card
 		</button>
 	</div>
 
 	<!-- Summary -->
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Cards</p>
 			<p class="mt-1 text-2xl font-bold text-white">{totalCards}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Unique Cards</p>
 			<p class="mt-1 text-2xl font-bold text-white">{uniqueCards}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Invested</p>
 			<p class="mt-1 text-2xl font-bold text-vault-gold">${totalInvested.toFixed(2)}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Entries</p>
 			<p class="mt-1 text-2xl font-bold text-white">{entries.length}</p>
 		</div>
 	</div>
 
 	<!-- Collection Table -->
-	<div class="rounded-xl border border-vault-border bg-vault-surface">
-		<div class="border-b border-vault-border px-6 py-4">
+	<div class="rounded-2xl border border-vault-border bg-vault-surface">
+		<div class="border-b border-vault-border px-3 py-3 sm:px-6 sm:py-4">
 			<input
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search your collection..."
-				class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none"
+				class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 			/>
 		</div>
 
@@ -209,7 +209,7 @@
 			<div class="divide-y divide-vault-border">
 				{#each filteredEntries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
-					<div class="flex items-center gap-4 px-6 py-4">
+					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
 						<!-- Card thumbnail -->
 						{#if card}
 							<a href="/card/{card.id}" class="flex-shrink-0">
@@ -228,7 +228,7 @@
 						<!-- Card info -->
 						<div class="min-w-0 flex-1">
 							{#if card}
-								<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-accent">
+								<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-purple">
 									{card.name}
 								</a>
 								<p class="text-xs text-vault-text-muted">{card.set.name} · #{card.number}</p>
@@ -256,14 +256,14 @@
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateQuantity(entry, -1)}
-								class="flex h-8 w-8 items-center justify-center rounded-lg border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
 							>
 								-
 							</button>
 							<span class="w-8 text-center text-sm font-bold text-white">{entry.quantity}</span>
 							<button
 								onclick={() => updateQuantity(entry, 1)}
-								class="flex h-8 w-8 items-center justify-center rounded-lg border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
 							>
 								+
 							</button>
@@ -291,7 +291,7 @@
 					{:else}
 						<p class="text-lg">No cards in your collection yet</p>
 						<p class="mt-1 text-sm">Browse cards and add them to start tracking!</p>
-						<a href="/browse" class="mt-4 inline-block rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover">
+						<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 							Browse Cards
 						</a>
 					{/if}
@@ -305,7 +305,7 @@
 {#if showAddModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button aria-label="Close modal" class="fixed inset-0 bg-black/60" onclick={closeAddModal}></button>
-		<div class="relative w-full max-w-lg rounded-xl border border-vault-border bg-vault-surface p-6 shadow-2xl">
+		<div class="relative w-full max-w-sm rounded-2xl border border-vault-border bg-vault-surface p-4 shadow-2xl sm:max-w-lg sm:p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-white">Add Card to Collection</h2>
 				<button onclick={closeAddModal} class="text-vault-text-muted hover:text-white" aria-label="Close">
@@ -326,7 +326,7 @@
 							bind:value={cardSearchQuery}
 							oninput={() => { if (cardSearchQuery.length >= 2) searchCards(); }}
 							placeholder="Type a card name..."
-							class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none"
+							class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 						/>
 						{#if searchingCards}
 							<div class="absolute right-3 top-2.5">
@@ -356,7 +356,7 @@
 
 				<!-- Selected card preview -->
 				{#if selectedCard}
-					<div class="flex items-center gap-3 rounded-lg border border-vault-accent/30 bg-vault-accent/5 p-3">
+					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3">
 						<img src={selectedCard.images.small} alt={selectedCard.name} class="h-16 w-11 rounded object-cover" />
 						<div>
 							<p class="font-medium text-white">{selectedCard.name}</p>
@@ -373,7 +373,7 @@
 							type="number"
 							min="1"
 							bind:value={addQuantity}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						/>
 					</div>
 					<div>
@@ -381,7 +381,7 @@
 						<select
 							id="condition"
 							bind:value={addCondition}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						>
 							<option value="NM">Near Mint</option>
 							<option value="LP">Lightly Played</option>
@@ -402,7 +402,7 @@
 							min="0"
 							bind:value={addPurchasePrice}
 							placeholder="0.00"
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						/>
 					</div>
 					<div>
@@ -411,7 +411,7 @@
 							id="purchase-date"
 							type="date"
 							bind:value={addPurchaseDate}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						/>
 					</div>
 				</div>
@@ -423,7 +423,7 @@
 						type="text"
 						bind:value={addNotes}
 						placeholder="Optional notes..."
-						class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+						class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 					/>
 				</div>
 
