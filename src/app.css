@@ -1,29 +1,63 @@
-@import '@fontsource-variable/inconsolata';
-@import '@fontsource/anonymous-pro/400.css';
-@import '@fontsource/anonymous-pro/700.css';
-@import '@fontsource/bahiana';
-@import '@fontsource/bahianita';
+@import 'tailwindcss';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* PokéVault Custom Theme */
+@theme {
+	--color-vault-bg: #0a0e1a;
+	--color-vault-surface: #111827;
+	--color-vault-surface-hover: #1f2937;
+	--color-vault-border: #1e293b;
+	--color-vault-text: #e2e8f0;
+	--color-vault-text-muted: #94a3b8;
+	--color-vault-accent: #3b82f6;
+	--color-vault-accent-hover: #2563eb;
+	--color-vault-gold: #f59e0b;
+	--color-vault-green: #22c55e;
+	--color-vault-red: #ef4444;
 
-@font-face {
-  font-family: 'Chinese Rocks';
-  src: url('$lib/fonts/chinese-rocks-rg.otf') format('opentype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
+	/* Pokemon type colors */
+	--color-type-fire: #f97316;
+	--color-type-water: #3b82f6;
+	--color-type-grass: #22c55e;
+	--color-type-electric: #eab308;
+	--color-type-psychic: #d946ef;
+	--color-type-fighting: #dc2626;
+	--color-type-dark: #57534e;
+	--color-type-fairy: #ec4899;
+	--color-type-dragon: #7c3aed;
+	--color-type-steel: #94a3b8;
+	--color-type-normal: #a8a29e;
+
+	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
+/* Base styles */
+html {
+	color-scheme: dark;
+}
 
 body {
-  background-color: #000000;
+	background-color: var(--color-vault-bg);
+	color: var(--color-vault-text);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
-.description a {
-  @apply link text-orange-400;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 8px;
 }
-.description a:hover {
-  @apply no-underline;
+
+::-webkit-scrollbar-track {
+	background: var(--color-vault-bg);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-vault-border);
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-vault-text-muted);
 }
