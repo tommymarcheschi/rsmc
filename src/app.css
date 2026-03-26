@@ -1,24 +1,29 @@
 @import 'tailwindcss';
 
-/* PokéVault Custom Theme — Warm, fun, Pokemon-inspired */
+/* ═══════════════════════════════════════════════════════════════
+   PokéVault Theme System
+
+   Tailwind v4 @theme defines the design tokens at build time.
+   Skin overrides use CSS custom properties on [data-skin] to
+   swap colors at runtime without rebuilding.
+   ═══════════════════════════════════════════════════════════════ */
+
 @theme {
-	/* Core palette — warm darks with purple undertones */
-	--color-vault-bg: #12111a;
-	--color-vault-surface: #1c1b27;
-	--color-vault-surface-hover: #2a2940;
-	--color-vault-border: #2e2d42;
-	--color-vault-text: #eee8f5;
-	--color-vault-text-muted: #9b93b0;
+	/* Core palette — defaults (Pokeball skin) */
+	--color-vault-bg: var(--skin-bg, #12111a);
+	--color-vault-surface: var(--skin-surface, #1c1b27);
+	--color-vault-surface-hover: var(--skin-surface-hover, #2a2940);
+	--color-vault-border: var(--skin-border, #2e2d42);
+	--color-vault-text: var(--skin-text, #eee8f5);
+	--color-vault-text-muted: var(--skin-text-muted, #9b93b0);
 
-	/* Primary accent — Pokeball red energy */
-	--color-vault-accent: #ff5757;
-	--color-vault-accent-hover: #ff3838;
+	--color-vault-accent: var(--skin-accent, #ff5757);
+	--color-vault-accent-hover: var(--skin-accent-hover, #ff3838);
 
-	/* Secondary accent — fun purple */
-	--color-vault-purple: #a78bfa;
-	--color-vault-purple-hover: #8b5cf6;
+	--color-vault-purple: var(--skin-secondary, #a78bfa);
+	--color-vault-purple-hover: var(--skin-secondary-hover, #8b5cf6);
 
-	/* Functional */
+	/* Functional — consistent across skins */
 	--color-vault-gold: #fbbf24;
 	--color-vault-green: #34d399;
 	--color-vault-red: #f87171;
@@ -41,14 +46,162 @@
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* Base styles */
+/* ═══ SKIN: Pokeball (Default) ═══
+   Dark purple-black with Pokeball red + purple accents */
+:root, [data-skin="pokeball"] {
+	--skin-bg: #12111a;
+	--skin-surface: #1c1b27;
+	--skin-surface-hover: #2a2940;
+	--skin-border: #2e2d42;
+	--skin-text: #eee8f5;
+	--skin-text-muted: #9b93b0;
+	--skin-accent: #ff5757;
+	--skin-accent-hover: #ff3838;
+	--skin-secondary: #a78bfa;
+	--skin-secondary-hover: #8b5cf6;
+	--skin-glow-1: rgba(255, 87, 87, 0.12);
+	--skin-glow-2: rgba(167, 139, 250, 0.06);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(255, 87, 87, 0.15), rgba(167, 139, 250, 0.1));
+}
+
+/* ═══ SKIN: Pikachu ═══
+   Electric yellow energy — warm blacks with golden lightning accents
+   Inspired by Pikachu's Wild Charge art */
+[data-skin="pikachu"] {
+	--skin-bg: #141210;
+	--skin-surface: #1e1b16;
+	--skin-surface-hover: #2e2920;
+	--skin-border: #3d3628;
+	--skin-text: #fef3c7;
+	--skin-text-muted: #a89970;
+	--skin-accent: #facc15;
+	--skin-accent-hover: #eab308;
+	--skin-secondary: #fb923c;
+	--skin-secondary-hover: #f97316;
+	--skin-glow-1: rgba(250, 204, 21, 0.15);
+	--skin-glow-2: rgba(251, 146, 60, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(251, 146, 60, 0.1));
+}
+
+/* ═══ SKIN: Charizard ═══
+   Flame orange + ember red on smoky dark backgrounds */
+[data-skin="charizard"] {
+	--skin-bg: #150f0c;
+	--skin-surface: #201714;
+	--skin-surface-hover: #33221b;
+	--skin-border: #44302a;
+	--skin-text: #fde8d8;
+	--skin-text-muted: #b08870;
+	--skin-accent: #f97316;
+	--skin-accent-hover: #ea580c;
+	--skin-secondary: #ef4444;
+	--skin-secondary-hover: #dc2626;
+	--skin-glow-1: rgba(249, 115, 22, 0.15);
+	--skin-glow-2: rgba(239, 68, 68, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(239, 68, 68, 0.1));
+}
+
+/* ═══ SKIN: Gengar ═══
+   Haunted purple + toxic magenta on deep shadow backgrounds */
+[data-skin="gengar"] {
+	--skin-bg: #0f0b15;
+	--skin-surface: #1a1225;
+	--skin-surface-hover: #281a3a;
+	--skin-border: #3a2650;
+	--skin-text: #e8dff5;
+	--skin-text-muted: #9080aa;
+	--skin-accent: #c084fc;
+	--skin-accent-hover: #a855f7;
+	--skin-secondary: #e879f9;
+	--skin-secondary-hover: #d946ef;
+	--skin-glow-1: rgba(192, 132, 252, 0.15);
+	--skin-glow-2: rgba(232, 121, 249, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(192, 132, 252, 0.15), rgba(232, 121, 249, 0.1));
+}
+
+/* ═══ SKIN: Mewtwo ═══
+   Psychic blue-violet + ice cyan on cold deep dark */
+[data-skin="mewtwo"] {
+	--skin-bg: #0c0e18;
+	--skin-surface: #141828;
+	--skin-surface-hover: #1e2640;
+	--skin-border: #2a3558;
+	--skin-text: #e0e8ff;
+	--skin-text-muted: #7888b8;
+	--skin-accent: #818cf8;
+	--skin-accent-hover: #6366f1;
+	--skin-secondary: #22d3ee;
+	--skin-secondary-hover: #06b6d4;
+	--skin-glow-1: rgba(129, 140, 248, 0.15);
+	--skin-glow-2: rgba(34, 211, 238, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(129, 140, 248, 0.15), rgba(34, 211, 238, 0.1));
+}
+
+/* ═══ SKIN: Bulbasaur ═══
+   Forest green + leaf teal on earthy dark */
+[data-skin="bulbasaur"] {
+	--skin-bg: #0c1210;
+	--skin-surface: #141f1a;
+	--skin-surface-hover: #1e3028;
+	--skin-border: #2a4038;
+	--skin-text: #dcf5e8;
+	--skin-text-muted: #70a888;
+	--skin-accent: #4ade80;
+	--skin-accent-hover: #22c55e;
+	--skin-secondary: #2dd4bf;
+	--skin-secondary-hover: #14b8a6;
+	--skin-glow-1: rgba(74, 222, 128, 0.15);
+	--skin-glow-2: rgba(45, 212, 191, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(74, 222, 128, 0.15), rgba(45, 212, 191, 0.1));
+}
+
+/* ═══ SKIN: Umbreon ═══
+   Midnight black with neon gold rings on true dark */
+[data-skin="umbreon"] {
+	--skin-bg: #0a0a0a;
+	--skin-surface: #141414;
+	--skin-surface-hover: #1f1f1f;
+	--skin-border: #2a2a2a;
+	--skin-text: #e8e8e8;
+	--skin-text-muted: #888888;
+	--skin-accent: #fbbf24;
+	--skin-accent-hover: #f59e0b;
+	--skin-secondary: #fcd34d;
+	--skin-secondary-hover: #fbbf24;
+	--skin-glow-1: rgba(251, 191, 36, 0.18);
+	--skin-glow-2: rgba(252, 211, 77, 0.06);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(252, 211, 77, 0.08));
+}
+
+/* ═══ SKIN: Sylveon ═══
+   Fairy pink + soft lavender on rosy dark */
+[data-skin="sylveon"] {
+	--skin-bg: #150f14;
+	--skin-surface: #201820;
+	--skin-surface-hover: #30222e;
+	--skin-border: #44303f;
+	--skin-text: #f8e8f5;
+	--skin-text-muted: #b088a8;
+	--skin-accent: #f472b6;
+	--skin-accent-hover: #ec4899;
+	--skin-secondary: #c4b5fd;
+	--skin-secondary-hover: #a78bfa;
+	--skin-glow-1: rgba(244, 114, 182, 0.15);
+	--skin-glow-2: rgba(196, 181, 253, 0.08);
+	--skin-nav-gradient: linear-gradient(135deg, rgba(244, 114, 182, 0.15), rgba(196, 181, 253, 0.1));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Base Styles
+   ═══════════════════════════════════════════════════════════════ */
+
 html {
 	color-scheme: dark;
 }
 
 body {
-	background-color: var(--color-vault-bg);
-	color: var(--color-vault-text);
+	background-color: var(--skin-bg);
+	color: var(--skin-text);
 	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -64,28 +217,32 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-	background: var(--color-vault-border);
+	background: var(--skin-border);
 	border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-	background: var(--color-vault-text-muted);
+	background: var(--skin-text-muted);
 }
 
-/* Warm card glow on hover */
+/* ═══════════════════════════════════════════════════════════════
+   Component Utilities (use skin vars for dynamic theming)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Warm card glow on hover — uses skin colors */
 .card-glow:hover {
-	box-shadow: 0 0 20px rgba(255, 87, 87, 0.12), 0 0 40px rgba(167, 139, 250, 0.06);
+	box-shadow: 0 0 20px var(--skin-glow-1), 0 0 40px var(--skin-glow-2);
 }
 
-/* Gradient text helper */
+/* Gradient text helper — uses skin accent + secondary */
 .text-gradient {
-	background: linear-gradient(135deg, var(--color-vault-accent), var(--color-vault-purple));
+	background: linear-gradient(135deg, var(--skin-accent), var(--skin-secondary));
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
 }
 
-/* Subtle shimmer animation for special elements */
+/* Subtle shimmer animation */
 @keyframes shimmer {
 	0% { background-position: -200% center; }
 	100% { background-position: 200% center; }
@@ -95,17 +252,17 @@ body {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(167, 139, 250, 0.08) 50%,
+		color-mix(in srgb, var(--skin-secondary) 8%, transparent) 50%,
 		transparent 100%
 	);
 	background-size: 200% 100%;
 	animation: shimmer 3s ease-in-out infinite;
 }
 
-/* Active nav indicator */
+/* Active nav indicator — uses skin gradient */
 .nav-active {
-	background: linear-gradient(135deg, rgba(255, 87, 87, 0.15), rgba(167, 139, 250, 0.1));
-	border-left: 3px solid var(--color-vault-accent);
+	background: var(--skin-nav-gradient);
+	border-left: 3px solid var(--skin-accent);
 	color: white;
 }
 
@@ -131,4 +288,9 @@ body {
 
 .price-down {
 	color: var(--color-vault-red);
+}
+
+/* Skin transition for smooth switching */
+body, .nav-active, .card-glow, .text-gradient {
+	transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }

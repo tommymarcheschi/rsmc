@@ -2,12 +2,25 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { activeSkin, SKINS, type Skin } from '$lib/stores/theme';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		children: import('svelte').Snippet;
 	}
 
 	let { children }: Props = $props();
+
+	let skinPickerOpen = $state(false);
+
+	onMount(() => {
+		activeSkin.init();
+	});
+
+	function setSkin(skin: Skin) {
+		activeSkin.set(skin);
+		skinPickerOpen = false;
+	}
 
 	const navItems = [
 		{ href: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -128,9 +141,45 @@
 				</div>
 			</form>
 
-			<div class="flex items-center gap-2 text-sm text-vault-text-muted">
-				<div class="h-2 w-2 rounded-full bg-vault-green animate-pulse"></div>
-				<span class="hidden sm:inline">Live</span>
+			<div class="flex items-center gap-3">
+				<!-- Skin Picker -->
+				<div class="relative">
+					<button
+						onclick={() => (skinPickerOpen = !skinPickerOpen)}
+						class="flex h-8 w-8 items-center justify-center rounded-lg border border-vault-border transition-all hover:border-vault-purple/50"
+						aria-label="Change theme"
+						title="Change theme"
+					>
+						<div class="h-4 w-4 rounded-full" style="background: {SKINS.find(s => s.id === $activeSkin)?.preview}"></div>
+					</button>
+					{#if skinPickerOpen}
+						<button class="fixed inset-0 z-40" onclick={() => (skinPickerOpen = false)} aria-label="Close"></button>
+						<div class="absolute right-0 top-10 z-50 w-56 rounded-2xl border border-vault-border bg-vault-surface p-2 shadow-2xl">
+							<p class="px-2 pb-2 text-xs font-semibold text-vault-text-muted">Theme</p>
+							{#each SKINS as skin}
+								<button
+									onclick={() => setSkin(skin.id)}
+									class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left text-sm transition-all hover:bg-vault-surface-hover {$activeSkin === skin.id ? 'bg-vault-surface-hover ring-1 ring-vault-accent/50' : ''}"
+								>
+									<div class="h-6 w-6 flex-shrink-0 rounded-full" style="background: {skin.preview}"></div>
+									<div>
+										<p class="font-medium text-white">{skin.name}</p>
+										<p class="text-[10px] text-vault-text-muted">{skin.pokemon}</p>
+									</div>
+									{#if $activeSkin === skin.id}
+										<svg class="ml-auto h-4 w-4 text-vault-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+											<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+										</svg>
+									{/if}
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
+				<div class="flex items-center gap-2 text-sm text-vault-text-muted">
+					<div class="h-2 w-2 rounded-full bg-vault-green animate-pulse"></div>
+					<span class="hidden sm:inline">Live</span>
+				</div>
 			</div>
 		</header>
 
