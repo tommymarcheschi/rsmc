@@ -132,7 +132,7 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-white">Browse Cards</h1>
+			<h1 class="text-3xl font-bold text-gradient">Browse Cards</h1>
 			<p class="mt-1 text-vault-text-muted">
 				{totalCount.toLocaleString()} cards found
 			</p>
@@ -140,7 +140,7 @@
 		{#if hasActiveFilters}
 			<button
 				onclick={clearFilters}
-				class="rounded-lg border border-vault-border px-3 py-1.5 text-sm text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+				class="btn-press rounded-xl border border-vault-border px-4 py-2 text-sm font-medium text-vault-text-muted transition-all hover:border-vault-accent/50 hover:bg-vault-surface-hover hover:text-white"
 			>
 				Clear Filters
 			</button>
@@ -155,9 +155,9 @@
 					type="text"
 					bind:value={searchInput}
 					placeholder="Search by name..."
-					class="w-full rounded-lg border border-vault-border bg-vault-surface px-4 py-2 pl-10 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none focus:ring-1 focus:ring-vault-accent"
+					class="w-full rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
 				/>
-				<svg class="absolute left-3 top-2.5 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg class="absolute left-3 top-3 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 				</svg>
 			</div>
@@ -166,7 +166,7 @@
 		<select
 			bind:value={selectedSet}
 			onchange={handleFilterChange}
-			class="rounded-lg border border-vault-border bg-vault-surface px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
 		>
 			<option value="">All Sets</option>
 			{#each sets as s}
@@ -177,7 +177,7 @@
 		<select
 			bind:value={selectedType}
 			onchange={handleFilterChange}
-			class="rounded-lg border border-vault-border bg-vault-surface px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
 		>
 			<option value="">All Types</option>
 			<option value="Colorless">Colorless</option>
@@ -196,7 +196,7 @@
 		<select
 			bind:value={selectedRarity}
 			onchange={handleFilterChange}
-			class="rounded-lg border border-vault-border bg-vault-surface px-4 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none"
+			class="rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none"
 		>
 			<option value="">All Rarities</option>
 			<option value="Common">Common</option>
@@ -230,7 +230,7 @@
 			<div bind:this={sentinel} class="flex items-center justify-center py-8">
 				{#if loading}
 					<div class="flex items-center gap-3 text-vault-text-muted">
-						<div class="h-5 w-5 animate-spin rounded-full border-2 border-vault-accent border-t-transparent"></div>
+						<div class="h-5 w-5 animate-spin rounded-full border-2 border-vault-purple border-t-transparent"></div>
 						<span class="text-sm">Loading more cards...</span>
 					</div>
 				{/if}
@@ -242,15 +242,15 @@
 		{/if}
 	{:else}
 		<div class="flex flex-col items-center justify-center py-24 text-vault-text-muted">
-			<svg class="mb-4 h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+			<svg class="mb-4 h-16 w-16 text-vault-purple/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
-			<p class="text-lg">No cards found</p>
+			<p class="text-lg font-medium">No cards found</p>
 			<p class="mt-1 text-sm">Try adjusting your search or filters</p>
 			{#if hasActiveFilters}
 				<button
 					onclick={clearFilters}
-					class="mt-4 rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover"
+					class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
 				>
 					Clear All Filters
 				</button>

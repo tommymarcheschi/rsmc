@@ -18,43 +18,43 @@
 
 <div class="space-y-6">
 	<div>
-		<h1 class="text-3xl font-bold text-white">Market Insights</h1>
+		<h1 class="text-3xl font-bold text-gradient">Market Insights</h1>
 		<p class="mt-1 text-vault-text-muted">Analytics, trends, and arbitrage opportunities</p>
 	</div>
 
 	<!-- Portfolio Summary -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Portfolio Invested</p>
 			<p class="mt-1 text-2xl font-bold text-vault-gold">${portfolio.totalInvested.toFixed(2)}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Cards</p>
 			<p class="mt-1 text-2xl font-bold text-white">{portfolio.totalCards}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Unique Entries</p>
 			<p class="mt-1 text-2xl font-bold text-white">{portfolio.uniqueCards}</p>
 		</div>
 	</div>
 
 	<!-- Tab Navigation -->
-	<div class="flex gap-1 rounded-lg border border-vault-border bg-vault-surface p-1">
+	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 		<button
 			onclick={() => (insightTab = 'trending')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'trending' ? 'bg-vault-accent text-white' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Trending Cards
 		</button>
 		<button
 			onclick={() => (insightTab = 'arbitrage')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'arbitrage' ? 'bg-vault-accent text-white' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'arbitrage' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			US vs EU Arbitrage
 		</button>
 		<button
 			onclick={() => (insightTab = 'movers')}
-			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'movers' ? 'bg-vault-accent text-white' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors {insightTab === 'movers' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Biggest Movers
 		</button>
@@ -62,7 +62,7 @@
 
 	<!-- Trending Cards Tab -->
 	{#if insightTab === 'trending'}
-		<div class="rounded-xl border border-vault-border bg-vault-surface">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			{#if trending.length > 0}
 				<div class="divide-y divide-vault-border">
 					{#each trending as card, i}
@@ -97,7 +97,7 @@
 
 	<!-- Arbitrage Tab -->
 	{#if insightTab === 'arbitrage'}
-		<div class="rounded-xl border border-vault-border bg-vault-surface">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="border-b border-vault-border px-6 py-4">
 				<p class="text-sm text-vault-text-muted">
 					Cards where CardMarket (EUR) is significantly cheaper than TCGPlayer (USD) — potential savings on cross-market purchases.
@@ -147,7 +147,7 @@
 	{#if insightTab === 'movers'}
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 			<!-- Biggest Gainers -->
-			<div class="rounded-xl border border-vault-border bg-vault-surface">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface">
 				<div class="border-b border-vault-border px-6 py-4">
 					<h3 class="font-semibold text-vault-green">Biggest Gainers</h3>
 				</div>
@@ -172,7 +172,7 @@
 			</div>
 
 			<!-- Biggest Losers -->
-			<div class="rounded-xl border border-vault-border bg-vault-surface">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface">
 				<div class="border-b border-vault-border px-6 py-4">
 					<h3 class="font-semibold text-vault-red">Biggest Losers</h3>
 				</div>

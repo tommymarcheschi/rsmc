@@ -167,26 +167,26 @@
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-3xl font-bold text-white">Grading Center</h1>
+			<h1 class="text-3xl font-bold text-gradient">Grading Center</h1>
 			<p class="mt-1 text-vault-text-muted">Calculate ROI and track your grading submissions</p>
 		</div>
 	</div>
 
 	<!-- Stats -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Submissions</p>
 			<p class="mt-1 text-2xl font-bold text-white">{submissions.length}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">In Progress</p>
 			<p class="mt-1 text-2xl font-bold text-vault-gold">{pendingCount}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Completed</p>
 			<p class="mt-1 text-2xl font-bold text-vault-green">{completedCount}</p>
 		</div>
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-4">
+		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Grading Cost</p>
 			<p class="mt-1 text-2xl font-bold text-white">${totalGradingCost.toFixed(2)}</p>
 		</div>
@@ -194,7 +194,7 @@
 
 	<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
 		<!-- ROI Calculator -->
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 			<h2 class="text-lg font-semibold text-white">Grading ROI Calculator</h2>
 			<p class="mt-1 text-sm text-vault-text-muted">See if a card is worth grading</p>
 			<div class="mt-4 space-y-4">
@@ -205,7 +205,7 @@
 						bind:value={roiSearchQuery}
 						oninput={() => searchCards(roiSearchQuery, 'roi')}
 						placeholder="Search for a card..."
-						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none"
+						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 					/>
 					{#if roiSearchResults.length > 0}
 						<div class="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
@@ -233,7 +233,7 @@
 				</div>
 
 				{#if roiSelectedCard}
-					<div class="flex items-center gap-3 rounded-lg border border-vault-accent/30 bg-vault-accent/5 p-3">
+					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3">
 						<img src={roiSelectedCard.images.small} alt={roiSelectedCard.name} class="h-14 w-10 rounded object-cover" />
 						<div>
 							<p class="font-medium text-white">{roiSelectedCard.name}</p>
@@ -245,7 +245,7 @@
 				<div class="grid grid-cols-3 gap-3">
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="roi-service">Service</label>
-						<select id="roi-service" bind:value={roiService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none">
+						<select id="roi-service" bind:value={roiService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
 							<option value="PSA">PSA</option>
 							<option value="CGC">CGC</option>
 							<option value="BGS">BGS</option>
@@ -254,11 +254,11 @@
 					</div>
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="roi-raw">Raw Value ($)</label>
-						<input id="roi-raw" type="number" step="0.01" bind:value={roiRawValue} placeholder="0.00" class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none" />
+						<input id="roi-raw" type="number" step="0.01" bind:value={roiRawValue} placeholder="0.00" class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none" />
 					</div>
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="roi-grade">Expected Grade</label>
-						<select id="roi-grade" bind:value={roiExpectedGrade} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none">
+						<select id="roi-grade" bind:value={roiExpectedGrade} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
 							<option value="10">PSA 10 / Gem Mint</option>
 							<option value="9.5">PSA 9.5</option>
 							<option value="9">PSA 9 / Mint</option>
@@ -323,10 +323,10 @@
 		</div>
 
 		<!-- Submission Tracker -->
-		<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+		<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-white">Submission Tracker</h2>
-				<button onclick={() => (showSubmitModal = true)} class="rounded-lg bg-vault-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover">
+				<button onclick={() => (showSubmitModal = true)} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 					+ New Submission
 				</button>
 			</div>
@@ -414,7 +414,7 @@
 {#if showSubmitModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button aria-label="Close modal" class="fixed inset-0 bg-black/60" onclick={closeSubmitModal}></button>
-		<div class="relative w-full max-w-md rounded-xl border border-vault-border bg-vault-surface p-6 shadow-2xl">
+		<div class="relative w-full max-w-md rounded-2xl border border-vault-border bg-vault-surface p-6 shadow-2xl">
 			<h2 class="text-lg font-semibold text-white">New Grading Submission</h2>
 			<div class="mt-4 space-y-4">
 				<div class="relative">
@@ -423,7 +423,7 @@
 						bind:value={subSearchQuery}
 						oninput={() => searchCards(subSearchQuery, 'sub')}
 						placeholder="Search for a card..."
-						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-accent focus:outline-none"
+						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 					/>
 					{#if subSearchResults.length > 0}
 						<div class="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
@@ -444,7 +444,7 @@
 				</div>
 
 				{#if subSelectedCard}
-					<div class="flex items-center gap-3 rounded-lg border border-vault-accent/30 bg-vault-accent/5 p-3">
+					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3">
 						<img src={subSelectedCard.images.small} alt={subSelectedCard.name} class="h-14 w-10 rounded object-cover" />
 						<div>
 							<p class="font-medium text-white">{subSelectedCard.name}</p>
@@ -456,7 +456,7 @@
 				<div class="grid grid-cols-2 gap-3">
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="sub-service">Service</label>
-						<select id="sub-service" bind:value={subService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none">
+						<select id="sub-service" bind:value={subService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
 							<option value="PSA">PSA</option>
 							<option value="CGC">CGC</option>
 							<option value="BGS">BGS</option>
@@ -465,7 +465,7 @@
 					</div>
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="sub-tier">Tier</label>
-						<select id="sub-tier" bind:value={subTier} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none">
+						<select id="sub-tier" bind:value={subTier} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
 							<option value="economy">Economy</option>
 							<option value="regular">Regular</option>
 							<option value="express">Express</option>
@@ -477,18 +477,18 @@
 				<div class="grid grid-cols-2 gap-3">
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="sub-date">Submit Date</label>
-						<input id="sub-date" type="date" bind:value={subDate} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none" />
+						<input id="sub-date" type="date" bind:value={subDate} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none" />
 					</div>
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="sub-cost">Cost ($)</label>
-						<input id="sub-cost" type="number" step="0.01" bind:value={subCost} placeholder="0.00" class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-accent focus:outline-none" />
+						<input id="sub-cost" type="number" step="0.01" bind:value={subCost} placeholder="0.00" class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none" />
 					</div>
 				</div>
 
 				<button
 					onclick={addSubmission}
 					disabled={!subSelectedCard || submitting}
-					class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
+					class="btn-press w-full rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50"
 				>
 					{submitting ? 'Submitting...' : 'Add Submission'}
 				</button>

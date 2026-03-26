@@ -94,7 +94,7 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<a href="/browse" class="inline-flex items-center gap-2 text-sm text-vault-accent hover:underline">
+	<a href="/browse" class="inline-flex items-center gap-2 text-sm text-vault-purple hover:text-vault-purple-hover hover:underline">
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 		</svg>
@@ -105,14 +105,14 @@
 		<!-- Card Image -->
 		<div class="flex items-start justify-center lg:col-span-1">
 			<div class="sticky top-8 w-full max-w-sm">
-				<img src={card.images.large} alt={card.name} class="w-full rounded-xl shadow-2xl shadow-vault-accent/10" />
+				<img src={card.images.large} alt={card.name} class="w-full rounded-xl shadow-2xl shadow-vault-purple/10" />
 			</div>
 		</div>
 
 		<!-- Card Details -->
 		<div class="space-y-6 lg:col-span-2">
 			<!-- Header -->
-			<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 				<div class="flex items-start justify-between">
 					<div>
 						<h1 class="text-3xl font-bold text-white">{card.name}</h1>
@@ -165,10 +165,10 @@
 
 			<!-- Multi-Marketplace Pricing (PokeTrace) -->
 			{#if hasPokeTrace}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-semibold text-white">Multi-Marketplace Prices</h2>
-						<span class="rounded-full bg-vault-accent/10 px-2.5 py-0.5 text-xs font-medium text-vault-accent">
+						<span class="rounded-full bg-vault-green/10 px-2.5 py-0.5 text-xs font-medium text-vault-green">
 							Live Data
 						</span>
 					</div>
@@ -179,9 +179,9 @@
 					<div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
 						<!-- TCGPlayer -->
 						{#if poketracePrice?.tcgplayer}
-							<div class="rounded-lg border border-vault-border bg-vault-bg p-4">
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
 								<div class="flex items-center justify-between">
-									<p class="text-sm font-medium text-vault-accent">TCGPlayer</p>
+									<p class="text-sm font-medium text-vault-purple">TCGPlayer</p>
 									<span class="text-xs text-vault-text-muted">{poketracePrice.tcgplayer.currency}</span>
 								</div>
 								<div class="mt-3 space-y-1.5">
@@ -209,7 +209,7 @@
 
 						<!-- eBay -->
 						{#if poketracePrice?.ebay}
-							<div class="rounded-lg border border-vault-border bg-vault-bg p-4">
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
 								<div class="flex items-center justify-between">
 									<p class="text-sm font-medium text-yellow-400">eBay</p>
 									<span class="text-xs text-vault-text-muted">{poketracePrice.ebay.currency}</span>
@@ -239,7 +239,7 @@
 
 						<!-- CardMarket (EU) -->
 						{#if poketracePrice?.cardmarket}
-							<div class="rounded-lg border border-vault-border bg-vault-bg p-4">
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
 								<div class="flex items-center justify-between">
 									<p class="text-sm font-medium text-emerald-400">CardMarket</p>
 									<span class="text-xs text-vault-text-muted">{poketracePrice.cardmarket.currency}</span>
@@ -272,7 +272,7 @@
 
 			<!-- TCGPlayer Prices (fallback from card data) -->
 			{#if card.tcgplayer?.prices && !hasPokeTrace}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-semibold text-white">Market Prices</h2>
 						{#if card.tcgplayer.url}
@@ -286,7 +286,7 @@
 					</p>
 					<div class="mt-4 space-y-3">
 						{#each Object.entries(card.tcgplayer.prices) as [variant, prices]}
-							<div class="rounded-lg border border-vault-border bg-vault-bg p-4">
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
 								<p class="mb-2 text-sm font-medium capitalize text-vault-text-muted">
 									{variant.replace(/([A-Z])/g, ' $1').trim()}
 								</p>
@@ -312,7 +312,7 @@
 
 			<!-- Graded Prices -->
 			{#if hasGradedPrices}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<h2 class="text-lg font-semibold text-white">Graded Prices</h2>
 					<p class="mt-1 text-xs text-vault-text-muted">Recent sale prices by grade</p>
 					<div class="mt-4 space-y-4">
@@ -337,18 +337,18 @@
 			{/if}
 
 			<!-- Price History Chart -->
-			<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 				<h2 class="text-lg font-semibold text-white">Price History</h2>
 				<PriceChart {priceHistory} height={280} />
 			</div>
 
 			<!-- Attacks -->
 			{#if card.attacks?.length}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<h2 class="text-lg font-semibold text-white">Attacks</h2>
 					<div class="mt-4 space-y-4">
 						{#each card.attacks as attack}
-							<div class="rounded-lg border border-vault-border bg-vault-bg p-4">
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
 								<div class="flex items-center justify-between">
 									<div class="flex items-center gap-3">
 										<div class="flex gap-0.5">
@@ -373,7 +373,7 @@
 
 			<!-- Weaknesses / Resistances / Retreat -->
 			{#if card.weaknesses?.length || card.resistances?.length || card.retreatCost?.length}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<div class="grid grid-cols-3 gap-4 text-center">
 						<div>
 							<h3 class="text-sm font-medium text-vault-text-muted">Weakness</h3>
@@ -407,7 +407,7 @@
 
 			<!-- PokéAPI Enrichment -->
 			{#if pokedexData}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<h2 class="text-lg font-semibold text-white">Pokédex Data</h2>
 					<div class="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
 						<div><span class="text-vault-text-muted">National Dex #</span><p class="font-medium text-white">#{pokedexData.id}</p></div>
@@ -417,7 +417,7 @@
 						<div><span class="text-vault-text-muted">Weight</span><p class="font-medium text-white">{(pokedexData.weight / 10).toFixed(1)}kg</p></div>
 					</div>
 					{#if pokedexData.flavor_text}
-						<div class="mt-4 rounded-lg border border-vault-border bg-vault-bg p-4">
+						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-4">
 							<p class="text-sm italic text-vault-text-muted">"{pokedexData.flavor_text}"</p>
 						</div>
 					{/if}
@@ -426,7 +426,7 @@
 
 			<!-- Evolution Chain -->
 			{#if evolutions.length > 1}
-				<div class="rounded-xl border border-vault-border bg-vault-surface p-6">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 					<h2 class="text-lg font-semibold text-white">Evolution Chain</h2>
 					<div class="mt-4 flex flex-wrap items-center gap-3">
 						{#each evolutions as evo, i}
@@ -444,10 +444,10 @@
 
 			<!-- Actions -->
 			<div class="flex gap-3">
-				<button onclick={addToCollection} disabled={actionLoading === 'collection'} class="rounded-lg bg-vault-accent px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover disabled:opacity-50">
+				<button onclick={addToCollection} disabled={actionLoading === 'collection'} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50">
 					{#if addedToCollection}Added!{:else if actionLoading === 'collection'}Adding...{:else}Add to Collection{/if}
 				</button>
-				<button onclick={addToWatchlist} disabled={actionLoading === 'watchlist'} class="rounded-lg border border-vault-border px-6 py-2.5 text-sm font-medium text-vault-text transition-colors hover:bg-vault-surface-hover disabled:opacity-50">
+				<button onclick={addToWatchlist} disabled={actionLoading === 'watchlist'} class="btn-press rounded-xl border border-vault-border px-6 py-2.5 text-sm font-medium text-vault-text transition-all hover:border-vault-purple/50 hover:bg-vault-surface-hover disabled:opacity-50">
 					{#if addedToWatchlist}Watching!{:else if actionLoading === 'watchlist'}Adding...{:else}Add to Watchlist{/if}
 				</button>
 			</div>
