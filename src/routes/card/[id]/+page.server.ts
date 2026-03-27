@@ -1,10 +1,10 @@
 import { getCard } from '$services/tcg-api';
 import { getPokemon, getEvolutionChain } from '$services/pokeapi';
 import { getCardPrices } from '$services/poketrace';
-import { getGradedPrices, getPriceHistory } from '$services/price-tracker';
+import { getGradedPrices } from '$services/price-tracker';
 import { searchEbaySold } from '$services/ebay-scraper';
 import { searchPSAPop } from '$services/psa-scraper';
-import { supabase } from '$services/supabase';
+import { cacheTcgPlayerPrices, getPriceHistoryFromCache } from '$services/price-cache';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
@@ -12,37 +12,28 @@ export const load: PageServerLoad = async ({ params }) => {
 	const card = await getCard(params.id).catch(() => null);
 	if (!card) throw error(404, 'Card not found');
 
-	// Fetch all enrichment data in parallel
+	// Cache TCGPlayer prices to Supabase (fire-and-forget, once per day)
+	if (card.tcgplayer?.prices) {
+		cacheTcgPlayerPrices(card.id, card.tcgplayer).catch(() => {});
+	}
+
 	const dexNumber = card.nationalPokedexNumbers?.[0];
 
-	const [pokedexData, evolutionChain, poketracePrice, gradedPrices, priceHistory, ebaySold, psaPop] =
+	// Core data: Pokedex enrichment + price history from our cache
+	// External APIs: only attempt if env vars are configured
+	const hasPokeTrace = !!process.env.POKETRACE_API_KEY;
+	const hasPriceTracker = !!process.env.PRICE_TRACKER_API_KEY;
+
+	const [pokedexData, evolutionChain, priceHistory, poketracePrice, gradedPrices, ebaySold, psaPop] =
 		await Promise.all([
 			dexNumber ? getPokemon(dexNumber) : Promise.resolve(null),
 			dexNumber ? getEvolutionChain(dexNumber) : Promise.resolve(null),
-			getCardPrices(params.id),
-			getGradedPrices(params.id),
-			getPriceHistory(params.id, '1y'),
+			getPriceHistoryFromCache(params.id),
+			hasPokeTrace ? getCardPrices(params.id) : Promise.resolve(null),
+			hasPriceTracker ? getGradedPrices(params.id) : Promise.resolve([]),
 			searchEbaySold(card.name, card.set?.name, 10),
 			searchPSAPop(card.name, card.set?.name)
 		]);
-
-	// Cache the price data in Supabase if we got PokeTrace data
-	if (poketracePrice) {
-		const marketPrice = poketracePrice.tcgplayer?.raw?.market;
-		await supabase
-			.from('price_cache')
-			.upsert(
-				{
-					card_id: params.id,
-					source: 'poketrace',
-					raw_price: marketPrice ?? null,
-					graded_prices: poketracePrice.tcgplayer?.graded ?? {},
-					cached_at: new Date().toISOString()
-				},
-				{ onConflict: 'card_id,source' }
-			)
-			.catch(() => {});
-	}
 
 	return {
 		card,
