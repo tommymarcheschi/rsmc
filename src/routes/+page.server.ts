@@ -3,7 +3,12 @@ import { getCard } from '$services/tcg-api';
 import { getCachedPricesForCards } from '$services/price-cache';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ setHeaders }) => {
+	// Dashboard is mostly static when collection is empty — cache at edge
+	setHeaders({
+		'cache-control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
+	});
+
 	const [collectionRes, watchlistRes, gradingRes] = await Promise.all([
 		supabase.from('collection').select('*'),
 		supabase.from('watchlist').select('*'),
@@ -27,26 +32,17 @@ export const load: PageServerLoad = async () => {
 	if (collection.length > 0) {
 		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))].slice(0, 20);
 
-		// Try cached prices first, then fall back to TCG API for uncached cards
-		const cachedPrices = await getCachedPricesForCards(uniqueCardIds);
-		const uncachedIds = uniqueCardIds.filter((id) => !cachedPrices.has(id));
-
-		const cardResults = await Promise.all(
-			uncachedIds.map((id) => getCard(id).catch(() => null))
-		);
+		// Get cached prices + fetch card metadata in one pass
+		const [cachedPrices, ...cardResults] = await Promise.all([
+			getCachedPricesForCards(uniqueCardIds),
+			...uniqueCardIds.map((id) => getCard(id).catch(() => null))
+		]);
 
 		const cardMap = new Map<string, { name: string; marketPrice: number; imageUrl: string }>();
 
-		// Add cached prices (need card name/image from API still)
-		// Fetch all cards for metadata but use cached price when available
-		const allCardResults = await Promise.all(
-			uniqueCardIds.map((id) => getCard(id).catch(() => null))
-		);
-
-		for (const card of allCardResults) {
+		for (const card of cardResults) {
 			if (!card) continue;
-			// Prefer cached price, fall back to live TCGPlayer price from card data
-			let marketPrice = cachedPrices.get(card.id) ?? 0;
+			let marketPrice = (cachedPrices as Map<string, number>).get(card.id) ?? 0;
 			if (marketPrice === 0 && card.tcgplayer?.prices) {
 				for (const variant of Object.values(card.tcgplayer.prices)) {
 					if (variant.market) { marketPrice = variant.market; break; }

@@ -1,7 +1,12 @@
 import { getSets } from '$services/tcg-api';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, setHeaders }) => {
+	// Sets list is stable — cache aggressively at the edge
+	setHeaders({
+		'cache-control': 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600'
+	});
+
 	const search = url.searchParams.get('q') ?? '';
 	const set = url.searchParams.get('set') ?? '';
 	const type = url.searchParams.get('type') ?? '';
