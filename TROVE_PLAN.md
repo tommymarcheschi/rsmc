@@ -1,4 +1,4 @@
-# PokéVault — Master Build Plan
+# Trove — Master Build Plan
 
 Personal Pokémon TCG Collector Intelligence App
 

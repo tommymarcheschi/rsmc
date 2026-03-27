@@ -13,7 +13,7 @@
 </script>
 
 <svelte:head>
-	<title>Insights — PokéVault</title>
+	<title>Insights — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

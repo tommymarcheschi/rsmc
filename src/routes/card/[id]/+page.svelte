@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>{card.name} — PokéVault</title>
+	<title>{card.name} — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

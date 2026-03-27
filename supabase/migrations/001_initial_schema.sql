@@ -1,4 +1,4 @@
--- PokéVault Initial Schema
+-- Trove Initial Schema
 -- Run this in your Supabase SQL editor to set up all tables
 
 -- ============================================

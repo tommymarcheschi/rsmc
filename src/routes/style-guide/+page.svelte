@@ -3,13 +3,13 @@
 </script>
 
 <svelte:head>
-	<title>Style Guide — PokéVault</title>
+	<title>Style Guide — Trove</title>
 </svelte:head>
 
 <div class="space-y-8">
 	<div>
 		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Style Guide</h1>
-		<p class="mt-1 text-vault-text-muted">PokéVault design system reference</p>
+		<p class="mt-1 text-vault-text-muted">Trove design system reference</p>
 	</div>
 
 	<!-- Tabs -->

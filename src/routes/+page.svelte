@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>PokéVault — Dashboard</title>
+	<title>Trove — Dashboard</title>
 </svelte:head>
 
 <div class="space-y-6 sm:space-y-8">

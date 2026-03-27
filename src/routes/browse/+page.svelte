@@ -139,7 +139,7 @@
 </script>
 
 <svelte:head>
-	<title>Browse Cards — PokéVault</title>
+	<title>Browse Cards — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

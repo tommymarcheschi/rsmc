@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-	<title>Watchlist — PokéVault</title>
+	<title>Watchlist — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

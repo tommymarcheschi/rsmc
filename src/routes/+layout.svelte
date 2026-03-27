@@ -51,7 +51,7 @@
 					<circle cx="12" cy="12" r="3" fill="currentColor"/>
 				</svg>
 			</div>
-			<span class="text-xl font-bold text-gradient">PokéVault</span>
+			<span class="text-xl font-bold text-gradient">Trove</span>
 		</div>
 
 		<!-- Nav items -->
@@ -154,7 +154,7 @@
 						<circle cx="12" cy="12" r="3" fill="currentColor"/>
 					</svg>
 				</div>
-				<span class="text-xl font-bold text-gradient">PokéVault</span>
+				<span class="text-xl font-bold text-gradient">Trove</span>
 			</div>
 			<nav class="space-y-1 p-3">
 				{#each navItems as item}
