@@ -1,12 +1,32 @@
 import type { PokedexData, EvolutionNode } from '$types';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
+const TIMEOUT_MS = 5000;
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour — Pokedex data never changes
+
+// In-memory caches
+const pokemonCache = new Map<number, { data: PokedexData; expires: number }>();
+const evoCache = new Map<number, { data: EvolutionNode[]; expires: number }>();
+
+async function fetchWithTimeout(url: string): Promise<Response> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+	try {
+		return await fetch(url, { signal: controller.signal });
+	} finally {
+		clearTimeout(timer);
+	}
+}
 
 export async function getPokemon(nameOrId: string | number): Promise<PokedexData | null> {
+	const id = typeof nameOrId === 'string' ? parseInt(nameOrId) : nameOrId;
+	const cached = pokemonCache.get(id);
+	if (cached && cached.expires > Date.now()) return cached.data;
+
 	try {
 		const [speciesRes, pokemonRes] = await Promise.all([
-			fetch(`${BASE_URL}/pokemon-species/${nameOrId}`),
-			fetch(`${BASE_URL}/pokemon/${nameOrId}`)
+			fetchWithTimeout(`${BASE_URL}/pokemon-species/${nameOrId}`),
+			fetchWithTimeout(`${BASE_URL}/pokemon/${nameOrId}`)
 		]);
 
 		if (!speciesRes.ok || !pokemonRes.ok) return null;
@@ -21,7 +41,7 @@ export async function getPokemon(nameOrId: string | number): Promise<PokedexData
 			(g: { language: { name: string } }) => g.language.name === 'en'
 		);
 
-		return {
+		const data: PokedexData = {
 			id: pokemon.id,
 			name: pokemon.name,
 			types: pokemon.types.map((t: { type: { name: string } }) => t.type.name),
@@ -30,24 +50,52 @@ export async function getPokemon(nameOrId: string | number): Promise<PokedexData
 			height: pokemon.height,
 			weight: pokemon.weight
 		};
+
+		pokemonCache.set(id, { data, expires: Date.now() + CACHE_TTL });
+
+		// Also cache the evolution chain from this species data (avoids double fetch)
+		if (species.evolution_chain?.url) {
+			cacheEvolutionFromSpecies(id, species.evolution_chain.url);
+		}
+
+		return data;
 	} catch {
 		return null;
 	}
 }
 
 export async function getEvolutionChain(pokemonId: number): Promise<EvolutionNode[] | null> {
+	const cached = evoCache.get(pokemonId);
+	if (cached && cached.expires > Date.now()) return cached.data;
+
 	try {
-		const speciesRes = await fetch(`${BASE_URL}/pokemon-species/${pokemonId}`);
+		const speciesRes = await fetchWithTimeout(`${BASE_URL}/pokemon-species/${pokemonId}`);
 		if (!speciesRes.ok) return null;
 		const species = await speciesRes.json();
 
-		const evoRes = await fetch(species.evolution_chain.url);
+		const evoRes = await fetchWithTimeout(species.evolution_chain.url);
 		if (!evoRes.ok) return null;
 		const evoData = await evoRes.json();
 
-		return [parseChain(evoData.chain)];
+		const data = [parseChain(evoData.chain)];
+		evoCache.set(pokemonId, { data, expires: Date.now() + CACHE_TTL });
+		return data;
 	} catch {
 		return null;
+	}
+}
+
+/** Pre-cache evolution chain when we already have the species URL from getPokemon */
+async function cacheEvolutionFromSpecies(pokemonId: number, evoUrl: string): Promise<void> {
+	if (evoCache.has(pokemonId)) return;
+	try {
+		const evoRes = await fetchWithTimeout(evoUrl);
+		if (!evoRes.ok) return;
+		const evoData = await evoRes.json();
+		const data = [parseChain(evoData.chain)];
+		evoCache.set(pokemonId, { data, expires: Date.now() + CACHE_TTL });
+	} catch {
+		// Ignore
 	}
 }
 
