@@ -157,7 +157,7 @@
 </script>
 
 <svelte:head>
-	<title>My Collection — PokéVault</title>
+	<title>My Collection — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

@@ -161,7 +161,7 @@
 </script>
 
 <svelte:head>
-	<title>Grading — PokéVault</title>
+	<title>Grading — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

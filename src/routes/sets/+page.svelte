@@ -37,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>Set Tracker — PokéVault</title>
+	<title>Set Tracker — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

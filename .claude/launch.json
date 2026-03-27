@@ -2,11 +2,11 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pokevault-dev",
+      "name": "trove-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173,
-      "cwd": "/Users/tommymarcheschi/dev/rsmc"
+      "runtimeArgs": ["run", "dev", "--", "--port", "5176"],
+      "port": 5176,
+      "cwd": ""
     }
   ]
 }

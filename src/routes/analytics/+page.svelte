@@ -117,7 +117,7 @@
 </script>
 
 <svelte:head>
-	<title>Analytics — PokéVault</title>
+	<title>Analytics — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">

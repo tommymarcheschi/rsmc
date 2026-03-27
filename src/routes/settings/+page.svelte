@@ -3,13 +3,13 @@
 </script>
 
 <svelte:head>
-	<title>Settings — PokéVault</title>
+	<title>Settings — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div>
 		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Settings</h1>
-		<p class="mt-1 text-vault-text-muted">Configure your PokéVault experience</p>
+		<p class="mt-1 text-vault-text-muted">Configure your Trove experience</p>
 	</div>
 
 	<div class="max-w-2xl space-y-6">
