@@ -1,5 +1,6 @@
 import { supabase } from '$services/supabase';
 import { getCard } from '$services/tcg-api';
+import { getCachedPricesForCards } from '$services/price-cache';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -20,22 +21,33 @@ export const load: PageServerLoad = async () => {
 		0
 	);
 
-	// Portfolio valuation — fetch current market prices for collection cards
 	let portfolioValue = 0;
 	let topHoldings: { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[] = [];
 
 	if (collection.length > 0) {
-		// Fetch prices for up to 20 unique cards (avoid hammering API)
 		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))].slice(0, 20);
+
+		// Try cached prices first, then fall back to TCG API for uncached cards
+		const cachedPrices = await getCachedPricesForCards(uniqueCardIds);
+		const uncachedIds = uniqueCardIds.filter((id) => !cachedPrices.has(id));
+
 		const cardResults = await Promise.all(
-			uniqueCardIds.map((id) => getCard(id).catch(() => null))
+			uncachedIds.map((id) => getCard(id).catch(() => null))
 		);
 
 		const cardMap = new Map<string, { name: string; marketPrice: number; imageUrl: string }>();
-		for (const card of cardResults) {
+
+		// Add cached prices (need card name/image from API still)
+		// Fetch all cards for metadata but use cached price when available
+		const allCardResults = await Promise.all(
+			uniqueCardIds.map((id) => getCard(id).catch(() => null))
+		);
+
+		for (const card of allCardResults) {
 			if (!card) continue;
-			let marketPrice = 0;
-			if (card.tcgplayer?.prices) {
+			// Prefer cached price, fall back to live TCGPlayer price from card data
+			let marketPrice = cachedPrices.get(card.id) ?? 0;
+			if (marketPrice === 0 && card.tcgplayer?.prices) {
 				for (const variant of Object.values(card.tcgplayer.prices)) {
 					if (variant.market) { marketPrice = variant.market; break; }
 					if (variant.mid) { marketPrice = variant.mid; break; }

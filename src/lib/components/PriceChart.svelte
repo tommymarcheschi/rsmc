@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { PriceHistory } from '$services/price-tracker';
+	// PriceHistory type — compatible with both price-tracker API and our cache
+	interface PriceHistory {
+		card_id: string;
+		data_points: { date: string; price: number }[];
+		period: string;
+	}
 
 	interface Props {
 		priceHistory: PriceHistory | null;
@@ -95,9 +100,14 @@
 	});
 </script>
 
-{#if priceHistory?.data_points?.length}
+{#if priceHistory?.data_points?.length && priceHistory.data_points.length >= 2}
 	<div style="height: {height}px;">
 		<canvas bind:this={canvas}></canvas>
+	</div>
+{:else if priceHistory?.data_points?.length === 1}
+	<div class="flex flex-col items-center justify-center gap-2 py-8 text-sm text-vault-text-muted" style="height: {height}px;">
+		<div class="text-2xl font-bold text-vault-green">${priceHistory.data_points[0].price.toFixed(2)}</div>
+		<p>Price tracking started — chart builds as you browse over time</p>
 	</div>
 {:else}
 	<div class="flex items-center justify-center py-8 text-sm text-vault-text-muted" style="height: {height}px;">
