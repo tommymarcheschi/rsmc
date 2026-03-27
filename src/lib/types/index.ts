@@ -17,6 +17,7 @@ export interface PokemonCard {
 	nationalPokedexNumbers?: number[];
 	images: CardImages;
 	tcgplayer?: TCGPlayerData;
+	cardmarket?: CardMarketData;
 }
 
 export interface Attack {
@@ -62,6 +63,19 @@ export interface PriceData {
 	high?: number;
 	market?: number;
 	directLow?: number;
+}
+
+export interface CardMarketData {
+	url: string;
+	updatedAt: string;
+	prices?: {
+		averageSellPrice?: number;
+		lowPrice?: number;
+		trendPrice?: number;
+		avg1?: number;
+		avg7?: number;
+		avg30?: number;
+	};
 }
 
 // Collection types

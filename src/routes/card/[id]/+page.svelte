@@ -312,6 +312,58 @@
 						{/each}
 					</div>
 				</div>
+			{:else if card.cardmarket?.prices && !hasPokeTrace}
+				<!-- CardMarket fallback when TCGPlayer has no prices -->
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">Market Prices</h2>
+						{#if card.cardmarket.url}
+							<a href={card.cardmarket.url} target="_blank" rel="noopener noreferrer" class="text-sm text-vault-accent hover:underline">
+								View on CardMarket
+							</a>
+						{/if}
+					</div>
+					<p class="mt-1 text-xs text-vault-text-muted">
+						Source: CardMarket (EU) · Updated: {new Date(card.cardmarket.updatedAt).toLocaleDateString()}
+					</p>
+					<div class="mt-4">
+						<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
+							<div class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+								{#if card.cardmarket.prices.trendPrice != null}
+									<div><span class="text-vault-text-muted">Trend</span><p class="font-bold text-vault-green">${card.cardmarket.prices.trendPrice.toFixed(2)}</p></div>
+								{/if}
+								{#if card.cardmarket.prices.averageSellPrice != null}
+									<div><span class="text-vault-text-muted">Avg Sell</span><p class="font-semibold text-white">${card.cardmarket.prices.averageSellPrice.toFixed(2)}</p></div>
+								{/if}
+								{#if card.cardmarket.prices.lowPrice != null}
+									<div><span class="text-vault-text-muted">Low</span><p class="font-semibold text-white">${card.cardmarket.prices.lowPrice.toFixed(2)}</p></div>
+								{/if}
+								{#if card.cardmarket.prices.avg30 != null}
+									<div><span class="text-vault-text-muted">30d Avg</span><p class="font-semibold text-white">${card.cardmarket.prices.avg30.toFixed(2)}</p></div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				</div>
+			{:else if !hasPokeTrace}
+				<!-- No pricing data available -->
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">Market Prices</h2>
+						{#if card.tcgplayer?.url}
+							<a href={card.tcgplayer.url} target="_blank" rel="noopener noreferrer" class="text-sm text-vault-accent hover:underline">
+								View on TCGPlayer
+							</a>
+						{/if}
+					</div>
+					<div class="mt-4 flex flex-col items-center justify-center rounded-xl border border-vault-border bg-vault-bg py-8 text-vault-text-muted">
+						<svg class="mb-2 h-8 w-8 text-vault-purple/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<p class="text-sm font-medium">Pricing not yet available</p>
+						<p class="mt-1 text-xs">New cards may take a few days to get market pricing</p>
+					</div>
+				</div>
 			{/if}
 
 			<!-- Graded Prices -->
