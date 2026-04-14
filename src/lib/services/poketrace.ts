@@ -6,7 +6,10 @@
  * US vs EU arbitrage data, confidence scores
  */
 
+import * as apiMonitor from './api-monitor';
+
 const BASE_URL = 'https://api.poketrace.com/v1';
+const SERVICE = 'poketrace';
 
 export interface PokeTracePrice {
 	card_id: string;
@@ -67,7 +70,14 @@ function getHeaders(): HeadersInit {
 }
 
 async function fetchPokeTrace(endpoint: string): Promise<Response> {
-	return fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
+	try {
+		const res = await fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
+		apiMonitor.record(SERVICE, res);
+		return res;
+	} catch (err) {
+		apiMonitor.recordError(SERVICE, err);
+		throw err;
+	}
 }
 
 export async function getCardPrices(cardId: string): Promise<PokeTracePrice | null> {

@@ -1,8 +1,10 @@
 import type { PokedexData, EvolutionNode } from '$types';
+import * as apiMonitor from './api-monitor';
 
 const BASE_URL = 'https://pokeapi.co/api/v2';
 const TIMEOUT_MS = 5000;
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour — Pokedex data never changes
+const SERVICE = 'pokeapi';
 
 // In-memory caches
 const pokemonCache = new Map<number, { data: PokedexData; expires: number }>();
@@ -12,7 +14,12 @@ async function fetchWithTimeout(url: string): Promise<Response> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 	try {
-		return await fetch(url, { signal: controller.signal });
+		const res = await fetch(url, { signal: controller.signal });
+		apiMonitor.record(SERVICE, res);
+		return res;
+	} catch (err) {
+		apiMonitor.recordError(SERVICE, err);
+		throw err;
 	} finally {
 		clearTimeout(timer);
 	}
