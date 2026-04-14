@@ -245,6 +245,9 @@
 		{:else}
 			<div class="flex items-center justify-center py-8 text-sm text-vault-text-muted">
 				Showing all {allCards.length.toLocaleString()} cards
+				{#if data.clientSort && data.hiddenByClientSort > 0}
+					<span class="ml-2">({data.hiddenByClientSort.toLocaleString()} hidden — missing price data)</span>
+				{/if}
 			</div>
 		{/if}
 	{:else}
