@@ -10,9 +10,9 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	const card = await getCard(params.id).catch(() => null);
 	if (!card) throw error(404, 'Card not found');
 
-	// Cache at the edge for 5 min, serve stale for 1 hour while revalidating
+	// Per-user (auth-gated) — cache in the user's browser only.
 	setHeaders({
-		'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600'
+		'cache-control': 'private, max-age=300, stale-while-revalidate=3600'
 	});
 
 	// Cache TCGPlayer prices to Supabase (fire-and-forget, once per day)

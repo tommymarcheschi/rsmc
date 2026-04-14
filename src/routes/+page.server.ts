@@ -4,9 +4,10 @@ import { getCachedPricesForCards } from '$services/price-cache';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
-	// Dashboard is mostly static when collection is empty — cache at edge
+	// Per-user data — cache in the user's browser only, never share across users
+	// or via shared CDNs. (Dashboard reflects the logged-in user's collection.)
 	setHeaders({
-		'cache-control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
+		'cache-control': 'private, max-age=60, stale-while-revalidate=300'
 	});
 
 	const [collectionRes, watchlistRes, gradingRes] = await Promise.all([

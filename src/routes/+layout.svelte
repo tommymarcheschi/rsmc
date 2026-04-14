@@ -24,6 +24,9 @@
 	let mobileMenuOpen = $state(false);
 	let globalSearch = $state('');
 
+	// /login uses its own standalone layout — skip the sidebar chrome there.
+	let isLoginPage = $derived($page.url.pathname === '/login');
+
 	function handleGlobalSearch(e: Event) {
 		e.preventDefault();
 		if (globalSearch.trim()) {
@@ -40,6 +43,9 @@
 	}
 </script>
 
+{#if isLoginPage}
+	{@render children()}
+{:else}
 <div class="flex h-screen overflow-hidden bg-vault-bg">
 	<!-- Sidebar (desktop) -->
 	<aside class="hidden w-64 flex-shrink-0 flex-col border-r border-vault-border bg-vault-surface lg:flex">
@@ -95,6 +101,17 @@
 				</svg>
 				Style Guide
 			</a>
+			<form method="POST" action="/logout" class="contents">
+				<button
+					type="submit"
+					class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-vault-text-muted transition-all duration-200 hover:bg-vault-surface-hover hover:text-white"
+				>
+					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+					</svg>
+					Sign Out
+				</button>
+			</form>
 		</div>
 	</aside>
 
@@ -172,4 +189,5 @@
 			</nav>
 		</div>
 	</div>
+{/if}
 {/if}
