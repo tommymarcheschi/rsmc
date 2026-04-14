@@ -18,3 +18,10 @@ create table if not exists price_history (
 create index if not exists idx_price_history_card_id on price_history (card_id);
 create index if not exists idx_price_history_recorded_at on price_history (recorded_at);
 create index if not exists idx_price_history_card_date on price_history (card_id, recorded_at desc);
+
+-- Trove is a single-user app gated by TROVE_PASSWORD at the hooks layer
+-- (src/hooks.server.ts). Auth lives in front of the whole app, not at the DB
+-- row level — matching the RLS posture of the tables in 001_initial_schema.sql.
+-- Without this, newer Supabase projects default to RLS-enabled and silently
+-- block inserts from the publishable key (which is what the app uses).
+alter table price_history disable row level security;

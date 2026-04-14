@@ -64,7 +64,7 @@
 		if (!compareSearch.trim() || searchLoading) return;
 		searchLoading = true;
 		try {
-			const res = await fetch(`/api/cards?q=${encodeURIComponent(`name:"${compareSearch.trim}"`)}&pageSize=12`);
+			const res = await fetch(`/api/cards?q=${encodeURIComponent(`name:"${compareSearch.trim()}"`)}&pageSize=12`);
 			const json = await res.json();
 			compareSearchResults = json.data ?? [];
 		} catch {
