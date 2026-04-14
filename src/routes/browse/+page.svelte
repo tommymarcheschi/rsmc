@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { CardThumbnail } from '$components';
+	import { SORT_OPTIONS } from '$services/sort';
 	import type { PokemonCard } from '$types';
 
 	let { data } = $props();
@@ -54,6 +55,7 @@
 				page: String(currentPage + 1),
 				pageSize: String(PAGE_SIZE)
 			});
+			if (data.filters.sort) params.set('sort', data.filters.sort);
 			const res = await fetch(`/api/cards?${params}`);
 			if (!res.ok) throw new Error('Failed to load more cards');
 			const result = await res.json();
@@ -89,7 +91,13 @@
 	}
 
 	let hasActiveFilters = $derived(
-		!!(data.filters.search || data.filters.set || data.filters.type || data.filters.rarity)
+		!!(
+			data.filters.search ||
+			data.filters.set ||
+			data.filters.type ||
+			data.filters.rarity ||
+			data.filters.sort
+		)
 	);
 </script>
 
@@ -191,6 +199,18 @@
 			<option value="Hyper Rare">Hyper Rare</option>
 		</select>
 
+		<select
+			name="sort"
+			value={data.filters.sort}
+			onchange={autoSubmit}
+			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+			aria-label="Sort cards"
+		>
+			{#each SORT_OPTIONS as opt}
+				<option value={opt.value}>{opt.label}</option>
+			{/each}
+		</select>
+
 		<!--
 			Apply button — always visible so users without JS (or whose JS
 			hasn't hydrated yet) can still submit the form. With JS, the selects
@@ -225,6 +245,9 @@
 		{:else}
 			<div class="flex items-center justify-center py-8 text-sm text-vault-text-muted">
 				Showing all {allCards.length.toLocaleString()} cards
+				{#if data.clientSort && data.hiddenByClientSort > 0}
+					<span class="ml-2">({data.hiddenByClientSort.toLocaleString()} hidden — missing price data)</span>
+				{/if}
 			</div>
 		{/if}
 	{:else}
