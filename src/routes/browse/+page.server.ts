@@ -2,9 +2,18 @@ import { getSets } from '$services/tcg-api';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
-	// Sets list is stable — cache aggressively at the edge
+	// Do NOT cache the HTML document. The HTML references hashed JS bundles
+	// (`_app/immutable/entry/*.{hash}.js`), and when Vercel promotes a new
+	// deployment the old hashes 404. A browser holding cached HTML from a
+	// previous deploy then fails to hydrate — the page renders, but every
+	// interaction is a no-op because `kit.start()` never runs. ETag-based
+	// revalidation (`no-cache` + must-revalidate) keeps reloads fast while
+	// guaranteeing the browser always checks with the server first.
+	// The sets list itself is cached via in-memory setsCache in tcg-api.ts,
+	// and /api/cards has its own cache-control header, so losing the HTML
+	// cache has negligible cost.
 	setHeaders({
-		'cache-control': 'private, max-age=600, stale-while-revalidate=3600'
+		'cache-control': 'private, no-cache, must-revalidate'
 	});
 
 	const search = url.searchParams.get('q') ?? '';
