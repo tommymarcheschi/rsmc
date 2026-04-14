@@ -1,44 +1,17 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import type { CollectionEntry, PokemonCard, CardCondition } from '$types';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	let entries = $derived(data.entries as CollectionEntry[]);
-	let loading = $state(false);
-	let searchQuery = $state('');
-	let showAddModal = $state(false);
-	let editingEntry = $state<CollectionEntry | null>(null);
-	let saveError = $state<string | null>(null);
+	let cardCache = $derived(data.cardCache as Record<string, PokemonCard>);
+	let addMode = $derived(data.addMode);
+	let selectedCard = $derived(data.selectedCard as PokemonCard | null);
+	let addSearchResults = $derived(data.addSearchResults as PokemonCard[]);
+	let addSearchQuery = $derived(data.addSearch ?? '');
 
-	async function readError(res: Response): Promise<string> {
-		try {
-			const body = await res.clone().json();
-			return body?.message ?? body?.error ?? `Request failed (HTTP ${res.status})`;
-		} catch {
-			return `Request failed (HTTP ${res.status})`;
-		}
-	}
-
-	// Card search for add modal
-	let cardSearchQuery = $state('');
-	let cardSearchResults = $state<PokemonCard[]>([]);
-	let searchingCards = $state(false);
-	let selectedCard = $state<PokemonCard | null>(null);
-
-	// Add form state
-	let addQuantity = $state(1);
-	let addCondition = $state<CardCondition>('NM');
-	let addPurchasePrice = $state('');
-	let addPurchaseDate = $state('');
-	let addNotes = $state('');
-
-	// Filtered entries
-	let filteredEntries = $derived(
-		searchQuery
-			? entries.filter((e) => e.card_id.toLowerCase().includes(searchQuery.toLowerCase()))
-			: entries
-	);
+	let saveError = $derived(form && !form.success ? form.message : null);
 
 	// Stats
 	let totalCards = $derived(entries.reduce((sum, e) => sum + e.quantity, 0));
@@ -47,121 +20,21 @@
 	);
 	let uniqueCards = $derived(new Set(entries.map((e) => e.card_id)).size);
 
-	// Card lookup cache — maps card_id to card data for display
-	let cardCache = $state<Record<string, PokemonCard>>({});
-
-	// Fetch card data for display
-	async function lookupCard(cardId: string): Promise<PokemonCard | null> {
-		if (cardCache[cardId]) return cardCache[cardId];
-		try {
-			const res = await fetch(`https://api.pokemontcg.io/v2/cards/${cardId}`);
-			if (!res.ok) return null;
-			const json = await res.json();
-			cardCache[cardId] = json.data;
-			return json.data;
-		} catch {
-			return null;
-		}
-	}
-
-	// Load card data for all entries on mount
-	$effect(() => {
-		for (const entry of entries) {
-			if (!cardCache[entry.card_id]) {
-				lookupCard(entry.card_id);
-			}
-		}
-	});
-
-	// Search for cards to add
-	async function searchCards() {
-		if (!cardSearchQuery.trim()) return;
-		searchingCards = true;
-		try {
-			const res = await fetch(`/api/cards?q=name:"${cardSearchQuery}*"&pageSize=12`);
-			const result = await res.json();
-			cardSearchResults = result.data ?? [];
-		} catch {
-			cardSearchResults = [];
-		} finally {
-			searchingCards = false;
-		}
-	}
-
-	function selectCard(card: PokemonCard) {
-		selectedCard = card;
-		cardSearchResults = [];
-		cardSearchQuery = card.name;
-	}
-
-	async function addToCollection() {
-		if (!selectedCard) return;
-		loading = true;
-		saveError = null;
-		try {
-			const res = await fetch('/api/collection', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					card_id: selectedCard.id,
-					quantity: addQuantity,
-					condition: addCondition,
-					purchase_price: addPurchasePrice ? parseFloat(addPurchasePrice) : null,
-					purchase_date: addPurchaseDate || null,
-					notes: addNotes || null
+	// Client-side filter over the server-rendered list. The input is a plain
+	// field (no form submission) — filtering is purely cosmetic, no data
+	// changes, so it's fine to skip the server round-trip when JS is on. The
+	// entire list is already server-rendered so without JS the user simply
+	// sees every row.
+	let searchQuery = $state('');
+	let filteredEntries = $derived(
+		searchQuery
+			? entries.filter((e) => {
+					const card = cardCache[e.card_id];
+					const haystack = `${e.card_id} ${card?.name ?? ''} ${card?.set.name ?? ''}`.toLowerCase();
+					return haystack.includes(searchQuery.toLowerCase());
 				})
-			});
-			if (res.ok) {
-				// Cache the card data
-				cardCache[selectedCard.id] = selectedCard;
-				closeAddModal();
-				await invalidateAll();
-			} else {
-				saveError = await readError(res);
-			}
-		} catch (err) {
-			saveError = err instanceof Error ? err.message : 'Network error';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function removeEntry(id: string) {
-		const res = await fetch(`/api/collection?id=${id}`, { method: 'DELETE' });
-		if (res.ok) await invalidateAll();
-	}
-
-	async function updateQuantity(entry: CollectionEntry, delta: number) {
-		const newQty = entry.quantity + delta;
-		if (newQty <= 0) {
-			removeEntry(entry.id);
-			return;
-		}
-		await fetch('/api/collection', {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id: entry.id, quantity: newQty })
-		});
-		await invalidateAll();
-	}
-
-	function openAddModal() {
-		showAddModal = true;
-		selectedCard = null;
-		cardSearchQuery = '';
-		cardSearchResults = [];
-		addQuantity = 1;
-		addCondition = 'NM';
-		addPurchasePrice = '';
-		addPurchaseDate = '';
-		addNotes = '';
-		saveError = null;
-	}
-
-	function closeAddModal() {
-		showAddModal = false;
-		selectedCard = null;
-	}
+			: entries
+	);
 
 	const conditionLabels: Record<CardCondition, string> = {
 		NM: 'Near Mint',
@@ -182,12 +55,20 @@
 			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">My Collection</h1>
 			<p class="mt-1 text-vault-text-muted">Track every card you own</p>
 		</div>
-		<button
-			onclick={openAddModal}
+		<!--
+			"+ Add Card" is a plain link to ?add=1 so the modal opens server-side.
+			The modal's card-search form submits back to the same route with
+			?addSearch=<q>; the loader populates results. Option (b) from the task
+			spec — less disruptive than a separate /collection/add route and keeps
+			the existing in-page modal UX.
+		-->
+		<a
+			href="/collection?add=1"
+			data-testid="open-add-modal"
 			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 		>
 			+ Add Card
-		</button>
+		</a>
 	</div>
 
 	<!-- Summary -->
@@ -222,10 +103,10 @@
 		</div>
 
 		{#if filteredEntries.length > 0}
-			<div class="divide-y divide-vault-border">
+			<div class="divide-y divide-vault-border" data-testid="collection-list">
 				{#each filteredEntries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
-					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
+					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4" data-testid="collection-row" data-card-id={entry.card_id}>
 						<!-- Card thumbnail -->
 						{#if card}
 							<a href="/card/{card.id}" class="flex-shrink-0">
@@ -268,33 +149,47 @@
 							</div>
 						</div>
 
-						<!-- Quantity controls -->
+						<!-- Quantity controls (tiny forms) -->
 						<div class="flex items-center gap-2">
-							<button
-								onclick={() => updateQuantity(entry, -1)}
-								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
-							>
-								-
-							</button>
-							<span class="w-8 text-center text-sm font-bold text-white">{entry.quantity}</span>
-							<button
-								onclick={() => updateQuantity(entry, 1)}
-								class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
-							>
-								+
-							</button>
+							<form method="POST" action="?/decrement" use:enhance class="contents">
+								<input type="hidden" name="id" value={entry.id} />
+								<button
+									type="submit"
+									data-testid="qty-decrement"
+									class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+									aria-label="Decrease quantity"
+								>
+									-
+								</button>
+							</form>
+							<span class="w-8 text-center text-sm font-bold text-white" data-testid="qty">{entry.quantity}</span>
+							<form method="POST" action="?/increment" use:enhance class="contents">
+								<input type="hidden" name="id" value={entry.id} />
+								<button
+									type="submit"
+									data-testid="qty-increment"
+									class="flex h-10 w-10 items-center justify-center rounded-xl border border-vault-border text-vault-text-muted transition-colors hover:bg-vault-surface-hover hover:text-white"
+									aria-label="Increase quantity"
+								>
+									+
+								</button>
+							</form>
 						</div>
 
 						<!-- Delete -->
-						<button
-							onclick={() => removeEntry(entry.id)}
-							class="flex-shrink-0 rounded-lg p-2 text-vault-text-muted transition-colors hover:bg-vault-red/10 hover:text-vault-red"
-							aria-label="Remove from collection"
-						>
-							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-							</svg>
-						</button>
+						<form method="POST" action="?/remove" use:enhance class="contents">
+							<input type="hidden" name="id" value={entry.id} />
+							<button
+								type="submit"
+								data-testid="remove-entry"
+								class="flex-shrink-0 rounded-lg p-2 text-vault-text-muted transition-colors hover:bg-vault-red/10 hover:text-vault-red"
+								aria-label="Remove from collection"
+							>
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+							</button>
+						</form>
 					</div>
 				{/each}
 			</div>
@@ -317,142 +212,164 @@
 	</div>
 </div>
 
-<!-- Add Card Modal -->
-{#if showAddModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-		<button aria-label="Close modal" class="fixed inset-0 bg-black/60" onclick={closeAddModal}></button>
+<!-- Add Card Modal — rendered when ?add=1 is in the URL. Closing is a link back
+     to /collection (which re-runs load without the add params). -->
+{#if addMode}
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="add-modal">
+		<a href="/collection" aria-label="Close modal" class="fixed inset-0 bg-black/60"></a>
 		<div class="relative w-full max-w-sm rounded-2xl border border-vault-border bg-vault-surface p-4 shadow-2xl sm:max-w-lg sm:p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-white">Add Card to Collection</h2>
-				<button onclick={closeAddModal} class="text-vault-text-muted hover:text-white" aria-label="Close">
+				<a href="/collection" class="text-vault-text-muted hover:text-white" aria-label="Close">
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 					</svg>
-				</button>
+				</a>
 			</div>
 
 			<div class="mt-4 space-y-4">
-				<!-- Card search -->
-				<div>
+				<!-- Card search — plain GET form back to /collection?add=1&addSearch=<q>.
+				     Loader runs the TCG search and returns results in data.addSearchResults. -->
+				<form method="GET" action="/collection" class="space-y-2">
+					<input type="hidden" name="add" value="1" />
 					<label class="block text-sm font-medium text-vault-text-muted" for="card-search">Search Card</label>
-					<div class="relative mt-1">
+					<div class="flex gap-2">
 						<input
 							id="card-search"
+							name="addSearch"
 							type="text"
-							bind:value={cardSearchQuery}
-							oninput={() => { if (cardSearchQuery.length >= 2) searchCards(); }}
+							value={addSearchQuery}
 							placeholder="Type a card name..."
-							class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
+							data-testid="card-search-input"
+							class="flex-1 rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 						/>
-						{#if searchingCards}
-							<div class="absolute right-3 top-2.5">
-								<div class="h-4 w-4 animate-spin rounded-full border-2 border-vault-accent border-t-transparent"></div>
-							</div>
-						{/if}
+						<button
+							type="submit"
+							data-testid="card-search-submit"
+							class="rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white hover:bg-vault-accent-hover"
+						>
+							Search
+						</button>
 					</div>
+				</form>
 
-					<!-- Search results dropdown -->
-					{#if cardSearchResults.length > 0}
-						<div class="mt-1 max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg">
-							{#each cardSearchResults as result}
-								<button
-									onclick={() => selectCard(result)}
-									class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-vault-surface-hover"
-								>
-									<img src={result.images.small} alt={result.name} class="h-10 w-7 rounded object-cover" />
-									<div>
-										<p class="text-sm text-white">{result.name}</p>
-										<p class="text-xs text-vault-text-muted">{result.set.name} · #{result.number}</p>
-									</div>
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<!-- Selected card preview -->
-				{#if selectedCard}
-					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3">
-						<img src={selectedCard.images.small} alt={selectedCard.name} class="h-16 w-11 rounded object-cover" />
-						<div>
-							<p class="font-medium text-white">{selectedCard.name}</p>
-							<p class="text-xs text-vault-text-muted">{selectedCard.set.name} · {selectedCard.rarity ?? 'Unknown'}</p>
-						</div>
+				<!-- Search results — each result is a link to ?add=1&selectedCard=<id>,
+				     so picking one is a normal navigation. -->
+				{#if addSearchResults.length > 0 && !selectedCard}
+					<div class="max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg" data-testid="card-search-results">
+						{#each addSearchResults as result}
+							<a
+								href="/collection?add=1&selectedCard={encodeURIComponent(result.id)}&addSearch={encodeURIComponent(addSearchQuery)}"
+								data-testid="card-search-result"
+								data-card-id={result.id}
+								class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-vault-surface-hover"
+							>
+								<img src={result.images.small} alt={result.name} class="h-10 w-7 rounded object-cover" />
+								<div>
+									<p class="text-sm text-white">{result.name}</p>
+									<p class="text-xs text-vault-text-muted">{result.set.name} · #{result.number}</p>
+								</div>
+							</a>
+						{/each}
 					</div>
 				{/if}
 
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<label class="block text-sm font-medium text-vault-text-muted" for="quantity">Quantity</label>
-						<input
-							id="quantity"
-							type="number"
-							min="1"
-							bind:value={addQuantity}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-						/>
+				{#if addSearchQuery && addSearchResults.length === 0 && !selectedCard}
+					<p class="text-sm text-vault-text-muted">No cards found for "{addSearchQuery}"</p>
+				{/if}
+
+				<!-- Selected card preview + add form. The final submit is a POST to
+				     ?/addEntry with all fields in FormData. -->
+				{#if selectedCard}
+					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3" data-testid="selected-card">
+						<img src={selectedCard.images.small} alt={selectedCard.name} class="h-16 w-11 rounded object-cover" />
+						<div class="flex-1">
+							<p class="font-medium text-white">{selectedCard.name}</p>
+							<p class="text-xs text-vault-text-muted">{selectedCard.set.name} · {selectedCard.rarity ?? 'Unknown'}</p>
+						</div>
+						<a href="/collection?add=1&addSearch={encodeURIComponent(addSearchQuery)}" class="text-xs text-vault-text-muted hover:text-white">
+							Change
+						</a>
 					</div>
-					<div>
-						<label class="block text-sm font-medium text-vault-text-muted" for="condition">Condition</label>
-						<select
-							id="condition"
-							bind:value={addCondition}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+
+					<form method="POST" action="?/addEntry" use:enhance class="space-y-4">
+						<input type="hidden" name="card_id" value={selectedCard.id} />
+
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-sm font-medium text-vault-text-muted" for="quantity">Quantity</label>
+								<input
+									id="quantity"
+									name="quantity"
+									type="number"
+									min="1"
+									value="1"
+									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+								/>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-vault-text-muted" for="condition">Condition</label>
+								<select
+									id="condition"
+									name="condition"
+									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+								>
+									<option value="NM">Near Mint</option>
+									<option value="LP">Lightly Played</option>
+									<option value="MP">Moderately Played</option>
+									<option value="HP">Heavily Played</option>
+									<option value="DMG">Damaged</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label class="block text-sm font-medium text-vault-text-muted" for="purchase-price">Purchase Price ($)</label>
+								<input
+									id="purchase-price"
+									name="purchase_price"
+									type="number"
+									step="0.01"
+									min="0"
+									placeholder="0.00"
+									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+								/>
+							</div>
+							<div>
+								<label class="block text-sm font-medium text-vault-text-muted" for="purchase-date">Purchase Date</label>
+								<input
+									id="purchase-date"
+									name="purchase_date"
+									type="date"
+									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+								/>
+							</div>
+						</div>
+
+						<div>
+							<label class="block text-sm font-medium text-vault-text-muted" for="notes">Notes</label>
+							<input
+								id="notes"
+								name="notes"
+								type="text"
+								placeholder="Optional notes..."
+								class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+							/>
+						</div>
+
+						<button
+							type="submit"
+							data-testid="submit-add-entry"
+							class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
 						>
-							<option value="NM">Near Mint</option>
-							<option value="LP">Lightly Played</option>
-							<option value="MP">Moderately Played</option>
-							<option value="HP">Heavily Played</option>
-							<option value="DMG">Damaged</option>
-						</select>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div>
-						<label class="block text-sm font-medium text-vault-text-muted" for="purchase-price">Purchase Price ($)</label>
-						<input
-							id="purchase-price"
-							type="number"
-							step="0.01"
-							min="0"
-							bind:value={addPurchasePrice}
-							placeholder="0.00"
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label class="block text-sm font-medium text-vault-text-muted" for="purchase-date">Purchase Date</label>
-						<input
-							id="purchase-date"
-							type="date"
-							bind:value={addPurchaseDate}
-							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-						/>
-					</div>
-				</div>
-
-				<div>
-					<label class="block text-sm font-medium text-vault-text-muted" for="notes">Notes</label>
-					<input
-						id="notes"
-						type="text"
-						bind:value={addNotes}
-						placeholder="Optional notes..."
-						class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-
-				<button
-					onclick={addToCollection}
-					disabled={!selectedCard || loading}
-					class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
-				>
-					{loading ? 'Adding...' : 'Add to Collection'}
-				</button>
+							Add to Collection
+						</button>
+					</form>
+				{/if}
 
 				{#if saveError}
-					<div class="rounded-lg border border-vault-accent/40 bg-vault-accent/10 px-4 py-3 text-sm text-vault-accent">
+					<div class="rounded-lg border border-vault-accent/40 bg-vault-accent/10 px-4 py-3 text-sm text-vault-accent" data-testid="save-error">
 						<span class="font-semibold">Couldn't save:</span> {saveError}
 					</div>
 				{/if}
