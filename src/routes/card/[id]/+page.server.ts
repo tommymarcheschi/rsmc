@@ -10,9 +10,11 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	const card = await getCard(params.id).catch(() => null);
 	if (!card) throw error(404, 'Card not found');
 
-	// Per-user (auth-gated) — cache in the user's browser only.
+	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
+	// for the full rationale — cached HTML referencing deleted immutable
+	// JS hashes after a Vercel deploy silently breaks hydration.
 	setHeaders({
-		'cache-control': 'private, max-age=300, stale-while-revalidate=3600'
+		'cache-control': 'private, no-cache, must-revalidate'
 	});
 
 	// Cache TCGPlayer prices to Supabase (fire-and-forget, once per day)

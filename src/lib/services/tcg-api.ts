@@ -2,7 +2,16 @@ import type { PokemonCard, CardSet, PaginatedResponse } from '$types';
 import * as apiMonitor from './api-monitor';
 
 const BASE_URL = 'https://api.pokemontcg.io/v2';
-const TIMEOUT_MS = 15000;
+// Total budget for a single logical request, across all retry attempts.
+const TOTAL_TIMEOUT_MS = 15000;
+// Per-attempt cap so a single slow call can't consume the whole budget.
+const ATTEMPT_TIMEOUT_MS = 6000;
+// Retries are cheap for a read-only API and the upstream is observably flaky
+// (intermittently returns 404/5xx for queries that are valid). 2 retries with
+// exponential backoff absorb ~3 consecutive failures without doubling latency
+// on the happy path.
+const MAX_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 200;
 const SERVICE = 'tcg';
 
 function getHeaders(): HeadersInit {
@@ -20,19 +29,58 @@ function getHeaders(): HeadersInit {
 	return headers;
 }
 
+/**
+ * Retry on transient upstream failures: network errors, timeouts, 5xx, 429,
+ * and 404 (the pokemontcg.io v2 API has been observed to return 404 for valid
+ * queries under load, then succeed on immediate retry).
+ *
+ * Does NOT retry on 400/401/403 because those are deterministic client errors
+ * — retrying just delays the inevitable failure.
+ */
+function isRetryableStatus(status: number): boolean {
+	if (status === 404 || status === 429) return true;
+	return status >= 500 && status < 600;
+}
+
 async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-	try {
-		const res = await fetch(url, { ...opts, signal: controller.signal });
-		apiMonitor.record(SERVICE, res);
-		return res;
-	} catch (err) {
-		apiMonitor.recordError(SERVICE, err);
-		throw err;
-	} finally {
-		clearTimeout(timeout);
+	const deadline = Date.now() + TOTAL_TIMEOUT_MS;
+	let lastError: unknown = null;
+
+	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) break;
+		const attemptTimeout = Math.min(ATTEMPT_TIMEOUT_MS, remaining);
+
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), attemptTimeout);
+		try {
+			const res = await fetch(url, { ...opts, signal: controller.signal });
+			apiMonitor.record(SERVICE, res);
+			// Retry transient failures; return everything else (including 2xx and
+			// deterministic 4xx) so the caller can decide what to do.
+			if (attempt < MAX_ATTEMPTS && isRetryableStatus(res.status)) {
+				lastError = new Error(`TCG API transient HTTP ${res.status}`);
+				// Drain the body so the connection can be reused.
+				await res.body?.cancel().catch(() => {});
+			} else {
+				return res;
+			}
+		} catch (err) {
+			apiMonitor.recordError(SERVICE, err);
+			lastError = err;
+			// AbortError + network errors are retryable.
+		} finally {
+			clearTimeout(timer);
+		}
+
+		// Exponential backoff: 200ms, 600ms — capped by remaining deadline.
+		if (attempt < MAX_ATTEMPTS) {
+			const backoff = Math.min(BASE_BACKOFF_MS * 3 ** (attempt - 1), deadline - Date.now());
+			if (backoff > 0) await new Promise((r) => setTimeout(r, backoff));
+		}
 	}
+
+	throw lastError instanceof Error ? lastError : new Error('TCG API request failed');
 }
 
 // ── In-memory cache for sets (rarely changes, saves ~1 API call per page load) ──

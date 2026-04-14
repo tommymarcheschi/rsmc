@@ -4,10 +4,11 @@ import { getCachedPricesForCards } from '$services/price-cache';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
-	// Per-user data — cache in the user's browser only, never share across users
-	// or via shared CDNs. (Dashboard reflects the logged-in user's collection.)
+	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
+	// for the full rationale — cached HTML referencing deleted immutable
+	// JS hashes after a Vercel deploy silently breaks hydration.
 	setHeaders({
-		'cache-control': 'private, max-age=60, stale-while-revalidate=300'
+		'cache-control': 'private, no-cache, must-revalidate'
 	});
 
 	const [collectionRes, watchlistRes, gradingRes] = await Promise.all([
