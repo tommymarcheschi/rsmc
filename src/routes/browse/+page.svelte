@@ -24,14 +24,17 @@
 	let sets = $derived(data.sets);
 	let hasMore = $derived(cards.length < totalCount);
 
-	// Build query string from current filters
+	// Build query string from current filters. Default to the latest set (first in
+	// the server-loaded list, which is sorted by -releaseDate).
 	function buildQuery(): string {
 		const parts: string[] = [];
 		if (searchInput) parts.push(`name:"${searchInput}*"`);
 		if (selectedSet) parts.push(`set.id:${selectedSet}`);
 		if (selectedType) parts.push(`types:${selectedType}`);
 		if (selectedRarity) parts.push(`rarity:"${selectedRarity}"`);
-		return parts.length > 0 ? parts.join(' ') : 'set.id:me2pt5';
+		if (parts.length > 0) return parts.join(' ');
+		const latestSetId = sets[0]?.id;
+		return latestSetId ? `set.id:${latestSetId}` : '';
 	}
 
 	// Fetch cards from client-side API
