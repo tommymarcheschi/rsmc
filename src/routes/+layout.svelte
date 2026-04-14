@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { ApiStatus } from '$components';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -128,10 +129,7 @@
 				</div>
 			</form>
 
-			<div class="flex items-center gap-2 text-sm text-vault-text-muted">
-				<div class="h-2 w-2 rounded-full bg-vault-green animate-pulse"></div>
-				<span class="hidden sm:inline">Live</span>
-			</div>
+			<ApiStatus />
 		</header>
 
 		<!-- Page content -->

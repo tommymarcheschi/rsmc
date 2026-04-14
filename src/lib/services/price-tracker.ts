@@ -6,7 +6,10 @@
  * population reports, 1+ year historical price data
  */
 
+import * as apiMonitor from './api-monitor';
+
 const BASE_URL = 'https://pokemonpricetracker.com/api/v1';
+const SERVICE = 'price-tracker';
 
 export interface GradedPrice {
 	grade: number;
@@ -65,7 +68,14 @@ function getHeaders(): HeadersInit {
 }
 
 async function fetchPriceTracker(endpoint: string): Promise<Response> {
-	return fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
+	try {
+		const res = await fetch(`${BASE_URL}${endpoint}`, { headers: getHeaders() });
+		apiMonitor.record(SERVICE, res);
+		return res;
+	} catch (err) {
+		apiMonitor.recordError(SERVICE, err);
+		throw err;
+	}
 }
 
 export async function getGradedPrices(cardId: string): Promise<GradedPrice[]> {

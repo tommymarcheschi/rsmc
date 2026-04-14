@@ -1,7 +1,9 @@
 import type { PokemonCard, CardSet, PaginatedResponse } from '$types';
+import * as apiMonitor from './api-monitor';
 
 const BASE_URL = 'https://api.pokemontcg.io/v2';
 const TIMEOUT_MS = 15000;
+const SERVICE = 'tcg';
 
 function getHeaders(): HeadersInit {
 	const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -18,12 +20,19 @@ function getHeaders(): HeadersInit {
 	return headers;
 }
 
-function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(url: string, opts: RequestInit = {}): Promise<Response> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-	return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
-		clearTimeout(timeout)
-	);
+	try {
+		const res = await fetch(url, { ...opts, signal: controller.signal });
+		apiMonitor.record(SERVICE, res);
+		return res;
+	} catch (err) {
+		apiMonitor.recordError(SERVICE, err);
+		throw err;
+	} finally {
+		clearTimeout(timeout);
+	}
 }
 
 // ── In-memory cache for sets (rarely changes, saves ~1 API call per page load) ──
