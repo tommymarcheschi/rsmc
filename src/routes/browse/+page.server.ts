@@ -11,6 +11,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const set = url.searchParams.get('set') ?? '';
 	const type = url.searchParams.get('type') ?? '';
 	const rarity = url.searchParams.get('rarity') ?? '';
+	const sort = url.searchParams.get('sort') ?? '';
 
 	// Only load sets on the server (fast, cacheable).
 	// Card search happens client-side via /api/cards to avoid Vercel 10s timeout.
@@ -18,6 +19,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 
 	return {
 		sets,
-		filters: { search, set, type, rarity }
+		filters: { search, set, type, rarity, sort }
 	};
 };
