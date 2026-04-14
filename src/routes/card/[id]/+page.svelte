@@ -22,17 +22,34 @@
 	let addedToCollection = $state(false);
 	let addedToWatchlist = $state(false);
 	let actionLoading = $state('');
+	let actionError = $state<string | null>(null);
 	let priceTab = $state<'raw' | 'graded'>('raw');
+
+	async function readError(res: Response): Promise<string> {
+		try {
+			const body = await res.clone().json();
+			return body?.message ?? body?.error ?? `Request failed (HTTP ${res.status})`;
+		} catch {
+			return `Request failed (HTTP ${res.status})`;
+		}
+	}
 
 	async function addToCollection() {
 		actionLoading = 'collection';
+		actionError = null;
 		try {
 			const res = await fetch('/api/collection', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ card_id: card.id, quantity: 1, condition: 'NM' })
 			});
-			if (res.ok) addedToCollection = true;
+			if (res.ok) {
+				addedToCollection = true;
+			} else {
+				actionError = await readError(res);
+			}
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Network error';
 		} finally {
 			actionLoading = '';
 		}
@@ -40,13 +57,20 @@
 
 	async function addToWatchlist() {
 		actionLoading = 'watchlist';
+		actionError = null;
 		try {
 			const res = await fetch('/api/watchlist', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ card_id: card.id })
 			});
-			if (res.ok) addedToWatchlist = true;
+			if (res.ok) {
+				addedToWatchlist = true;
+			} else {
+				actionError = await readError(res);
+			}
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Network error';
 		} finally {
 			actionLoading = '';
 		}
@@ -584,13 +608,20 @@
 			{/if}
 
 			<!-- Actions -->
-			<div class="flex gap-3">
-				<button onclick={addToCollection} disabled={actionLoading === 'collection'} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50">
-					{#if addedToCollection}Added!{:else if actionLoading === 'collection'}Adding...{:else}Add to Collection{/if}
-				</button>
-				<button onclick={addToWatchlist} disabled={actionLoading === 'watchlist'} class="btn-press rounded-xl border border-vault-border px-6 py-2.5 text-sm font-medium text-vault-text transition-all hover:border-vault-purple/50 hover:bg-vault-surface-hover disabled:opacity-50">
-					{#if addedToWatchlist}Watching!{:else if actionLoading === 'watchlist'}Adding...{:else}Add to Watchlist{/if}
-				</button>
+			<div class="space-y-3">
+				<div class="flex gap-3">
+					<button onclick={addToCollection} disabled={actionLoading === 'collection'} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50">
+						{#if addedToCollection}Added!{:else if actionLoading === 'collection'}Adding...{:else}Add to Collection{/if}
+					</button>
+					<button onclick={addToWatchlist} disabled={actionLoading === 'watchlist'} class="btn-press rounded-xl border border-vault-border px-6 py-2.5 text-sm font-medium text-vault-text transition-all hover:border-vault-purple/50 hover:bg-vault-surface-hover disabled:opacity-50">
+						{#if addedToWatchlist}Watching!{:else if actionLoading === 'watchlist'}Adding...{:else}Add to Watchlist{/if}
+					</button>
+				</div>
+				{#if actionError}
+					<div class="rounded-xl border border-vault-accent/40 bg-vault-accent/10 px-4 py-3 text-sm text-vault-accent" data-testid="action-error">
+						<span class="font-semibold">Couldn't save:</span> {actionError}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

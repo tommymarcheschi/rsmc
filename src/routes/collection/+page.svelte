@@ -9,6 +9,16 @@
 	let searchQuery = $state('');
 	let showAddModal = $state(false);
 	let editingEntry = $state<CollectionEntry | null>(null);
+	let saveError = $state<string | null>(null);
+
+	async function readError(res: Response): Promise<string> {
+		try {
+			const body = await res.clone().json();
+			return body?.message ?? body?.error ?? `Request failed (HTTP ${res.status})`;
+		} catch {
+			return `Request failed (HTTP ${res.status})`;
+		}
+	}
 
 	// Card search for add modal
 	let cardSearchQuery = $state('');
@@ -87,6 +97,7 @@
 	async function addToCollection() {
 		if (!selectedCard) return;
 		loading = true;
+		saveError = null;
 		try {
 			const res = await fetch('/api/collection', {
 				method: 'POST',
@@ -105,7 +116,11 @@
 				cardCache[selectedCard.id] = selectedCard;
 				closeAddModal();
 				await invalidateAll();
+			} else {
+				saveError = await readError(res);
 			}
+		} catch (err) {
+			saveError = err instanceof Error ? err.message : 'Network error';
 		} finally {
 			loading = false;
 		}
@@ -140,6 +155,7 @@
 		addPurchasePrice = '';
 		addPurchaseDate = '';
 		addNotes = '';
+		saveError = null;
 	}
 
 	function closeAddModal() {
@@ -434,6 +450,12 @@
 				>
 					{loading ? 'Adding...' : 'Add to Collection'}
 				</button>
+
+				{#if saveError}
+					<div class="rounded-lg border border-vault-accent/40 bg-vault-accent/10 px-4 py-3 text-sm text-vault-accent">
+						<span class="font-semibold">Couldn't save:</span> {saveError}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
