@@ -1,6 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { ApiStatus } from '$components';
 
@@ -22,20 +21,9 @@
 	];
 
 	let mobileMenuOpen = $state(false);
-	let globalSearch = $state('');
 
 	// /login uses its own standalone layout — skip the sidebar chrome there.
 	let isLoginPage = $derived($page.url.pathname === '/login');
-
-	function handleGlobalSearch(e: Event) {
-		e.preventDefault();
-		if (globalSearch.trim()) {
-			goto(`/browse?q=${encodeURIComponent(globalSearch.trim())}`);
-			globalSearch = '';
-		} else {
-			goto('/browse');
-		}
-	}
 
 	function isActive(href: string, currentPath: string): boolean {
 		if (href === '/') return currentPath === '/';
@@ -131,12 +119,17 @@
 			</button>
 			<div class="hidden lg:block"></div>
 
-			<!-- Search bar -->
-			<form onsubmit={handleGlobalSearch} class="mx-2 flex max-w-md flex-1 sm:mx-4">
+			<!--
+				Global search bar — plain GET form that natively navigates to
+				/browse?q=... when submitted. Works without JS. With JS,
+				SvelteKit's data-sveltekit-preload-code on the surrounding
+				layout makes the navigation instant; no extra handler needed.
+			-->
+			<form method="GET" action="/browse" class="mx-2 flex max-w-md flex-1 sm:mx-4">
 				<div class="relative w-full">
 					<input
 						type="text"
-						bind:value={globalSearch}
+						name="q"
 						placeholder="Search cards..."
 						class="w-full rounded-xl border border-vault-border bg-vault-bg px-4 py-2 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
 					/>
