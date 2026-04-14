@@ -4,7 +4,7 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// Sets list is stable — cache aggressively at the edge
 	setHeaders({
-		'cache-control': 'public, max-age=600, s-maxage=1800, stale-while-revalidate=3600'
+		'cache-control': 'private, max-age=600, stale-while-revalidate=3600'
 	});
 
 	const search = url.searchParams.get('q') ?? '';

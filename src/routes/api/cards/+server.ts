@@ -25,7 +25,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const result = await searchCards(query, page, pageSize);
 		return json(result, {
-			headers: { 'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600' }
+			headers: { 'cache-control': 'private, max-age=300, stale-while-revalidate=3600' }
 		});
 	} catch {
 		return json({ data: [], totalCount: 0, page, pageSize, count: 0 });
