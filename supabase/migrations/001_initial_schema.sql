@@ -85,3 +85,18 @@ create trigger collection_updated_at
 create trigger grading_updated_at
     before update on grading
     for each row execute function update_updated_at();
+
+-- ============================================
+-- Row Level Security
+-- ============================================
+-- Trove is a single-user app gated by TROVE_PASSWORD at the hooks layer
+-- (src/hooks.server.ts). Auth lives in front of the whole app, not at the
+-- DB row level. Explicitly disable RLS on every table so the publishable
+-- key can read/write — newer Supabase projects default to RLS-enabled and
+-- will silently block writes from the anon key otherwise. These statements
+-- are idempotent: running them on an existing DB where RLS was never enabled
+-- is a no-op.
+alter table collection disable row level security;
+alter table watchlist disable row level security;
+alter table grading disable row level security;
+alter table price_cache disable row level security;
