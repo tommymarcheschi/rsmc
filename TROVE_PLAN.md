@@ -37,14 +37,35 @@ Personal Pokémon TCG Collector Intelligence App
 | `/sets` | Set completion tracker (owned vs missing, cost to complete) | ✅ Full feature |
 | `/settings` | API connections, preferences, currency | ✅ Scaffolded |
 
-## Supabase Schema (defined in `supabase/migrations/001_initial_schema.sql`)
+## Supabase Schema
 
+| Migration | Tables | Purpose |
+|-----------|--------|---------|
+| `001_initial_schema.sql` | `collection`, `watchlist`, `grading`, `price_cache` | User-owned data |
+| `002_price_history.sql` | `price_history` | Daily price snapshots, one row per card/variant/day |
+| `003_card_catalog.sql` | `sets`, `cards` | Static card + set catalog (populated by `npm run ingest:catalog`) |
+
+### Card catalog ingest
+
+The `cards` and `sets` tables are populated by an idempotent ingest script
+that pages through the Pokémon TCG API and upserts everything. Once the
+catalog is populated, `/browse` and `/api/cards` read from Supabase directly
+instead of hitting api.pokemontcg.io on every page load. If the catalog is
+empty, the routes fall back to the live API automatically.
+
+```bash
+# Apply the migration via Supabase dashboard SQL editor (or CLI):
+#   supabase db push
+# Then ingest:
+npm run ingest:catalog                  # all sets
+npm run ingest:catalog -- --set base1   # one set
+npm run ingest:catalog -- --since 2024  # only sets released this year+
 ```
-collection  (id, card_id, quantity, condition, purchase_price, purchase_date, notes)
-watchlist   (id, card_id, target_price, alert_enabled)
-grading     (id, card_id, service, tier, status, submitted_date, returned_date, grade, cost, final_value)
-price_cache (id, card_id, source, raw_price, graded_prices, cached_at)
-```
+
+Requires `SUPABASE_SERVICE_ROLE_KEY` and (recommended) `POKEMON_TCG_API_KEY`
+in `.env.local`. Live pricing is intentionally NOT refreshed by this script
+— that runs on a separate schedule (TBD) so the catalog can be re-ingested
+without disturbing the live price snapshots.
 
 ## API Endpoints (in `src/routes/api/`)
 
