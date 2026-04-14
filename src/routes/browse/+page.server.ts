@@ -1,4 +1,5 @@
 import { getSets, searchCards } from '$services/tcg-api';
+import { resolveSortOrderBy } from '$services/sort';
 import type { PageServerLoad } from './$types';
 import type { PokemonCard } from '$types';
 
@@ -20,6 +21,8 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const set = url.searchParams.get('set') ?? '';
 	const type = url.searchParams.get('type') ?? '';
 	const rarity = url.searchParams.get('rarity') ?? '';
+	const sort = url.searchParams.get('sort') ?? '';
+	const orderBy = resolveSortOrderBy(sort);
 
 	// Build the TCG API query from the current filters. If no filters are
 	// applied, default to the newest set (first in the release-sorted list).
@@ -45,7 +48,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	let totalCount = 0;
 	if (query) {
 		try {
-			const result = await searchCards(query, 1, INITIAL_PAGE_SIZE);
+			const result = await searchCards(query, 1, INITIAL_PAGE_SIZE, orderBy);
 			initialCards = result.data;
 			totalCount = result.totalCount;
 		} catch {
@@ -55,7 +58,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 
 	return {
 		sets,
-		filters: { search, set, type, rarity },
+		filters: { search, set, type, rarity, sort },
 		initialCards,
 		initialTotalCount: totalCount
 	};

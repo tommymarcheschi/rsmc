@@ -94,13 +94,14 @@ const CARD_CACHE_TTL = 1000 * 60 * 10; // 10 minutes
 export async function searchCards(
 	query: string,
 	page = 1,
-	pageSize = 20
+	pageSize = 20,
+	orderBy = '-set.releaseDate'
 ): Promise<PaginatedResponse<PokemonCard>> {
 	const params = new URLSearchParams({
 		q: query,
 		page: String(page),
 		pageSize: String(pageSize),
-		orderBy: '-set.releaseDate'
+		orderBy
 	});
 
 	const res = await fetchWithTimeout(`${BASE_URL}/cards?${params}`, {
