@@ -8,7 +8,7 @@
 		psa10_delta?: number | null;
 		psa10_multiple?: number | null;
 		psa_pop_total?: number | null;
-		tag_pop_total?: number | null;
+		cgc_pop_total?: number | null;
 		combined_pop_total?: number | null;
 		pcUrl?: string | null;
 	}
@@ -67,7 +67,7 @@
 	<!-- Pop badge (bottom left) — shows in hunt mode with PSA/CGC breakdown -->
 	{#if hasPop}
 		{@const psa = enrichment!.psa_pop_total ?? 0}
-		{@const cgc = enrichment!.tag_pop_total ?? 0}
+		{@const cgc = enrichment!.cgc_pop_total ?? 0}
 		{@const combined = enrichment!.combined_pop_total ?? 0}
 		<div class="absolute bottom-14 left-2 rounded-full bg-vault-bg/90 px-2 py-0.5 text-[10px] font-medium text-vault-text-muted shadow-lg backdrop-blur-sm"
 			title="PSA: {psa.toLocaleString()}{cgc ? ` + CGC: ${cgc.toLocaleString()}` : ''} = {combined.toLocaleString()} total graded">

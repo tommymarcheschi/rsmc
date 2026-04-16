@@ -23,7 +23,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		.select(
 			'card_id, name, set_name, set_release_date, card_number, rarity, image_small_url, ' +
 				'raw_nm_price, raw_source, psa10_price, psa_gem_rate, psa_pop_total, psa_pop_10, ' +
-				'tag_pop_total, tag_pop_10, graded_prices_fetched_at'
+				'cgc10_price, cgc_gem_rate, cgc_pop_total, cgc_pop_10, graded_prices_fetched_at'
 		)
 		.eq('card_id', cardId)
 		.maybeSingle();
