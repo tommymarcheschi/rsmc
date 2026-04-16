@@ -79,6 +79,11 @@ export const SORT_OPTIONS: SortOption[] = [
 	{ value: 'raw_desc', label: 'Raw Price (high → low)', kind: 'index', indexColumn: 'raw_nm_price', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
 	{ value: 'psa10_desc', label: 'PSA 10 Price (high → low)', kind: 'index', indexColumn: 'psa10_price', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
 	{ value: 'pop_asc', label: 'Population (low → high)', kind: 'index', indexColumn: 'combined_pop_total', indexDirection: 'asc', indexNulls: 'last', availableIn: ['hunt'] },
+	// Grading ROI — gem-rate-weighted PSA 10 premium (service-independent).
+	// Grading cost is applied in the UI, not SQL, so rankings stay stable
+	// across service switches. Label names "PSA gem rate" so the user knows
+	// the signal is anchored to PSA population data.
+	{ value: 'roi_desc', label: 'Grading ROI (PSA gem rate)', kind: 'index', indexColumn: 'grading_roi_premium', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
 ];
 
 const DEFAULT_OPTION = SORT_OPTIONS[0];
