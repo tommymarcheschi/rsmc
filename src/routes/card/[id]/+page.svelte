@@ -7,6 +7,27 @@
 	import type { PriceHistory } from '$services/price-tracker';
 	import type { EbaySoldResult } from '$services/ebay-scraper';
 	import type { PSAPopData } from '$services/psa-scraper';
+	import type { CardSignal } from '$services/insights';
+	import type { GradingROIResult } from '$services/grading-roi';
+
+	interface IndexRow {
+		rarity: string | null;
+		raw_nm_price: number | null;
+		raw_source: string | null;
+		psa10_price: number | null;
+		cgc10_price: number | null;
+		tag10_price: number | null;
+		psa10_delta: number | null;
+		psa10_multiple: number | null;
+		psa_pop_total: number | null;
+		psa_pop_10: number | null;
+		psa_gem_rate: number | null;
+		cgc_pop_total: number | null;
+		cgc_pop_10: number | null;
+		cgc_gem_rate: number | null;
+		graded_prices_fetched_at: string | null;
+		last_enriched_at: string | null;
+	}
 
 	let { data, form } = $props();
 
@@ -30,6 +51,26 @@
 	);
 	let hasConditionPrices = $derived(conditionPrices.length > 0);
 	let conditionPricesAsOf = $derived(conditionPrices[0]?.snapshot_date ?? null);
+
+	let indexRow = $derived(data.indexRow as IndexRow | null);
+	let cardSignal = $derived(data.cardSignal as CardSignal | null);
+	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
+	let hasMarketSignals = $derived(
+		indexRow != null &&
+			(indexRow.raw_nm_price != null ||
+				indexRow.psa10_price != null ||
+				indexRow.psa_pop_total != null ||
+				indexRow.cgc_pop_total != null)
+	);
+
+	function fmtMoney(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
+	function fmtInt(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n.toLocaleString();
+	}
 
 	const CONDITION_LABEL: Record<string, string> = {
 		NM: 'Near Mint',
@@ -356,6 +397,136 @@
 						<p class="text-sm font-medium">Pricing not yet available</p>
 						<p class="mt-1 text-xs">New cards may take a few days to get market pricing</p>
 					</div>
+				</div>
+			{/if}
+
+			<!-- Market Signals — all data we have on this card from card_index -->
+			{#if hasMarketSignals && indexRow}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">Market Signals</h2>
+						{#if indexRow.last_enriched_at}
+							<span class="text-[10px] text-vault-text-muted">
+								enriched {new Date(indexRow.last_enriched_at).toLocaleDateString()}
+							</span>
+						{/if}
+					</div>
+
+					<!-- Price ladder (raw + each grader's 10) -->
+					<div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
+							<p class="text-[11px] font-medium text-vault-text-muted">Raw NM</p>
+							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.raw_nm_price)}</p>
+							<p class="text-[10px] text-vault-text-muted">PriceCharting</p>
+						</div>
+						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
+							<p class="text-[11px] font-medium text-vault-gold">PSA 10</p>
+							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.psa10_price)}</p>
+							{#if indexRow.psa10_multiple != null}
+								<p class="text-[10px] text-vault-text-muted">{indexRow.psa10_multiple.toFixed(1)}× raw</p>
+							{/if}
+						</div>
+						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
+							<p class="text-[11px] font-medium text-blue-400">CGC 10</p>
+							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.cgc10_price)}</p>
+						</div>
+						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
+							<p class="text-[11px] font-medium text-purple-300">TAG 10</p>
+							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.tag10_price)}</p>
+						</div>
+					</div>
+
+					<!-- Pop reports -->
+					{#if indexRow.psa_pop_total != null || indexRow.cgc_pop_total != null}
+						<div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+							{#if indexRow.psa_pop_total != null}
+								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
+									<p class="text-[11px] font-medium text-vault-gold">PSA Population</p>
+									<div class="mt-1 flex items-baseline justify-between">
+										<p class="text-base font-bold text-white">{fmtInt(indexRow.psa_pop_total)} total</p>
+										<p class="text-sm text-vault-text-muted">{fmtInt(indexRow.psa_pop_10)} at 10</p>
+									</div>
+									{#if indexRow.psa_gem_rate != null}
+										<p class="mt-0.5 text-xs text-vault-text-muted">
+											Gem rate <span class="text-vault-green">{indexRow.psa_gem_rate.toFixed(1)}%</span>
+										</p>
+									{/if}
+								</div>
+							{/if}
+							{#if indexRow.cgc_pop_total != null}
+								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
+									<p class="text-[11px] font-medium text-blue-400">CGC Population</p>
+									<div class="mt-1 flex items-baseline justify-between">
+										<p class="text-base font-bold text-white">{fmtInt(indexRow.cgc_pop_total)} total</p>
+										<p class="text-sm text-vault-text-muted">{fmtInt(indexRow.cgc_pop_10)} at 10</p>
+									</div>
+									{#if indexRow.cgc_gem_rate != null}
+										<p class="mt-0.5 text-xs text-vault-text-muted">
+											Gem rate <span class="text-vault-green">{indexRow.cgc_gem_rate.toFixed(1)}%</span>
+										</p>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					<!-- Undervalued-finder context -->
+					{#if cardSignal}
+						{@const dev = cardSignal.deviation_pct}
+						{@const label = dev >= 20 ? 'PSA 10 is running hot' : dev <= -20 ? 'PSA 10 looks cheap' : 'PSA 10 is priced normally'}
+						{@const color = dev >= 20 ? 'text-vault-gold' : dev <= -20 ? 'text-vault-green' : 'text-vault-text-muted'}
+						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-3 sm:p-4">
+							<div class="flex items-baseline justify-between gap-3">
+								<p class="text-sm font-medium {color}">{label}</p>
+								<p class="text-sm font-bold {color}">
+									{dev >= 0 ? '+' : ''}{dev.toFixed(0)}%
+								</p>
+							</div>
+							<p class="mt-1 text-xs text-vault-text-muted">
+								This card's PSA 10 sells at <b>{cardSignal.actual_multiple.toFixed(1)}×</b> raw. Typical for <b>{cardSignal.rarity}</b> rarity is <b>{cardSignal.median_multiple.toFixed(1)}×</b> (across {cardSignal.sample_size} indexed cards).
+							</p>
+						</div>
+					{/if}
+
+					<!-- Grading ROI — concrete profit math for a PSA submission -->
+					{#if gradingROI && gradingROI.gradingCost > 0 && indexRow.raw_nm_price != null && indexRow.psa10_price != null}
+						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-3 sm:p-4">
+							<div class="flex items-center justify-between">
+								<p class="text-sm font-medium text-white">Grading ROI (PSA)</p>
+								<span class="text-[10px] text-vault-text-muted">
+									{gradingROI.resolvedTier?.name} · ${gradingROI.gradingCost}
+								</span>
+							</div>
+							<div class="mt-3 grid grid-cols-3 gap-2 text-center">
+								<div>
+									<p class="text-[10px] text-vault-text-muted">Realistic</p>
+									<p class="mt-0.5 text-sm font-bold {gradingROI.realisticProfit != null && gradingROI.realisticProfit > 0 ? 'text-vault-green' : 'text-vault-red'}">
+										{gradingROI.realisticProfit != null ? fmtMoney(gradingROI.realisticProfit) : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">using gem rate</p>
+								</div>
+								<div>
+									<p class="text-[10px] text-vault-text-muted">If it 10s</p>
+									<p class="mt-0.5 text-sm font-bold {gradingROI.optimisticProfit != null && gradingROI.optimisticProfit > 0 ? 'text-vault-green' : 'text-vault-red'}">
+										{gradingROI.optimisticProfit != null ? fmtMoney(gradingROI.optimisticProfit) : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">upside cap</p>
+								</div>
+								<div>
+									<p class="text-[10px] text-vault-text-muted">Break-even</p>
+									<p class="mt-0.5 text-sm font-bold text-white">
+										{gradingROI.breakEvenGemRate != null ? gradingROI.breakEvenGemRate.toFixed(0) + '%' : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">gem rate needed</p>
+								</div>
+							</div>
+							{#if !gradingROI.confident}
+								<p class="mt-3 text-[10px] italic text-amber-400">
+									Low PSA sample ({indexRow.psa_pop_total ?? 0} graded) — gem rate estimate is noisy.
+								</p>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/if}
 

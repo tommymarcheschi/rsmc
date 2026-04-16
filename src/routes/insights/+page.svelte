@@ -155,14 +155,10 @@
 	<!-- Undervalued Tab -->
 	{#if insightTab === 'undervalued'}
 		<div class="space-y-6">
-			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-xs text-vault-text-muted sm:text-sm">
-				<p>
-					For each rarity, we compute the median PSA 10 / Raw multiple across all indexed cards with both prices. Cards whose actual multiple deviates most from that median surface below. Only rarities with ≥15 indexed cards are sampled.
-				</p>
+			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-sm text-vault-text-muted">
+				<p class="text-white">How much more does a PSA 10 cost than a raw copy?</p>
 				<p class="mt-1">
-					<span class="text-vault-green">Cheap PSA 10</span>: the PSA 10 comp looks low vs peers (buy graded).
-					<span class="text-vault-gold">Hot PSA 10</span>: the PSA 10 comp runs hot vs peers (raw looks cheap — buy &amp; possibly grade).
-					Sample: <b>{undervalued.cardsAnalyzed}</b> cards across <b>{undervalued.raritiesSampled}</b> rarities.
+					For every card, we compare its raw → PSA 10 jump to what's typical for its rarity. The two lists below flag cards where the jump is way bigger or way smaller than normal — possible mispricings to investigate. Based on <b>{undervalued.cardsAnalyzed.toLocaleString()}</b> indexed cards across <b>{undervalued.raritiesSampled}</b> rarities.
 				</p>
 			</div>
 
@@ -170,8 +166,10 @@
 				<!-- Cheap PSA 10 -->
 				<div class="rounded-2xl border border-vault-border bg-vault-surface">
 					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
-						<h3 class="font-semibold text-vault-green">Cheap PSA 10 vs peers</h3>
-						<p class="mt-0.5 text-xs text-vault-text-muted">Multiple below rarity median → graded comps look underpriced</p>
+						<h3 class="font-semibold text-vault-green">PSA 10s selling cheap</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">
+							The jump from raw to PSA 10 is smaller than usual for the rarity. A graded copy may be a bargain right now.
+						</p>
 					</div>
 					{#if undervalued.cheapPsa10.length > 0}
 						<div class="divide-y divide-vault-border">
@@ -183,16 +181,17 @@
 									<div class="min-w-0 flex-1">
 										<p class="truncate text-sm font-medium text-white">{row.name}</p>
 										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+										<p class="mt-0.5 truncate text-xs text-vault-text-muted">
+											Raw ${row.raw_nm_price.toFixed(0)} → PSA 10 ${row.psa10_price.toFixed(0)}
+										</p>
 									</div>
-									<div class="text-right">
-										<p class="text-sm font-bold text-white">
-											{row.actual_multiple.toFixed(1)}×
-										</p>
-										<p class="text-xs text-vault-text-muted">
-											median {row.median_multiple.toFixed(1)}×
-										</p>
-										<p class="text-xs font-medium text-vault-green">
+									<div class="shrink-0 text-right">
+										<p class="text-sm font-bold text-vault-green">
 											{row.deviation_pct.toFixed(0)}%
+										</p>
+										<p class="text-xs text-vault-text-muted">below typical</p>
+										<p class="mt-0.5 text-[10px] text-vault-text-muted">
+											{row.actual_multiple.toFixed(1)}× vs {row.median_multiple.toFixed(1)}×
 										</p>
 									</div>
 								</a>
@@ -208,8 +207,10 @@
 				<!-- Hot PSA 10 -->
 				<div class="rounded-2xl border border-vault-border bg-vault-surface">
 					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
-						<h3 class="font-semibold text-vault-gold">Hot PSA 10 vs peers</h3>
-						<p class="mt-0.5 text-xs text-vault-text-muted">Multiple above rarity median → raw looks cheap vs graded</p>
+						<h3 class="font-semibold text-vault-gold">PSA 10s running hot</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">
+							The jump from raw to PSA 10 is much bigger than usual. Either the graded market is hot, or the raw is still cheap — worth a closer look before grading or buying.
+						</p>
 					</div>
 					{#if undervalued.hotPsa10.length > 0}
 						<div class="divide-y divide-vault-border">
@@ -221,16 +222,17 @@
 									<div class="min-w-0 flex-1">
 										<p class="truncate text-sm font-medium text-white">{row.name}</p>
 										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+										<p class="mt-0.5 truncate text-xs text-vault-text-muted">
+											Raw ${row.raw_nm_price.toFixed(0)} → PSA 10 ${row.psa10_price.toFixed(0)}
+										</p>
 									</div>
-									<div class="text-right">
-										<p class="text-sm font-bold text-white">
-											{row.actual_multiple.toFixed(1)}×
-										</p>
-										<p class="text-xs text-vault-text-muted">
-											median {row.median_multiple.toFixed(1)}×
-										</p>
-										<p class="text-xs font-medium text-vault-gold">
+									<div class="shrink-0 text-right">
+										<p class="text-sm font-bold text-vault-gold">
 											+{row.deviation_pct.toFixed(0)}%
+										</p>
+										<p class="text-xs text-vault-text-muted">above typical</p>
+										<p class="mt-0.5 text-[10px] text-vault-text-muted">
+											{row.actual_multiple.toFixed(1)}× vs {row.median_multiple.toFixed(1)}×
 										</p>
 									</div>
 								</a>

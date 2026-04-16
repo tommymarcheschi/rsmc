@@ -1,11 +1,14 @@
 import { getCard } from '$services/tcg-api';
 import { getPokemon, getEvolutionChain } from '$services/pokeapi';
 import { getCardPrices } from '$services/poketrace';
-import { getGradedPrices } from '$services/price-tracker';
+import { getGradedPrices, getGradingFees } from '$services/price-tracker';
 import { cacheTcgPlayerPrices, getPriceHistoryFromCache } from '$services/price-cache';
 import { supabase } from '$services/supabase';
+import { getCardSignal } from '$services/insights';
+import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import type { GradingService } from '$types';
 
 export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	const card = await getCard(params.id).catch(() => null);
@@ -41,7 +44,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	// watchlist so the page can show "In Collection" / "Watching" state
 	// on initial render without needing JS. Errors are swallowed — if
 	// Supabase is unreachable the buttons just show their default state.
-	const [collectionRows, watchlistRows, conditionPriceRows] = await Promise.all([
+	const [collectionRows, watchlistRows, conditionPriceRows, cardIndexRow, gradingFees] = await Promise.all([
 		supabase.from('collection').select('id').eq('card_id', params.id).limit(1),
 		supabase.from('watchlist').select('id').eq('card_id', params.id).limit(1),
 		// Latest snapshot per condition. Small (≤5 rows per card) so we can
@@ -51,10 +54,48 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 			.select('condition, median_cents, p25_cents, p75_cents, sample_count, snapshot_date')
 			.eq('card_id', params.id)
 			.order('snapshot_date', { ascending: false })
-			.limit(50)
+			.limit(50),
+		// card_index row for market signals section
+		supabase
+			.from('card_index')
+			.select(
+				'rarity, raw_nm_price, raw_source, psa10_price, cgc10_price, tag10_price, ' +
+					'psa10_delta, psa10_multiple, psa_pop_total, psa_pop_10, psa_gem_rate, ' +
+					'cgc_pop_total, cgc_pop_10, cgc_gem_rate, ' +
+					'graded_prices_fetched_at, last_enriched_at'
+			)
+			.eq('card_id', params.id)
+			.maybeSingle(),
+		getGradingFees()
 	]);
 	const inCollection = !!collectionRows.data?.length;
 	const onWatchlist = !!watchlistRows.data?.length;
+
+	// Market signals: undervalued-finder context + precomputed grading ROI.
+	// Best-effort — any failure shows "no data" in the UI rather than 500ing.
+	const indexRow = cardIndexRow.data;
+	const cardSignal = indexRow
+		? await getCardSignal(
+				params.id,
+				indexRow.rarity,
+				indexRow.raw_nm_price,
+				indexRow.psa10_price
+		  ).catch(() => null)
+		: null;
+
+	const gradingROI = indexRow
+		? computeGradingROI(
+				{
+					raw_nm_price: indexRow.raw_nm_price,
+					psa10_price: indexRow.psa10_price,
+					psa_gem_rate: indexRow.psa_gem_rate,
+					psa_pop_total: indexRow.psa_pop_total
+				},
+				'PSA' as GradingService,
+				DEFAULT_TIER_BY_SERVICE.PSA,
+				gradingFees
+		  )
+		: null;
 
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
@@ -71,6 +112,9 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		ebaySold: { query: '', listings: [], averagePrice: 0, medianPrice: 0, lowPrice: 0, highPrice: 0, totalSold: 0 },
 		psaPop: null,
 		conditionPrices,
+		indexRow,
+		cardSignal,
+		gradingROI,
 		inCollection,
 		onWatchlist
 	};

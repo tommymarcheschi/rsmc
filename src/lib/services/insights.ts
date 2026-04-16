@@ -93,6 +93,65 @@ export interface UndervaluedResult {
 	cardsAnalyzed: number;
 }
 
+export interface CardSignal {
+	actual_multiple: number;
+	median_multiple: number;
+	deviation_pct: number;
+	rarity: string;
+	sample_size: number;
+}
+
+// Cache the rarity→median map for 10 minutes so per-card signal lookups
+// don't re-scan card_index on every /card/[id] hit.
+let rarityMedianCache: { at: number; map: Map<string, { median: number; size: number }> } | null =
+	null;
+const RARITY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+async function getRarityMedians(): Promise<Map<string, { median: number; size: number }>> {
+	if (rarityMedianCache && Date.now() - rarityMedianCache.at < RARITY_CACHE_TTL_MS) {
+		return rarityMedianCache.map;
+	}
+	const rows = await loadAnalyzableCards();
+	const byRarity = new Map<string, number[]>();
+	for (const r of rows) {
+		const rar = r.rarity ?? 'Unknown';
+		if (!byRarity.has(rar)) byRarity.set(rar, []);
+		byRarity.get(rar)!.push(r.psa10_multiple);
+	}
+	const map = new Map<string, { median: number; size: number }>();
+	for (const [rar, mults] of byRarity) {
+		if (mults.length < MIN_RARITY_SAMPLE) continue;
+		const sorted = [...mults].sort((a, b) => a - b);
+		map.set(rar, { median: median(sorted), size: mults.length });
+	}
+	rarityMedianCache = { at: Date.now(), map };
+	return map;
+}
+
+/** Per-card deviation vs peers of same rarity. Null when we can't compute. */
+export async function getCardSignal(
+	cardId: string,
+	rarity: string | null,
+	rawPrice: number | null,
+	psa10Price: number | null
+): Promise<CardSignal | null> {
+	if (!rarity || rawPrice == null || psa10Price == null) return null;
+	if (rawPrice < MIN_RAW || psa10Price < MIN_PSA10) return null;
+
+	const map = await getRarityMedians();
+	const entry = map.get(rarity);
+	if (!entry) return null;
+
+	const actual = psa10Price / rawPrice;
+	return {
+		actual_multiple: actual,
+		median_multiple: entry.median,
+		deviation_pct: ((actual - entry.median) / entry.median) * 100,
+		rarity,
+		sample_size: entry.size
+	};
+}
+
 /**
  * Find cards whose PSA 10 multiple deviates most from the median multiple
  * for their rarity. Returns both directions in one pass.
