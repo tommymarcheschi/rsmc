@@ -41,12 +41,25 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 	// watchlist so the page can show "In Collection" / "Watching" state
 	// on initial render without needing JS. Errors are swallowed — if
 	// Supabase is unreachable the buttons just show their default state.
-	const [collectionRows, watchlistRows] = await Promise.all([
+	const [collectionRows, watchlistRows, conditionPriceRows] = await Promise.all([
 		supabase.from('collection').select('id').eq('card_id', params.id).limit(1),
-		supabase.from('watchlist').select('id').eq('card_id', params.id).limit(1)
+		supabase.from('watchlist').select('id').eq('card_id', params.id).limit(1),
+		// Latest snapshot per condition. Small (≤5 rows per card) so we can
+		// fetch and collapse in JS without a window function.
+		supabase
+			.from('condition_price_snapshots')
+			.select('condition, median_cents, p25_cents, p75_cents, sample_count, snapshot_date')
+			.eq('card_id', params.id)
+			.order('snapshot_date', { ascending: false })
+			.limit(50)
 	]);
 	const inCollection = !!collectionRows.data?.length;
 	const onWatchlist = !!watchlistRows.data?.length;
+
+	// Collapse to one row per condition, keeping the most recent. Missing
+	// table (404 after a fresh deploy before migration 005 applies) returns
+	// null data — we just show nothing, per honesty doctrine.
+	const conditionPrices = collapseLatestPerCondition(conditionPriceRows.data ?? []);
 
 	return {
 		card,
@@ -57,10 +70,32 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		priceHistory,
 		ebaySold: { query: '', listings: [], averagePrice: 0, medianPrice: 0, lowPrice: 0, highPrice: 0, totalSold: 0 },
 		psaPop: null,
+		conditionPrices,
 		inCollection,
 		onWatchlist
 	};
 };
+
+interface ConditionSnapshotRow {
+	condition: string;
+	median_cents: number;
+	p25_cents: number;
+	p75_cents: number;
+	sample_count: number;
+	snapshot_date: string;
+}
+
+function collapseLatestPerCondition(rows: ConditionSnapshotRow[]): ConditionSnapshotRow[] {
+	const latest = new Map<string, ConditionSnapshotRow>();
+	for (const r of rows) {
+		const existing = latest.get(r.condition);
+		if (!existing || r.snapshot_date > existing.snapshot_date) latest.set(r.condition, r);
+	}
+	const order = ['NM', 'LP', 'MP', 'HP', 'DMG'];
+	return order
+		.map((c) => latest.get(c))
+		.filter((r): r is ConditionSnapshotRow => r != null);
+}
 
 /**
  * Form actions for "Add to Collection" and "Add to Watchlist".

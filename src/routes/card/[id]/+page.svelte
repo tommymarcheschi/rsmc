@@ -18,6 +18,26 @@
 	let priceHistory = $derived(data.priceHistory as PriceHistory | null);
 	let ebaySold = $derived(data.ebaySold as EbaySoldResult);
 	let psaPop = $derived(data.psaPop as PSAPopData | null);
+	let conditionPrices = $derived(
+		(data.conditionPrices ?? []) as Array<{
+			condition: string;
+			median_cents: number;
+			p25_cents: number;
+			p75_cents: number;
+			sample_count: number;
+			snapshot_date: string;
+		}>
+	);
+	let hasConditionPrices = $derived(conditionPrices.length > 0);
+	let conditionPricesAsOf = $derived(conditionPrices[0]?.snapshot_date ?? null);
+
+	const CONDITION_LABEL: Record<string, string> = {
+		NM: 'Near Mint',
+		LP: 'Lightly Played',
+		MP: 'Moderately Played',
+		HP: 'Heavily Played',
+		DMG: 'Damaged'
+	};
 
 	// "Added" state comes from either the server loader (reload-resistant,
 	// works without JS) or the most recent form submission result.
@@ -335,6 +355,34 @@
 						</svg>
 						<p class="text-sm font-medium">Pricing not yet available</p>
 						<p class="mt-1 text-xs">New cards may take a few days to get market pricing</p>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Price by Condition (Phase 1: per-condition raw pricing from TCGPlayer listings) -->
+			{#if hasConditionPrices}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<h2 class="text-lg font-semibold text-white">Price by Condition</h2>
+						{#if conditionPricesAsOf}
+							<span class="text-[10px] text-vault-text-muted">as of {conditionPricesAsOf}</span>
+						{/if}
+					</div>
+					<p class="mt-1 text-xs text-vault-text-muted">
+						Median active-listing price on TCGPlayer by condition. <span class="italic">low sample</span> when n &lt; 10.
+					</p>
+					<div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3">
+						{#each conditionPrices as row}
+							{@const isLowSample = row.sample_count < 10}
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
+								<p class="text-[11px] font-medium text-vault-gold">{row.condition}</p>
+								<p class="text-[10px] text-vault-text-muted">{CONDITION_LABEL[row.condition] ?? row.condition}</p>
+								<p class="mt-1 text-base font-bold text-white">${(row.median_cents / 100).toFixed(2)}</p>
+								<p class="text-[10px] text-vault-text-muted">
+									n={row.sample_count}{#if isLowSample} <span class="italic text-amber-400">low</span>{/if}
+								</p>
+							</div>
+						{/each}
 					</div>
 				</div>
 			{/if}
