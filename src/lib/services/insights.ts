@@ -3,14 +3,39 @@
  *
  * Queries against card_index. Returns SQL-computed signals the user can
  * act on: cards whose PSA 10 multiple is abnormally low or high vs the
- * median multiple for their rarity.
+ * median multiple for their era × rarity bucket.
  *
- * Why rarity-bucketed: a common-rarity Base Set card has a very different
- * PSA 10 multiple than a modern Ultra Rare. Comparing across rarities
- * conflates "cheap graded" with "different card class."
+ * Why era × rarity bucketed: rarity labels like "Promo" span everything
+ * from 1999 black-star promos (expensive, high PSA 10 multiple) to 2024
+ * stamped player promos (bulk). Same string, totally different markets.
+ * Splitting by era as well as rarity keeps medians meaningful.
  */
 
 import { supabase } from './supabase';
+
+export type Era = 'vintage' | 'ex' | 'modern' | 'current' | 'unknown';
+
+export const ERA_LABELS: Record<Era, string> = {
+	vintage: 'Vintage (pre-2003)',
+	ex: 'EX era (2003–2010)',
+	modern: 'Modern (2011–2019)',
+	current: 'Current (2020+)',
+	unknown: 'Unknown era'
+};
+
+export function eraForDate(date: string | null | undefined): Era {
+	if (!date) return 'unknown';
+	const year = Number.parseInt(date.slice(0, 4), 10);
+	if (!Number.isFinite(year)) return 'unknown';
+	if (year < 2003) return 'vintage';
+	if (year < 2011) return 'ex';
+	if (year < 2020) return 'modern';
+	return 'current';
+}
+
+function bucketKey(era: Era, rarity: string): string {
+	return `${era}::${rarity}`;
+}
 
 export interface UndervaluedRow {
 	card_id: string;
@@ -19,6 +44,7 @@ export interface UndervaluedRow {
 	set_release_date: string | null;
 	card_number: string | null;
 	rarity: string | null;
+	era: Era;
 	image_small_url: string | null;
 	raw_nm_price: number;
 	psa10_price: number;
@@ -33,9 +59,13 @@ export interface UndervaluedRow {
 const MIN_RAW = 5;
 const MIN_PSA10 = 20;
 
-// Rarities with fewer than this many indexed cards don't get a trustworthy
-// median. Those cards are excluded from the output.
-const MIN_RARITY_SAMPLE = 15;
+// Buckets (era × rarity) with fewer than this many indexed cards don't
+// get a trustworthy median. Cards in thin buckets are excluded. Splitting
+// by era as well as rarity thins each bucket vs. rarity-only, so the
+// threshold trades some statistical confidence for meaningful peer sets
+// (e.g. 1999 promos comparing against 1999 promos, not 2024 stamped ones).
+// Will tighten back up as the full-index run completes.
+const MIN_BUCKET_SAMPLE = 10;
 
 type RawRow = {
 	card_id: string;
@@ -89,7 +119,7 @@ function median(sorted: number[]): number {
 export interface UndervaluedResult {
 	cheapPsa10: UndervaluedRow[];
 	hotPsa10: UndervaluedRow[];
-	raritiesSampled: number;
+	bucketsSampled: number;
 	cardsAnalyzed: number;
 }
 
@@ -98,33 +128,37 @@ export interface CardSignal {
 	median_multiple: number;
 	deviation_pct: number;
 	rarity: string;
+	era: Era;
+	era_label: string;
 	sample_size: number;
 }
 
-// Cache the rarity→median map for 10 minutes so per-card signal lookups
-// don't re-scan card_index on every /card/[id] hit.
-let rarityMedianCache: { at: number; map: Map<string, { median: number; size: number }> } | null =
+// Cache the (era::rarity)→median map for 10 minutes so per-card signal
+// lookups don't re-scan card_index on every /card/[id] hit.
+let bucketMedianCache: { at: number; map: Map<string, { median: number; size: number }> } | null =
 	null;
-const RARITY_CACHE_TTL_MS = 10 * 60 * 1000;
+const BUCKET_CACHE_TTL_MS = 10 * 60 * 1000;
 
-async function getRarityMedians(): Promise<Map<string, { median: number; size: number }>> {
-	if (rarityMedianCache && Date.now() - rarityMedianCache.at < RARITY_CACHE_TTL_MS) {
-		return rarityMedianCache.map;
+async function getBucketMedians(): Promise<Map<string, { median: number; size: number }>> {
+	if (bucketMedianCache && Date.now() - bucketMedianCache.at < BUCKET_CACHE_TTL_MS) {
+		return bucketMedianCache.map;
 	}
 	const rows = await loadAnalyzableCards();
-	const byRarity = new Map<string, number[]>();
+	const byBucket = new Map<string, number[]>();
 	for (const r of rows) {
 		const rar = r.rarity ?? 'Unknown';
-		if (!byRarity.has(rar)) byRarity.set(rar, []);
-		byRarity.get(rar)!.push(r.psa10_multiple);
+		const era = eraForDate(r.set_release_date);
+		const key = bucketKey(era, rar);
+		if (!byBucket.has(key)) byBucket.set(key, []);
+		byBucket.get(key)!.push(r.psa10_multiple);
 	}
 	const map = new Map<string, { median: number; size: number }>();
-	for (const [rar, mults] of byRarity) {
-		if (mults.length < MIN_RARITY_SAMPLE) continue;
+	for (const [key, mults] of byBucket) {
+		if (mults.length < MIN_BUCKET_SAMPLE) continue;
 		const sorted = [...mults].sort((a, b) => a - b);
-		map.set(rar, { median: median(sorted), size: mults.length });
+		map.set(key, { median: median(sorted), size: mults.length });
 	}
-	rarityMedianCache = { at: Date.now(), map };
+	bucketMedianCache = { at: Date.now(), map };
 	return map;
 }
 
@@ -166,18 +200,20 @@ export async function getSupplySqueezeCards(limit = 20): Promise<SupplySqueezeRo
 	return data as SupplySqueezeRow[];
 }
 
-/** Per-card deviation vs peers of same rarity. Null when we can't compute. */
+/** Per-card deviation vs peers in the same era × rarity bucket. Null when we can't compute. */
 export async function getCardSignal(
 	cardId: string,
 	rarity: string | null,
+	releaseDate: string | null,
 	rawPrice: number | null,
 	psa10Price: number | null
 ): Promise<CardSignal | null> {
 	if (!rarity || rawPrice == null || psa10Price == null) return null;
 	if (rawPrice < MIN_RAW || psa10Price < MIN_PSA10) return null;
 
-	const map = await getRarityMedians();
-	const entry = map.get(rarity);
+	const era = eraForDate(releaseDate);
+	const map = await getBucketMedians();
+	const entry = map.get(bucketKey(era, rarity));
 	if (!entry) return null;
 
 	const actual = psa10Price / rawPrice;
@@ -186,49 +222,55 @@ export async function getCardSignal(
 		median_multiple: entry.median,
 		deviation_pct: ((actual - entry.median) / entry.median) * 100,
 		rarity,
+		era,
+		era_label: ERA_LABELS[era],
 		sample_size: entry.size
 	};
 }
 
 /**
  * Find cards whose PSA 10 multiple deviates most from the median multiple
- * for their rarity. Returns both directions in one pass.
+ * for their era × rarity bucket. Returns both directions in one pass.
  *
- * "cheapPsa10" = actual multiple far below rarity median → PSA 10 comp
+ * "cheapPsa10" = actual multiple far below bucket median → PSA 10 comp
  * looks underpriced relative to peers (buy graded).
  *
- * "hotPsa10" = actual multiple far above rarity median → raw looks
+ * "hotPsa10" = actual multiple far above bucket median → raw looks
  * underpriced relative to what PSA 10s sell for (buy raw, maybe grade).
  */
 export async function getUndervaluedCards(limit = 20): Promise<UndervaluedResult> {
 	const rows = await loadAnalyzableCards();
 
-	// Group multiples by rarity so each bucket has its own median.
-	const byRarity = new Map<string, number[]>();
+	const byBucket = new Map<string, number[]>();
 	for (const r of rows) {
 		const rar = r.rarity ?? 'Unknown';
-		if (!byRarity.has(rar)) byRarity.set(rar, []);
-		byRarity.get(rar)!.push(r.psa10_multiple);
+		const era = eraForDate(r.set_release_date);
+		const key = bucketKey(era, rar);
+		if (!byBucket.has(key)) byBucket.set(key, []);
+		byBucket.get(key)!.push(r.psa10_multiple);
 	}
 
-	const medianByRarity = new Map<string, number>();
-	for (const [rar, mults] of byRarity) {
-		if (mults.length < MIN_RARITY_SAMPLE) continue;
+	const medianByBucket = new Map<string, number>();
+	for (const [key, mults] of byBucket) {
+		if (mults.length < MIN_BUCKET_SAMPLE) continue;
 		const sorted = [...mults].sort((a, b) => a - b);
-		medianByRarity.set(rar, median(sorted));
+		medianByBucket.set(key, median(sorted));
 	}
 
-	const analyzed = rows
-		.filter((r) => medianByRarity.has(r.rarity ?? 'Unknown'))
-		.map<UndervaluedRow>((r) => {
-			const med = medianByRarity.get(r.rarity ?? 'Unknown')!;
-			return {
+	const analyzed = rows.flatMap<UndervaluedRow>((r) => {
+		const rar = r.rarity ?? 'Unknown';
+		const era = eraForDate(r.set_release_date);
+		const med = medianByBucket.get(bucketKey(era, rar));
+		if (med == null) return [];
+		return [
+			{
 				card_id: r.card_id,
 				name: r.name,
 				set_name: r.set_name,
 				set_release_date: r.set_release_date,
 				card_number: r.card_number,
 				rarity: r.rarity,
+				era,
 				image_small_url: r.image_small_url,
 				raw_nm_price: r.raw_nm_price,
 				psa10_price: r.psa10_price,
@@ -236,8 +278,9 @@ export async function getUndervaluedCards(limit = 20): Promise<UndervaluedResult
 				median_multiple: med,
 				deviation_pct: ((r.psa10_multiple - med) / med) * 100,
 				psa_pop_total: r.psa_pop_total
-			};
-		});
+			}
+		];
+	});
 
 	const cheapPsa10 = [...analyzed]
 		.sort((a, b) => a.deviation_pct - b.deviation_pct)
@@ -249,7 +292,7 @@ export async function getUndervaluedCards(limit = 20): Promise<UndervaluedResult
 	return {
 		cheapPsa10,
 		hotPsa10,
-		raritiesSampled: medianByRarity.size,
+		bucketsSampled: medianByBucket.size,
 		cardsAnalyzed: analyzed.length
 	};
 }

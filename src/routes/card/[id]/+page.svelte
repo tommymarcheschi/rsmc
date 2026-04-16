@@ -483,7 +483,7 @@
 								</p>
 							</div>
 							<p class="mt-1 text-xs text-vault-text-muted">
-								This card's PSA 10 sells at <b>{cardSignal.actual_multiple.toFixed(1)}×</b> raw. Typical for <b>{cardSignal.rarity}</b> rarity is <b>{cardSignal.median_multiple.toFixed(1)}×</b> (across {cardSignal.sample_size} indexed cards).
+								This card's PSA 10 sells at <b>{cardSignal.actual_multiple.toFixed(1)}×</b> raw. Typical for <b>{cardSignal.rarity}</b> in <b>{cardSignal.era_label}</b> is <b>{cardSignal.median_multiple.toFixed(1)}×</b> (across {cardSignal.sample_size} indexed cards).
 							</p>
 						</div>
 					{/if}

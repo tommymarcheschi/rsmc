@@ -59,7 +59,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		supabase
 			.from('card_index')
 			.select(
-				'rarity, raw_nm_price, raw_source, psa10_price, cgc10_price, tag10_price, ' +
+				'rarity, set_release_date, raw_nm_price, raw_source, psa10_price, cgc10_price, tag10_price, ' +
 					'psa10_delta, psa10_multiple, psa_pop_total, psa_pop_10, psa_gem_rate, ' +
 					'cgc_pop_total, cgc_pop_10, cgc_gem_rate, ' +
 					'graded_prices_fetched_at, last_enriched_at'
@@ -78,6 +78,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		? await getCardSignal(
 				params.id,
 				indexRow.rarity,
+				indexRow.set_release_date,
 				indexRow.raw_nm_price,
 				indexRow.psa10_price
 		  ).catch(() => null)

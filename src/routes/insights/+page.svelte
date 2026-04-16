@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TrendingCard } from '$services/poketrace';
 	import type { UndervaluedResult, SupplySqueezeRow } from '$services/insights';
+	import { ERA_LABELS } from '$services/insights';
 
 	let { data } = $props();
 
@@ -169,7 +170,7 @@
 			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-sm text-vault-text-muted">
 				<p class="text-white">How much more does a PSA 10 cost than a raw copy?</p>
 				<p class="mt-1">
-					For every card, we compare its raw → PSA 10 jump to what's typical for its rarity. The two lists below flag cards where the jump is way bigger or way smaller than normal — possible mispricings to investigate. Based on <b>{undervalued.cardsAnalyzed.toLocaleString()}</b> indexed cards across <b>{undervalued.raritiesSampled}</b> rarities.
+					For every card, we compare its raw → PSA 10 jump to what's typical for cards of the same rarity <i>and</i> era. (1999 promos and 2024 promos live in different markets — bucketing by era too keeps the median honest.) The two lists flag cards where the jump is way bigger or way smaller than normal — possible mispricings to investigate. Based on <b>{undervalued.cardsAnalyzed.toLocaleString()}</b> indexed cards across <b>{undervalued.bucketsSampled}</b> era × rarity buckets.
 				</p>
 			</div>
 
@@ -191,7 +192,7 @@
 									{/if}
 									<div class="min-w-0 flex-1">
 										<p class="truncate text-sm font-medium text-white">{row.name}</p>
-										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity} · {ERA_LABELS[row.era]}</p>
 										<p class="mt-0.5 truncate text-xs text-vault-text-muted">
 											Raw ${row.raw_nm_price.toFixed(0)} → PSA 10 ${row.psa10_price.toFixed(0)}
 										</p>
@@ -232,7 +233,7 @@
 									{/if}
 									<div class="min-w-0 flex-1">
 										<p class="truncate text-sm font-medium text-white">{row.name}</p>
-										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity} · {ERA_LABELS[row.era]}</p>
 										<p class="mt-0.5 truncate text-xs text-vault-text-muted">
 											Raw ${row.raw_nm_price.toFixed(0)} → PSA 10 ${row.psa10_price.toFixed(0)}
 										</p>
