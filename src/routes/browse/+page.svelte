@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { CardThumbnail } from '$components';
-	import { SORT_OPTIONS } from '$services/sort';
+	import { getSortOptionsForMode } from '$services/sort';
 	import type { PokemonCard } from '$types';
 
 	let { data } = $props();
+
+	let isHuntMode = $derived(data.mode === 'hunt');
+	let sortOptions = $derived(getSortOptionsForMode(data.mode ?? 'default'));
 
 	// Derive card state directly from server-loaded data. The server renders
 	// the first page; JS enhancement loads more via infinite scroll. This page
@@ -50,12 +53,20 @@
 		if (loadingMore || !hasMore) return;
 		loadingMore = true;
 		try {
-			const params = new URLSearchParams({
-				q: buildQuery(),
-				page: String(currentPage + 1),
-				pageSize: String(PAGE_SIZE)
-			});
-			if (data.filters.sort) params.set('sort', data.filters.sort);
+			const params = new URLSearchParams({ page: String(currentPage + 1), pageSize: String(PAGE_SIZE) });
+			if (isHuntMode) {
+				params.set('mode', 'hunt');
+				// Forward all hunt filters
+				const f = data.filters as Record<string, string>;
+				for (const key of ['q', 'set', 'sort', 'pop_lt', 'before', 'after', 'variants', 'raw_lt', 'raw_gt', 'require_psa10']) {
+					const alias = key === 'q' ? 'search' : key;
+					const val = f[alias] ?? f[key] ?? '';
+					if (val) params.set(key, val);
+				}
+			} else {
+				params.set('q', buildQuery());
+				if (data.filters.sort) params.set('sort', data.filters.sort);
+			}
 			const res = await fetch(`/api/cards?${params}`);
 			if (!res.ok) throw new Error('Failed to load more cards');
 			const result = await res.json();
@@ -90,140 +101,338 @@
 		select.form?.submit();
 	}
 
+	// Before hunt form submits, collect variant checkboxes into a single
+	// comma-separated hidden input. Without JS the checkboxes send multiple
+	// params which the server also handles, but this keeps the URL cleaner.
+	function handleHuntSubmit(e: Event) {
+		const form = e.currentTarget as HTMLFormElement;
+		const cbs = form.querySelectorAll<HTMLInputElement>('.hunt-variant-cb:checked');
+		const variants = Array.from(cbs).map((cb) => cb.value).join(',');
+		const hidden = form.querySelector<HTMLInputElement>('#hunt-variants-hidden');
+		if (hidden) hidden.value = variants;
+	}
+
 	let hasActiveFilters = $derived(
 		!!(
 			data.filters.search ||
 			data.filters.set ||
-			data.filters.type ||
-			data.filters.rarity ||
-			data.filters.sort
+			(data.filters as Record<string, string>).type ||
+			(data.filters as Record<string, string>).rarity ||
+			data.filters.sort ||
+			(data.filters as Record<string, string>).popLt ||
+			(data.filters as Record<string, string>).before ||
+			(data.filters as Record<string, string>).variants
 		)
 	);
 </script>
 
 <svelte:head>
-	<title>Browse Cards — Trove</title>
+	<title>{isHuntMode ? 'Sleeper Hunter' : 'Browse Cards'} — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Browse Cards</h1>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">
+				{isHuntMode ? 'Sleeper Hunter' : 'Browse Cards'}
+			</h1>
 			<p class="mt-1 text-vault-text-muted">
 				{totalCount.toLocaleString()} cards found
 			</p>
 		</div>
-		{#if hasActiveFilters}
+		<div class="flex items-center gap-2">
+			{#if hasActiveFilters}
+				<a
+					href={isHuntMode ? '/browse?mode=hunt' : '/browse'}
+					class="btn-press rounded-xl border border-vault-border px-4 py-2 text-sm font-medium text-vault-text-muted transition-all hover:border-vault-accent/50 hover:bg-vault-surface-hover hover:text-white"
+				>
+					Clear Filters
+				</a>
+			{/if}
+			<!-- Mode toggle -->
 			<a
-				href="/browse"
-				class="btn-press rounded-xl border border-vault-border px-4 py-2 text-sm font-medium text-vault-text-muted transition-all hover:border-vault-accent/50 hover:bg-vault-surface-hover hover:text-white"
+				href={isHuntMode ? '/browse' : '/browse?mode=hunt'}
+				class="btn-press rounded-xl px-4 py-2 text-sm font-medium transition-all {isHuntMode
+					? 'bg-vault-purple text-white hover:bg-vault-purple/80'
+					: 'border border-vault-purple/50 text-vault-purple hover:bg-vault-purple/10'}"
 			>
-				Clear Filters
+				{isHuntMode ? 'Browse Mode' : 'Hunt Mode'}
 			</a>
-		{/if}
+		</div>
 	</div>
 
-	<!--
-		The filter form is a real <form method="GET" action="/browse">.
-		Submitting it navigates to /browse?q=...&set=... — the server re-renders
-		the page with the new filters applied. This works with zero JS. On
-		clients with JS, the selects also auto-submit on change via `autoSubmit`.
-	-->
-	<form method="GET" action="/browse" class="flex flex-wrap gap-2 sm:gap-3">
-		<div class="relative flex-1" style="min-width: 200px;">
-			<input
-				type="text"
-				name="q"
-				value={data.filters.search}
-				placeholder="Search by name..."
-				class="w-full rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
-			/>
-			<svg class="absolute left-3 top-3 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-			</svg>
+	{#if isHuntMode}
+		<!-- ─── Hunt Mode Filter Form ──────────────────────────────────── -->
+		{@const f = data.filters as Record<string, string>}
+
+		<!-- Preset buttons -->
+		<div class="flex flex-wrap gap-2">
+			<a
+				href="/browse?mode=hunt&pop_lt=100&before=2017&variants=holo,reverse&sort=delta_desc&require_psa10=1"
+				class="rounded-lg border border-vault-purple/30 bg-vault-purple/10 px-3 py-1.5 text-xs font-medium text-vault-purple transition-all hover:bg-vault-purple/20"
+			>
+				Sleeper Holos (pre-2017, pop &lt;100, by delta)
+			</a>
+			<a
+				href="/browse?mode=hunt&pop_lt=50&sort=pop_asc&require_psa10=1"
+				class="rounded-lg border border-vault-purple/30 bg-vault-purple/10 px-3 py-1.5 text-xs font-medium text-vault-purple transition-all hover:bg-vault-purple/20"
+			>
+				Lowest Pop (with PSA 10 comp)
+			</a>
+			<a
+				href="/browse?mode=hunt&sort=delta_multiple&require_psa10=1&raw_lt=20"
+				class="rounded-lg border border-vault-purple/30 bg-vault-purple/10 px-3 py-1.5 text-xs font-medium text-vault-purple transition-all hover:bg-vault-purple/20"
+			>
+				Best ROI (raw under $20, highest multiple)
+			</a>
 		</div>
 
-		<select
-			name="set"
-			value={data.filters.set}
-			onchange={autoSubmit}
-			class="w-full rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
-		>
-			<option value="">All Sets</option>
-			{#each data.sets as s}
-				<option value={s.id}>{s.name}</option>
-			{/each}
-		</select>
+		<form method="GET" action="/browse" class="space-y-3" onsubmit={handleHuntSubmit}>
+			<input type="hidden" name="mode" value="hunt" />
+			<!-- Hidden input for comma-joined variants — JS populates from checkboxes -->
+			<input type="hidden" name="variants" id="hunt-variants-hidden" value={f.variants ?? ''} />
 
-		<select
-			name="type"
-			value={data.filters.type}
-			onchange={autoSubmit}
-			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
-		>
-			<option value="">All Types</option>
-			<option value="Colorless">Colorless</option>
-			<option value="Darkness">Darkness</option>
-			<option value="Dragon">Dragon</option>
-			<option value="Fairy">Fairy</option>
-			<option value="Fighting">Fighting</option>
-			<option value="Fire">Fire</option>
-			<option value="Grass">Grass</option>
-			<option value="Lightning">Lightning</option>
-			<option value="Metal">Metal</option>
-			<option value="Psychic">Psychic</option>
-			<option value="Water">Water</option>
-		</select>
+			<div class="flex flex-wrap gap-2 sm:gap-3">
+				<div class="relative flex-1" style="min-width: 200px;">
+					<input
+						type="text"
+						name="q"
+						value={f.search ?? ''}
+						placeholder="Search by name..."
+						class="w-full rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
+					/>
+					<svg class="absolute left-3 top-3 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+					</svg>
+				</div>
 
-		<select
-			name="rarity"
-			value={data.filters.rarity}
-			onchange={autoSubmit}
-			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
-		>
-			<option value="">All Rarities</option>
-			<option value="Common">Common</option>
-			<option value="Uncommon">Uncommon</option>
-			<option value="Rare">Rare</option>
-			<option value="Rare Holo">Rare Holo</option>
-			<option value="Rare Holo EX">Rare Holo EX</option>
-			<option value="Rare Holo GX">Rare Holo GX</option>
-			<option value="Rare Holo V">Rare Holo V</option>
-			<option value="Rare Holo VMAX">Rare Holo VMAX</option>
-			<option value="Rare Ultra">Rare Ultra</option>
-			<option value="Rare Rainbow">Rare Rainbow</option>
-			<option value="Rare Secret">Rare Secret</option>
-			<option value="Amazing Rare">Amazing Rare</option>
-			<option value="Illustration Rare">Illustration Rare</option>
-			<option value="Special Illustration Rare">Special Illustration Rare</option>
-			<option value="Hyper Rare">Hyper Rare</option>
-		</select>
+				<select
+					name="set"
+					value={f.set ?? ''}
+					onchange={autoSubmit}
+					class="w-full rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+				>
+					<option value="">All Indexed Sets</option>
+					{#each data.sets as s}
+						<option value={s.id}>{s.name}</option>
+					{/each}
+				</select>
 
-		<select
-			name="sort"
-			value={data.filters.sort}
-			onchange={autoSubmit}
-			class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
-			aria-label="Sort cards"
-		>
-			{#each SORT_OPTIONS as opt}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</select>
+				<select
+					name="sort"
+					value={f.sort ?? ''}
+					onchange={autoSubmit}
+					class="w-full rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+					aria-label="Sort cards"
+				>
+					{#each sortOptions as opt}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+			</div>
 
-		<!--
-			Apply button — always visible so users without JS (or whose JS
-			hasn't hydrated yet) can still submit the form. With JS, the selects
-			auto-submit on change and typing in the search input + Enter also
-			submits, so this button is a backup / explicit trigger for search.
-		-->
-		<button
-			type="submit"
-			class="btn-press rounded-xl bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
-		>
-			Apply
-		</button>
-	</form>
+			<div class="flex flex-wrap gap-2 sm:gap-3">
+				<div class="flex items-center gap-1.5">
+					<label for="pop_lt" class="text-xs text-vault-text-muted">Max Pop</label>
+					<input
+						type="number"
+						id="pop_lt"
+						name="pop_lt"
+						value={f.popLt ?? f.pop_lt ?? ''}
+						placeholder="100"
+						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+					/>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<label for="before" class="text-xs text-vault-text-muted">Before year</label>
+					<input
+						type="number"
+						id="before"
+						name="before"
+						value={f.before ?? ''}
+						placeholder="2017"
+						min="1999"
+						max="2026"
+						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+					/>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<label for="after" class="text-xs text-vault-text-muted">After year</label>
+					<input
+						type="number"
+						id="after"
+						name="after"
+						value={f.after ?? ''}
+						placeholder=""
+						min="1999"
+						max="2026"
+						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+					/>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<label for="raw_gt" class="text-xs text-vault-text-muted">Raw min $</label>
+					<input
+						type="number"
+						id="raw_gt"
+						name="raw_gt"
+						value={f.rawGt ?? f.raw_gt ?? ''}
+						placeholder=""
+						step="0.01"
+						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+					/>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<label for="raw_lt" class="text-xs text-vault-text-muted">Raw max $</label>
+					<input
+						type="number"
+						id="raw_lt"
+						name="raw_lt"
+						value={f.rawLt ?? f.raw_lt ?? ''}
+						placeholder=""
+						step="0.01"
+						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-3">
+				<fieldset class="flex items-center gap-2">
+					<legend class="sr-only">Printing variants</legend>
+					<label class="flex items-center gap-1.5 text-sm text-vault-text">
+						<input
+							type="checkbox"
+							class="hunt-variant-cb rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
+							value="holo"
+							checked={(f.variants ?? '').includes('holo')}
+						/>
+						Holo
+					</label>
+					<label class="flex items-center gap-1.5 text-sm text-vault-text">
+						<input
+							type="checkbox"
+							class="hunt-variant-cb rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
+							value="reverse"
+							checked={(f.variants ?? '').includes('reverse')}
+						/>
+						Reverse Holo
+					</label>
+				</fieldset>
+
+				<label class="flex items-center gap-1.5 text-sm text-vault-text">
+					<input
+						type="checkbox"
+						name="require_psa10"
+						value="1"
+						checked={(f.requirePsa10 ?? f.require_psa10) === '1'}
+						class="rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
+					/>
+					Has PSA 10 comp
+				</label>
+
+				<button
+					type="submit"
+					class="btn-press rounded-xl bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+				>
+					Hunt
+				</button>
+			</div>
+		</form>
+	{:else}
+		<!-- ─── Default Mode Filter Form ───────────────────────────────── -->
+		<form method="GET" action="/browse" class="flex flex-wrap gap-2 sm:gap-3">
+			<div class="relative flex-1" style="min-width: 200px;">
+				<input
+					type="text"
+					name="q"
+					value={data.filters.search}
+					placeholder="Search by name..."
+					class="w-full rounded-xl border border-vault-border bg-vault-surface px-4 py-2.5 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
+				/>
+				<svg class="absolute left-3 top-3 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+				</svg>
+			</div>
+
+			<select
+				name="set"
+				value={data.filters.set}
+				onchange={autoSubmit}
+				class="w-full rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+			>
+				<option value="">All Sets</option>
+				{#each data.sets as s}
+					<option value={s.id}>{s.name}</option>
+				{/each}
+			</select>
+
+			<select
+				name="type"
+				value={(data.filters as Record<string, string>).type ?? ''}
+				onchange={autoSubmit}
+				class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+			>
+				<option value="">All Types</option>
+				<option value="Colorless">Colorless</option>
+				<option value="Darkness">Darkness</option>
+				<option value="Dragon">Dragon</option>
+				<option value="Fairy">Fairy</option>
+				<option value="Fighting">Fighting</option>
+				<option value="Fire">Fire</option>
+				<option value="Grass">Grass</option>
+				<option value="Lightning">Lightning</option>
+				<option value="Metal">Metal</option>
+				<option value="Psychic">Psychic</option>
+				<option value="Water">Water</option>
+			</select>
+
+			<select
+				name="rarity"
+				value={(data.filters as Record<string, string>).rarity ?? ''}
+				onchange={autoSubmit}
+				class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+			>
+				<option value="">All Rarities</option>
+				<option value="Common">Common</option>
+				<option value="Uncommon">Uncommon</option>
+				<option value="Rare">Rare</option>
+				<option value="Rare Holo">Rare Holo</option>
+				<option value="Rare Holo EX">Rare Holo EX</option>
+				<option value="Rare Holo GX">Rare Holo GX</option>
+				<option value="Rare Holo V">Rare Holo V</option>
+				<option value="Rare Holo VMAX">Rare Holo VMAX</option>
+				<option value="Rare Ultra">Rare Ultra</option>
+				<option value="Rare Rainbow">Rare Rainbow</option>
+				<option value="Rare Secret">Rare Secret</option>
+				<option value="Amazing Rare">Amazing Rare</option>
+				<option value="Illustration Rare">Illustration Rare</option>
+				<option value="Special Illustration Rare">Special Illustration Rare</option>
+				<option value="Hyper Rare">Hyper Rare</option>
+			</select>
+
+			<select
+				name="sort"
+				value={data.filters.sort}
+				onchange={autoSubmit}
+				class="w-[calc(50%-4px)] rounded-xl border border-vault-border bg-vault-surface px-3 py-2.5 text-sm text-vault-text transition-all focus:border-vault-purple focus:outline-none sm:w-auto sm:px-4"
+				aria-label="Sort cards"
+			>
+				{#each sortOptions as opt}
+					<option value={opt.value}>{opt.label}</option>
+				{/each}
+			</select>
+
+			<button
+				type="submit"
+				class="btn-press rounded-xl bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+			>
+				Apply
+			</button>
+		</form>
+	{/if}
 
 	{#if allCards.length > 0}
 		<!-- Card grid -->
@@ -255,11 +464,24 @@
 			<svg class="mb-4 h-16 w-16 text-vault-purple/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
-			<p class="text-lg font-medium">No cards found</p>
-			<p class="mt-1 text-sm">Try adjusting your search or filters</p>
+			{#if isHuntMode}
+				<p class="text-lg font-medium">No indexed cards found</p>
+				<p class="mt-1 max-w-md text-center text-sm">
+					Hunt mode searches the card index. If it's empty, you need to run the enrichment script first.
+				</p>
+				<div class="mt-4 rounded-xl bg-vault-surface p-4 text-left">
+					<p class="text-xs font-medium text-vault-text-muted">1. Track sets to index:</p>
+					<a href="/admin/index" class="mt-1 inline-block text-xs text-vault-purple hover:underline">Open Card Index admin</a>
+					<p class="mt-3 text-xs font-medium text-vault-text-muted">2. Run the enrichment:</p>
+					<code class="mt-1 block text-xs text-vault-purple">npx tsx scripts/refresh-index.ts --all</code>
+				</div>
+			{:else}
+				<p class="text-lg font-medium">No cards found</p>
+				<p class="mt-1 text-sm">Try adjusting your search or filters</p>
+			{/if}
 			{#if hasActiveFilters}
 				<a
-					href="/browse"
+					href={isHuntMode ? '/browse?mode=hunt' : '/browse'}
 					class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
 				>
 					Clear All Filters
