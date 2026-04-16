@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ArbitrageOpportunity, TrendingCard } from '$services/poketrace';
+	import type { UndervaluedResult } from '$services/insights';
 
 	let { data } = $props();
 
@@ -7,9 +8,11 @@
 	let trending = $derived(data.trending as TrendingCard[]);
 	let moversUp = $derived(data.moversUp as TrendingCard[]);
 	let moversDown = $derived(data.moversDown as TrendingCard[]);
+	let undervalued = $derived(data.undervalued as UndervaluedResult);
 	let portfolio = $derived(data.portfolio);
 
-	let insightTab = $state<'trending' | 'arbitrage' | 'movers'>('trending');
+	// "undervalued" is the default — it uses our own data (not PokeTrace).
+	let insightTab = $state<'undervalued' | 'trending' | 'arbitrage' | 'movers'>('undervalued');
 </script>
 
 <svelte:head>
@@ -40,6 +43,12 @@
 
 	<!-- Tab Navigation -->
 	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
+		<button
+			onclick={() => (insightTab = 'undervalued')}
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'undervalued' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+		>
+			Undervalued
+		</button>
 		<button
 			onclick={() => (insightTab = 'trending')}
 			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
@@ -140,6 +149,100 @@
 					</div>
 				</div>
 			{/if}
+		</div>
+	{/if}
+
+	<!-- Undervalued Tab -->
+	{#if insightTab === 'undervalued'}
+		<div class="space-y-6">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-xs text-vault-text-muted sm:text-sm">
+				<p>
+					For each rarity, we compute the median PSA 10 / Raw multiple across all indexed cards with both prices. Cards whose actual multiple deviates most from that median surface below. Only rarities with ≥15 indexed cards are sampled.
+				</p>
+				<p class="mt-1">
+					<span class="text-vault-green">Cheap PSA 10</span>: the PSA 10 comp looks low vs peers (buy graded).
+					<span class="text-vault-gold">Hot PSA 10</span>: the PSA 10 comp runs hot vs peers (raw looks cheap — buy &amp; possibly grade).
+					Sample: <b>{undervalued.cardsAnalyzed}</b> cards across <b>{undervalued.raritiesSampled}</b> rarities.
+				</p>
+			</div>
+
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				<!-- Cheap PSA 10 -->
+				<div class="rounded-2xl border border-vault-border bg-vault-surface">
+					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+						<h3 class="font-semibold text-vault-green">Cheap PSA 10 vs peers</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">Multiple below rarity median → graded comps look underpriced</p>
+					</div>
+					{#if undervalued.cheapPsa10.length > 0}
+						<div class="divide-y divide-vault-border">
+							{#each undervalued.cheapPsa10 as row}
+								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
+									{#if row.image_small_url}
+										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+									{/if}
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium text-white">{row.name}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+									</div>
+									<div class="text-right">
+										<p class="text-sm font-bold text-white">
+											{row.actual_multiple.toFixed(1)}×
+										</p>
+										<p class="text-xs text-vault-text-muted">
+											median {row.median_multiple.toFixed(1)}×
+										</p>
+										<p class="text-xs font-medium text-vault-green">
+											{row.deviation_pct.toFixed(0)}%
+										</p>
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+							Not enough indexed cards yet — come back after more sets finish enriching.
+						</div>
+					{/if}
+				</div>
+
+				<!-- Hot PSA 10 -->
+				<div class="rounded-2xl border border-vault-border bg-vault-surface">
+					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+						<h3 class="font-semibold text-vault-gold">Hot PSA 10 vs peers</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">Multiple above rarity median → raw looks cheap vs graded</p>
+					</div>
+					{#if undervalued.hotPsa10.length > 0}
+						<div class="divide-y divide-vault-border">
+							{#each undervalued.hotPsa10 as row}
+								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
+									{#if row.image_small_url}
+										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+									{/if}
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium text-white">{row.name}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name} · {row.rarity}</p>
+									</div>
+									<div class="text-right">
+										<p class="text-sm font-bold text-white">
+											{row.actual_multiple.toFixed(1)}×
+										</p>
+										<p class="text-xs text-vault-text-muted">
+											median {row.median_multiple.toFixed(1)}×
+										</p>
+										<p class="text-xs font-medium text-vault-gold">
+											+{row.deviation_pct.toFixed(0)}%
+										</p>
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+							Not enough indexed cards yet — come back after more sets finish enriching.
+						</div>
+					{/if}
+				</div>
+			</div>
 		</div>
 	{/if}
 

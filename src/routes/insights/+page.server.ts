@@ -1,14 +1,16 @@
 import { getArbitrageOpportunities, getTrendingCards, getBiggestMovers } from '$services/poketrace';
 import { supabase } from '$services/supabase';
+import { getUndervaluedCards } from '$services/insights';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
-	const [arbitrage, trending, moversUp, moversDown, collectionRes] = await Promise.all([
+	const [arbitrage, trending, moversUp, moversDown, collectionRes, undervalued] = await Promise.all([
 		getArbitrageOpportunities(10, 20),
 		getTrendingCards('7d', 10),
 		getBiggestMovers('up', 10),
 		getBiggestMovers('down', 10),
-		supabase.from('collection').select('card_id, quantity, purchase_price')
+		supabase.from('collection').select('card_id, quantity, purchase_price'),
+		getUndervaluedCards(15)
 	]);
 
 	const collection = collectionRes.data ?? [];
@@ -23,6 +25,7 @@ export const load: PageServerLoad = async () => {
 		trending,
 		moversUp,
 		moversDown,
+		undervalued,
 		portfolio: { totalInvested, totalCards, uniqueCards: collection.length }
 	};
 };
