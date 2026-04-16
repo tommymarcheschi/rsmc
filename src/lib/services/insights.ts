@@ -128,6 +128,44 @@ async function getRarityMedians(): Promise<Map<string, { median: number; size: n
 	return map;
 }
 
+export interface SupplySqueezeRow {
+	card_id: string;
+	name: string;
+	set_name: string;
+	card_number: string | null;
+	rarity: string | null;
+	image_small_url: string | null;
+	raw_nm_price: number | null;
+	psa10_price: number;
+	psa_pop_total: number;
+	psa_pop_10: number | null;
+	psa_gem_rate: number | null;
+}
+
+/**
+ * High-value cards with scarce PSA 10 supply. Surfaces the genuinely
+ * rare + expensive combinations — where the PSA 10 comp carries a
+ * "can't get one" premium. Filters out bulk (low psa10 price) so we're
+ * not showing 50-cent commons that happen to have pop=3.
+ */
+export async function getSupplySqueezeCards(limit = 20): Promise<SupplySqueezeRow[]> {
+	const { data, error } = await supabase
+		.from('card_index')
+		.select(
+			'card_id, name, set_name, card_number, rarity, image_small_url, ' +
+				'raw_nm_price, psa10_price, psa_pop_total, psa_pop_10, psa_gem_rate'
+		)
+		.gte('psa10_price', 100)
+		.gte('psa_pop_total', 1)
+		.lte('psa_pop_total', 200)
+		.order('psa_pop_total', { ascending: true })
+		.order('psa10_price', { ascending: false })
+		.limit(limit);
+
+	if (error || !data) return [];
+	return data as SupplySqueezeRow[];
+}
+
 /** Per-card deviation vs peers of same rarity. Null when we can't compute. */
 export async function getCardSignal(
 	cardId: string,

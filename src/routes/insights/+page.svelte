@@ -1,18 +1,23 @@
 <script lang="ts">
-	import type { ArbitrageOpportunity, TrendingCard } from '$services/poketrace';
-	import type { UndervaluedResult } from '$services/insights';
+	import type { TrendingCard } from '$services/poketrace';
+	import type { UndervaluedResult, SupplySqueezeRow } from '$services/insights';
 
 	let { data } = $props();
 
-	let arbitrage = $derived(data.arbitrage as ArbitrageOpportunity[]);
 	let trending = $derived(data.trending as TrendingCard[]);
 	let moversUp = $derived(data.moversUp as TrendingCard[]);
 	let moversDown = $derived(data.moversDown as TrendingCard[]);
 	let undervalued = $derived(data.undervalued as UndervaluedResult);
+	let supplySqueeze = $derived(data.supplySqueeze as SupplySqueezeRow[]);
 	let portfolio = $derived(data.portfolio);
 
 	// "undervalued" is the default — it uses our own data (not PokeTrace).
-	let insightTab = $state<'undervalued' | 'trending' | 'arbitrage' | 'movers'>('undervalued');
+	let insightTab = $state<'undervalued' | 'supply' | 'trending' | 'movers'>('undervalued');
+
+	function fmtMoney(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
 </script>
 
 <svelte:head>
@@ -50,22 +55,22 @@
 			Undervalued
 		</button>
 		<button
+			onclick={() => (insightTab = 'supply')}
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'supply' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+		>
+			Supply Squeeze
+		</button>
+		<button
 			onclick={() => (insightTab = 'trending')}
 			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
-			Trending Cards
-		</button>
-		<button
-			onclick={() => (insightTab = 'arbitrage')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'arbitrage' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			US vs EU Arbitrage
+			Trending
 		</button>
 		<button
 			onclick={() => (insightTab = 'movers')}
 			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'movers' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
-			Biggest Movers
+			Movers
 		</button>
 	</div>
 
@@ -96,56 +101,62 @@
 			{:else}
 				<div class="flex items-center justify-center py-16 text-vault-text-muted">
 					<div class="text-center">
-						<p class="text-lg">Trending data not available</p>
-						<p class="mt-1 text-sm">Connect your PokeTrace API key for live trending data</p>
+						<p class="text-lg">Trending data coming soon</p>
+						<p class="mt-1 text-sm">
+							We started snapshotting every card's price daily at 5am. In ~7 days this tab will rank cards by 7d / 30d momentum — no API key required.
+						</p>
 					</div>
 				</div>
 			{/if}
 		</div>
 	{/if}
 
-	<!-- Arbitrage Tab -->
-	{#if insightTab === 'arbitrage'}
+	<!-- Supply Squeeze Tab -->
+	{#if insightTab === 'supply'}
 		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="border-b border-vault-border px-6 py-4">
-				<p class="text-sm text-vault-text-muted">
-					Cards where CardMarket (EUR) is significantly cheaper than TCGPlayer (USD) — potential savings on cross-market purchases.
+				<p class="text-sm text-white">Low supply, high value</p>
+				<p class="mt-1 text-xs text-vault-text-muted">
+					Cards where fewer than 200 copies exist in the total PSA population and a PSA 10 still sells for $100+. Low supply + real demand = potential upside as more people hunt them. Sorted by fewest PSA-graded copies.
 				</p>
 			</div>
-			{#if arbitrage.length > 0}
+			{#if supplySqueeze.length > 0}
 				<div class="divide-y divide-vault-border">
-					{#each arbitrage as opp}
-						<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
-							{#if opp.image_url}
-								<img src={opp.image_url} alt={opp.card_name} class="h-14 w-10 rounded-lg object-cover" />
+					{#each supplySqueeze as row}
+						<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
+							{#if row.image_small_url}
+								<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
 							{/if}
 							<div class="min-w-0 flex-1">
-								<p class="font-medium text-white">{opp.card_name}</p>
-								<p class="text-xs text-vault-text-muted">{opp.set_name}</p>
+								<p class="truncate text-sm font-medium text-white">{row.name}</p>
+								<p class="truncate text-xs text-vault-text-muted">
+									{row.set_name}{#if row.rarity} · {row.rarity}{/if}
+								</p>
+								{#if row.raw_nm_price != null}
+									<p class="mt-0.5 truncate text-xs text-vault-text-muted">
+										Raw {fmtMoney(row.raw_nm_price)} → PSA 10 {fmtMoney(row.psa10_price)}
+									</p>
+								{/if}
 							</div>
-							<div class="grid grid-cols-3 gap-2 text-right text-xs sm:gap-4 sm:text-sm">
-								<div>
-									<p class="text-vault-text-muted">TCGPlayer</p>
-									<p class="font-semibold text-white">${opp.us_price.toFixed(2)}</p>
-								</div>
-								<div>
-									<p class="text-vault-text-muted">CardMarket</p>
-									<p class="font-semibold text-white">€{opp.eu_price.toFixed(2)}</p>
-									<p class="text-xs text-vault-text-muted">(~${opp.eu_price_usd.toFixed(2)})</p>
-								</div>
-								<div>
-									<p class="text-vault-text-muted">Savings</p>
-									<p class="font-bold text-vault-green">{opp.savings_pct.toFixed(0)}%</p>
-								</div>
+							<div class="shrink-0 text-right">
+								<p class="text-sm font-bold text-vault-gold">
+									{row.psa_pop_total.toLocaleString()}
+								</p>
+								<p class="text-xs text-vault-text-muted">PSA pop</p>
+								{#if row.psa_pop_10 != null}
+									<p class="mt-0.5 text-[10px] text-vault-text-muted">
+										{row.psa_pop_10} at 10{#if row.psa_gem_rate != null} · {row.psa_gem_rate.toFixed(0)}%{/if}
+									</p>
+								{/if}
 							</div>
-						</div>
+						</a>
 					{/each}
 				</div>
 			{:else}
 				<div class="flex items-center justify-center py-16 text-vault-text-muted">
 					<div class="text-center">
-						<p class="text-lg">No arbitrage opportunities found</p>
-						<p class="mt-1 text-sm">Connect your PokeTrace API key to see cross-market pricing</p>
+						<p class="text-lg">No supply-squeeze cards found yet</p>
+						<p class="mt-1 text-sm">Pop data grows as more sets get indexed.</p>
 					</div>
 				</div>
 			{/if}
@@ -272,7 +283,9 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">No data available</div>
+					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+						Data accumulating — lights up after ~7 days of snapshots.
+					</div>
 				{/if}
 			</div>
 
@@ -297,7 +310,9 @@
 						{/each}
 					</div>
 				{:else}
-					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">No data available</div>
+					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+						Data accumulating — lights up after ~7 days of snapshots.
+					</div>
 				{/if}
 			</div>
 		</div>
