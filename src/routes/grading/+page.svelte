@@ -2,20 +2,31 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { GradingEntry, GradingService, PokemonCard } from '$types';
 	import type { GradingFees } from '$services/price-tracker';
+	import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
 
 	let { data } = $props();
 
 	let submissions = $derived(data.submissions as GradingEntry[]);
 	let gradingFees = $derived(data.gradingFees as GradingFees[]);
 
-	// ROI Calculator state
+	// ROI Calculator state — real-data version, backed by card_index.
 	let roiSearchQuery = $state('');
 	let roiSearchResults = $state<PokemonCard[]>([]);
 	let roiSelectedCard = $state<PokemonCard | null>(null);
 	let roiService = $state<GradingService>('PSA');
-	let roiRawValue = $state('');
-	let roiExpectedGrade = $state('9');
+	let roiTier = $state<string>(DEFAULT_TIER_BY_SERVICE.PSA);
 	let searchingROI = $state(false);
+	// Row from /api/card-index/[id] when the selected card is indexed.
+	// When null after lookup, the card isn't in our index — we show a
+	// "not indexed yet" note and never fabricate a multiplier fallback.
+	let indexRow = $state<{
+		raw_nm_price: number | null;
+		psa10_price: number | null;
+		psa_gem_rate: number | null;
+		psa_pop_total: number | null;
+		graded_prices_fetched_at: string | null;
+	} | null>(null);
+	let indexLookupState = $state<'idle' | 'loading' | 'missing' | 'ok'>('idle');
 
 	// New submission state
 	let showSubmitModal = $state(false);
@@ -50,8 +61,14 @@
 
 	async function searchCards(query: string, target: 'roi' | 'sub') {
 		if (query.length < 2) return;
-		const setSearching = target === 'roi' ? (v: boolean) => (searchingROI = v) : (v: boolean) => (searchingSub = v);
-		const setResults = target === 'roi' ? (r: PokemonCard[]) => (roiSearchResults = r) : (r: PokemonCard[]) => (subSearchResults = r);
+		const setSearching =
+			target === 'roi'
+				? (v: boolean) => (searchingROI = v)
+				: (v: boolean) => (searchingSub = v);
+		const setResults =
+			target === 'roi'
+				? (r: PokemonCard[]) => (roiSearchResults = r)
+				: (r: PokemonCard[]) => (subSearchResults = r);
 
 		setSearching(true);
 		try {
@@ -65,27 +82,68 @@
 		}
 	}
 
-	// ROI calculation
-	let selectedFees = $derived(gradingFees.find((f) => f.service === roiService));
-	let gradingCost = $derived(selectedFees?.tiers.find((t) => t.name.toLowerCase().includes('regular'))?.cost ?? 50);
-	let rawValue = $derived(parseFloat(roiRawValue) || 0);
-	let expectedGrade = $derived(parseFloat(roiExpectedGrade) || 9);
+	async function onROICardPicked(card: PokemonCard) {
+		roiSelectedCard = card;
+		roiSearchQuery = card.name;
+		roiSearchResults = [];
+		indexRow = null;
+		indexLookupState = 'loading';
+		try {
+			const res = await fetch(`/api/card-index/${encodeURIComponent(card.id)}`);
+			if (res.status === 404) {
+				indexLookupState = 'missing';
+				return;
+			}
+			if (!res.ok) {
+				indexLookupState = 'missing';
+				return;
+			}
+			indexRow = await res.json();
+			indexLookupState = 'ok';
+		} catch {
+			indexLookupState = 'missing';
+		}
+	}
 
-	// Rough grade multipliers (PSA-style)
-	const gradeMultipliers: Record<string, number> = {
-		'10': 8, '9.5': 4, '9': 2.5, '8.5': 1.8, '8': 1.4,
-		'7': 1.1, '6': 0.9, '5': 0.7, '4': 0.5
-	};
+	// Real ROI — only produced when we have a card_index row.
+	const tiersForService = $derived(
+		gradingFees.find((f) => f.service === roiService)?.tiers ?? []
+	);
 
-	let estimatedGradedValue = $derived.by(() => {
-		const mult = gradeMultipliers[roiExpectedGrade] ?? 1;
-		return rawValue * mult;
+	$effect(() => {
+		// Snap tier to a valid name when service changes.
+		if (!tiersForService.find((t) => t.name.toLowerCase() === roiTier.toLowerCase())) {
+			roiTier = DEFAULT_TIER_BY_SERVICE[roiService] ?? tiersForService[0]?.name ?? '';
+		}
 	});
 
-	let estimatedProfit = $derived(estimatedGradedValue - rawValue - gradingCost);
-	let isWorthGrading = $derived(estimatedProfit > 0);
+	const realROI = $derived.by(() => {
+		if (!indexRow) return null;
+		return computeGradingROI(
+			{
+				raw_nm_price: indexRow.raw_nm_price,
+				psa10_price: indexRow.psa10_price,
+				psa_gem_rate: indexRow.psa_gem_rate,
+				psa_pop_total: indexRow.psa_pop_total
+			},
+			roiService,
+			roiTier,
+			gradingFees
+		);
+	});
 
-	// Submission CRUD
+	function fmt(n: number | null | undefined, prefix = '$'): string {
+		if (n == null) return '—';
+		return `${prefix}${n.toFixed(2)}`;
+	}
+
+	function fmtSigned(n: number | null | undefined): string {
+		if (n == null) return '—';
+		const sign = n >= 0 ? '+' : '';
+		return `${sign}${fmt(n)}`;
+	}
+
+	// Submission CRUD (unchanged)
 	async function addSubmission() {
 		if (!subSelectedCard) return;
 		submitting = true;
@@ -125,7 +183,12 @@
 		await fetch('/api/grading', {
 			method: 'PATCH',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ id, grade: parseFloat(grade), status: 'complete', returned_date: new Date().toISOString().split('T')[0] })
+			body: JSON.stringify({
+				id,
+				grade: parseFloat(grade),
+				status: 'complete',
+				returned_date: new Date().toISOString().split('T')[0]
+			})
 		});
 		await invalidateAll();
 	}
@@ -165,11 +228,19 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
+	<div class="flex flex-wrap items-start justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Grading Center</h1>
-			<p class="mt-1 text-vault-text-muted">Calculate ROI and track your grading submissions</p>
+			<p class="mt-1 text-vault-text-muted">
+				Data-driven ROI from indexed PSA comps and track your grading submissions.
+			</p>
 		</div>
+		<a
+			href="/grading/candidates"
+			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+		>
+			Browse all grading candidates →
+		</a>
 	</div>
 
 	<!-- Stats -->
@@ -193,12 +264,14 @@
 	</div>
 
 	<div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-		<!-- ROI Calculator -->
+		<!-- ROI Calculator (real data) -->
 		<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 			<h2 class="text-lg font-semibold text-white">Grading ROI Calculator</h2>
-			<p class="mt-1 text-sm text-vault-text-muted">See if a card is worth grading</p>
+			<p class="mt-1 text-sm text-vault-text-muted">
+				Real PSA 10 comps and gem rate from our card index — no multipliers.
+			</p>
+
 			<div class="mt-4 space-y-4">
-				<!-- Card search -->
 				<div class="relative">
 					<input
 						type="text"
@@ -208,17 +281,10 @@
 						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 					/>
 					{#if roiSearchResults.length > 0}
-						<div class="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
+						<div class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
 							{#each roiSearchResults as result}
 								<button
-									onclick={() => {
-										roiSelectedCard = result;
-										roiSearchQuery = result.name;
-										roiSearchResults = [];
-										// Auto-fill raw value from TCGPlayer
-										const firstPrice = result.tcgplayer?.prices ? Object.values(result.tcgplayer.prices)[0] : null;
-										if (firstPrice?.market) roiRawValue = firstPrice.market.toFixed(2);
-									}}
+									onclick={() => onROICardPicked(result)}
 									class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-vault-surface-hover"
 								>
 									<img src={result.images.small} alt={result.name} class="h-10 w-7 rounded object-cover" />
@@ -235,17 +301,23 @@
 				{#if roiSelectedCard}
 					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3">
 						<img src={roiSelectedCard.images.small} alt={roiSelectedCard.name} class="h-14 w-10 rounded object-cover" />
-						<div>
+						<div class="min-w-0 flex-1">
 							<p class="font-medium text-white">{roiSelectedCard.name}</p>
-							<p class="text-xs text-vault-text-muted">{roiSelectedCard.set.name} · {roiSelectedCard.rarity ?? ''}</p>
+							<p class="truncate text-xs text-vault-text-muted">
+								{roiSelectedCard.set.name} · {roiSelectedCard.rarity ?? ''}
+							</p>
 						</div>
 					</div>
 				{/if}
 
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 					<div>
 						<label class="block text-xs text-vault-text-muted" for="roi-service">Service</label>
-						<select id="roi-service" bind:value={roiService} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
+						<select
+							id="roi-service"
+							bind:value={roiService}
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+						>
 							<option value="PSA">PSA</option>
 							<option value="CGC">CGC</option>
 							<option value="BGS">BGS</option>
@@ -253,63 +325,122 @@
 						</select>
 					</div>
 					<div>
-						<label class="block text-xs text-vault-text-muted" for="roi-raw">Raw Value ($)</label>
-						<input id="roi-raw" type="number" step="0.01" bind:value={roiRawValue} placeholder="0.00" class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none" />
-					</div>
-					<div>
-						<label class="block text-xs text-vault-text-muted" for="roi-grade">Expected Grade</label>
-						<select id="roi-grade" bind:value={roiExpectedGrade} class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none">
-							<option value="10">PSA 10 / Gem Mint</option>
-							<option value="9.5">PSA 9.5</option>
-							<option value="9">PSA 9 / Mint</option>
-							<option value="8.5">PSA 8.5</option>
-							<option value="8">PSA 8 / NM-MT</option>
-							<option value="7">PSA 7 / NM</option>
-							<option value="6">PSA 6 / EX-MT</option>
+						<label class="block text-xs text-vault-text-muted" for="roi-tier">Tier</label>
+						<select
+							id="roi-tier"
+							bind:value={roiTier}
+							class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+						>
+							{#each tiersForService as t}
+								<option value={t.name}>{t.name} (${t.cost})</option>
+							{/each}
 						</select>
 					</div>
 				</div>
 
 				<!-- ROI Result -->
-				{#if rawValue > 0}
-					<div class="rounded-lg border {isWorthGrading ? 'border-vault-green/30 bg-vault-green/5' : 'border-vault-red/30 bg-vault-red/5'} p-4">
+				{#if indexLookupState === 'loading'}
+					<div class="rounded-lg border border-vault-border bg-vault-bg p-4 text-sm text-vault-text-muted">
+						Looking up indexed comps…
+					</div>
+				{:else if indexLookupState === 'missing' && roiSelectedCard}
+					<div class="rounded-lg border border-vault-gold/30 bg-vault-gold/5 p-4 text-sm text-vault-gold">
+						<p class="font-medium">This card isn't in our index yet.</p>
+						<p class="mt-1 text-xs text-vault-text-muted">
+							Gem rate unknown — we can't compute a realistic ROI. Run the indexer on this
+							card's set (or check the <a href="/admin/index" class="underline">Card Index admin</a>)
+							to add it. We won't fabricate a multiplier fallback.
+						</p>
+					</div>
+				{:else if indexLookupState === 'ok' && indexRow && realROI && realROI.premium == null}
+					<!-- Indexed but missing PSA 10 comp or gem rate — the realistic ROI
+					     can't be computed without hallucinating. Show what we have. -->
+					<div class="rounded-lg border border-vault-gold/30 bg-vault-gold/5 p-4 text-sm text-vault-gold">
+						<p class="font-medium">PSA 10 comp or gem rate missing for this card.</p>
+						<p class="mt-1 text-xs text-vault-text-muted">
+							Raw price is indexed ({fmt(indexRow.raw_nm_price)}), but we don't have a PSA 10
+							sold comp or enough PSA pop data to compute a realistic ROI. We won't
+							fabricate one. Try a different card or re-run the indexer on this set.
+						</p>
+					</div>
+				{:else if indexLookupState === 'ok' && indexRow && realROI}
+					{@const isWorth = realROI.realisticProfit != null && realROI.realisticProfit > 0}
+					<div
+						class="rounded-lg border p-4 {isWorth
+							? 'border-vault-green/30 bg-vault-green/5'
+							: 'border-vault-red/30 bg-vault-red/5'}"
+					>
 						<div class="flex items-center justify-between">
-							<span class="text-sm font-bold {isWorthGrading ? 'text-vault-green' : 'text-vault-red'}">
-								{isWorthGrading ? 'WORTH GRADING' : 'SELL RAW'}
+							<span class="text-sm font-bold {isWorth ? 'text-vault-green' : 'text-vault-red'}">
+								{isWorth ? 'WORTH GRADING' : 'SELL RAW'}
 							</span>
-							<span class="rounded-full px-2.5 py-0.5 text-xs font-bold {isWorthGrading ? 'bg-vault-green/20 text-vault-green' : 'bg-vault-red/20 text-vault-red'}">
-								{estimatedProfit >= 0 ? '+' : ''}${estimatedProfit.toFixed(2)}
+							<span
+								class="rounded-full px-2.5 py-0.5 text-xs font-bold {isWorth
+									? 'bg-vault-green/20 text-vault-green'
+									: 'bg-vault-red/20 text-vault-red'}"
+							>
+								{fmtSigned(realROI.realisticProfit)}
 							</span>
 						</div>
 						<div class="mt-3 grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
 							<div>
-								<p class="text-vault-text-muted">Raw Value</p>
-								<p class="mt-0.5 font-bold text-white">${rawValue.toFixed(2)}</p>
+								<p class="text-vault-text-muted">Raw</p>
+								<p class="mt-0.5 font-bold text-white">{fmt(indexRow.raw_nm_price)}</p>
 							</div>
 							<div>
-								<p class="text-vault-text-muted">{roiService} Fee</p>
-								<p class="mt-0.5 font-bold text-white">${gradingCost.toFixed(0)}</p>
+								<p class="text-vault-text-muted">Gem rate</p>
+								<p class="mt-0.5 font-bold text-white">
+									{indexRow.psa_gem_rate?.toFixed(1) ?? '—'}%
+								</p>
+								<p class="text-[9px] text-vault-text-muted">
+									of {(indexRow.psa_pop_total ?? 0).toLocaleString()} PSA
+								</p>
 							</div>
 							<div>
-								<p class="text-vault-text-muted">Est. Graded</p>
-								<p class="mt-0.5 font-bold text-vault-gold">${estimatedGradedValue.toFixed(2)}</p>
+								<p class="text-vault-text-muted">PSA 10</p>
+								<p class="mt-0.5 font-bold text-vault-purple">{fmt(indexRow.psa10_price)}</p>
 							</div>
 							<div>
-								<p class="text-vault-text-muted">Profit</p>
-								<p class="mt-0.5 font-bold {isWorthGrading ? 'text-vault-green' : 'text-vault-red'}">
-									{estimatedProfit >= 0 ? '+' : ''}${estimatedProfit.toFixed(2)}
+								<p class="text-vault-text-muted">{roiService} cost</p>
+								<p class="mt-0.5 font-bold text-white">${realROI.gradingCost.toFixed(0)}</p>
+								<p class="text-[9px] text-vault-text-muted">
+									{realROI.resolvedTier?.name ?? roiTier}
 								</p>
 							</div>
 						</div>
+						<div class="mt-3 grid grid-cols-2 gap-2 border-t border-vault-border pt-3 text-center text-xs sm:grid-cols-3">
+							<div>
+								<p class="text-vault-text-muted">Realistic profit</p>
+								<p class="font-bold {isWorth ? 'text-vault-green' : 'text-vault-red'}">
+									{fmtSigned(realROI.realisticProfit)}
+								</p>
+							</div>
+							<div>
+								<p class="text-vault-text-muted">If it hits 10</p>
+								<p class="font-semibold text-vault-gold">{fmtSigned(realROI.optimisticProfit)}</p>
+							</div>
+							<div>
+								<p class="text-vault-text-muted">Break-even</p>
+								<p class="font-semibold text-white">
+									{realROI.breakEvenGemRate != null ? `${realROI.breakEvenGemRate.toFixed(1)}%` : '—'}
+								</p>
+							</div>
+						</div>
+						{#if !realROI.confident}
+							<p class="mt-3 text-[11px] text-vault-gold">
+								Low confidence — only {indexRow.psa_pop_total ?? 0} PSA-graded copies. Gem
+								rate is noisy at small sample sizes.
+							</p>
+						{/if}
 					</div>
 				{/if}
 
-				<!-- Grading Fee Reference -->
-				{#if selectedFees}
+				<!-- Tier reference -->
+				{#if tiersForService.length > 0}
 					<div>
-						<p class="text-xs font-medium text-vault-text-muted">{roiService} Pricing Tiers</p>
+						<p class="text-xs font-medium text-vault-text-muted">{roiService} pricing tiers</p>
 						<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-							{#each selectedFees.tiers as tier}
+							{#each tiersForService as tier}
 								<div class="rounded-lg border border-vault-border bg-vault-bg p-2 text-center text-xs">
 									<p class="font-medium text-white">{tier.name}</p>
 									<p class="text-vault-gold">${tier.cost}</p>
@@ -326,7 +457,10 @@
 		<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 			<div class="flex items-center justify-between">
 				<h2 class="text-lg font-semibold text-white">Submission Tracker</h2>
-				<button onclick={() => (showSubmitModal = true)} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
+				<button
+					onclick={() => (showSubmitModal = true)}
+					class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+				>
 					+ New Submission
 				</button>
 			</div>
@@ -346,7 +480,10 @@
 											<p class="font-medium text-white">{card?.name ?? sub.card_id}</p>
 											<p class="text-xs text-vault-text-muted">{sub.service} · {sub.tier}</p>
 										</div>
-										<span class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[sub.status] ?? 'bg-vault-surface text-vault-text-muted'}">
+										<span
+											class="rounded-full px-2 py-0.5 text-xs font-medium {statusColors[sub.status] ??
+												'bg-vault-surface text-vault-text-muted'}"
+										>
 											{sub.status}
 										</span>
 									</div>
@@ -426,10 +563,14 @@
 						class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 					/>
 					{#if subSearchResults.length > 0}
-						<div class="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
+						<div class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-vault-border bg-vault-bg shadow-xl">
 							{#each subSearchResults as result}
 								<button
-									onclick={() => { subSelectedCard = result; subSearchQuery = result.name; subSearchResults = []; }}
+									onclick={() => {
+										subSelectedCard = result;
+										subSearchQuery = result.name;
+										subSearchResults = [];
+									}}
 									class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-vault-surface-hover"
 								>
 									<img src={result.images.small} alt={result.name} class="h-10 w-7 rounded object-cover" />
