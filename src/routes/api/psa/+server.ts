@@ -32,7 +32,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	// ---------------------------------------------------------------
-	// Mode 2: Pop report search (cached for 24 hours)
+	// Mode 2: Pop report search (cached for 24 hours in scrape_cache)
 	// ---------------------------------------------------------------
 	if (search) {
 		const cacheKey = `psa-pop:${search.toLowerCase()}:${(set ?? '').toLowerCase()}`;
@@ -40,7 +40,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Check cache first
 		try {
 			const { data: cached } = await supabase
-				.from('price_cache')
+				.from('scrape_cache')
 				.select('data, fetched_at')
 				.eq('cache_key', cacheKey)
 				.single();
@@ -60,11 +60,12 @@ export const GET: RequestHandler = async ({ url }) => {
 			const data = await searchPSAPop(search, set ?? undefined);
 			if (!data) throw error(404, 'No population data found');
 
-			// Upsert into cache
+			// Upsert into scrape_cache
 			try {
-				await supabase.from('price_cache').upsert(
+				await supabase.from('scrape_cache').upsert(
 					{
 						cache_key: cacheKey,
+						source: 'psa',
 						data,
 						fetched_at: new Date().toISOString()
 					},

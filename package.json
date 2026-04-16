@@ -1,5 +1,5 @@
 {
-	"name": "trove",
+	"name": "pokevault",
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
@@ -15,6 +15,7 @@
 		"@sveltejs/adapter-vercel": "^5.0.0",
 		"@sveltejs/kit": "^2.0.0",
 		"@tailwindcss/vite": "^4.0.0",
+		"dotenv": "^17.4.2",
 		"eslint": "^9.0.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-svelte": "^2.30.0",
@@ -23,6 +24,7 @@
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
+		"tsx": "^4.21.0",
 		"typescript": "^5.0.0"
 	},
 	"type": "module",

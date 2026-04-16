@@ -53,10 +53,34 @@ function delay(ms: number): Promise<void> {
 
 /** Fetch a page with browser-like headers, returning the HTML body. */
 async function fetchPage(url: string): Promise<string | null> {
+	// Try native fetch first (works from SvelteKit server context)
 	try {
 		const res = await fetch(url, { headers: HEADERS });
-		if (!res.ok) return null;
-		return await res.text();
+		if (res.ok) return await res.text();
+		if (res.status !== 403) return null;
+	} catch {
+		// Fall through to curl
+	}
+
+	// Fallback: curl subprocess bypasses Cloudflare TLS fingerprinting
+	try {
+		const { execSync } = await import('child_process');
+		const result = execSync(
+			`curl -sL --compressed --max-time 10 ` +
+			`-H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" ` +
+			`-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" ` +
+			`-H "Accept-Language: en-US,en;q=0.9" ` +
+			`-H "Accept-Encoding: gzip, deflate, br" ` +
+			`-H "Sec-Fetch-Dest: document" ` +
+			`-H "Sec-Fetch-Mode: navigate" ` +
+			`-H "Sec-Fetch-Site: none" ` +
+			`-H "Sec-Fetch-User: ?1" ` +
+			`-H "Upgrade-Insecure-Requests: 1" ` +
+			`"${url}"`,
+			{ encoding: 'utf-8', timeout: 15000 }
+		);
+		if (!result || result.includes('Just a moment')) return null;
+		return result;
 	} catch {
 		return null;
 	}
