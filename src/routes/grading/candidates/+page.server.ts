@@ -8,7 +8,7 @@ import { supabase } from '$services/supabase';
 import { getGradingFees } from '$services/price-tracker';
 import type { PageServerLoad } from './$types';
 import type { GradingService } from '$types';
-import { GEM_RATE_MIN_SAMPLE } from '$services/grading-roi';
+import { GEM_RATE_MIN_SAMPLE, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
 
 const PAGE_SIZE = 24;
 
@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	setHeaders({ 'cache-control': 'private, no-cache, must-revalidate' });
 
 	const service = (url.searchParams.get('service') ?? 'PSA') as GradingService;
-	const tier = url.searchParams.get('tier') ?? 'Economy';
+	const tier = url.searchParams.get('tier') ?? DEFAULT_TIER_BY_SERVICE[service] ?? 'Value';
 	const minGemRate = parseFloat(url.searchParams.get('min_gem_rate') ?? '0');
 	const maxRaw = parseFloat(url.searchParams.get('max_raw') ?? '');
 	const minPop = parseInt(
