@@ -49,6 +49,8 @@ export interface CardIndexRow {
 	raw_fetched_at: string | null;
 	psa10_price: number | null;
 	psa10_source: string | null;
+	cgc10_price: number | null;
+	cgc10_source: string | null;
 	tag10_price: number | null;
 	tag10_source: string | null;
 	graded_prices_fetched_at: string | null;
@@ -56,9 +58,10 @@ export interface CardIndexRow {
 	psa_pop_10: number | null;
 	psa_gem_rate: number | null;
 	psa_fetched_at: string | null;
-	tag_pop_total: number | null;
-	tag_pop_10: number | null;
-	tag_fetched_at: string | null;
+	cgc_pop_total: number | null;
+	cgc_pop_10: number | null;
+	cgc_gem_rate: number | null;
+	cgc_fetched_at: string | null;
 	last_enriched_at: string;
 	enrich_version: number;
 	enrich_errors: Record<string, string | null>;
@@ -207,6 +210,8 @@ export async function enrichCard(
 		raw_fetched_at: now,
 		psa10_price: pc?.psa10 ?? null,
 		psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
+		cgc10_price: pc?.cgc10 ?? null,
+		cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
 		tag10_price: pc?.tag10 ?? null,
 		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
 		graded_prices_fetched_at: pc ? now : null,
@@ -214,9 +219,10 @@ export async function enrichCard(
 		psa_pop_10: psaPop?.grade10 ?? null,
 		psa_gem_rate: psaPop?.gemRate ?? null,
 		psa_fetched_at: psaPop ? now : null,
-		tag_pop_total: cgcPop?.total ?? null,  // Using tag columns for CGC until TAG scraper exists
-		tag_pop_10: cgcPop?.grade10 ?? null,
-		tag_fetched_at: cgcPop ? now : null,
+		cgc_pop_total: cgcPop?.total ?? null,
+		cgc_pop_10: cgcPop?.grade10 ?? null,
+		cgc_gem_rate: cgcPop?.gemRate ?? null,
+		cgc_fetched_at: cgcPop ? now : null,
 		last_enriched_at: now,
 		enrich_version: ENRICH_VERSION,
 		enrich_errors: errors

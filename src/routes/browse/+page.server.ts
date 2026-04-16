@@ -234,7 +234,7 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 			psa10_delta: row.psa10_delta as number | null,
 			psa10_multiple: row.psa10_multiple as number | null,
 			psa_pop_total: row.psa_pop_total as number | null,
-			tag_pop_total: row.tag_pop_total as number | null,
+			cgc_pop_total: row.cgc_pop_total as number | null,
 			combined_pop_total: row.combined_pop_total as number,
 			pcUrl: null
 		}
