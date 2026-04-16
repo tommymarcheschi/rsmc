@@ -33,12 +33,16 @@ import type { GradingFees } from './price-tracker';
 export const GEM_RATE_MIN_SAMPLE = 20;
 
 // Default tier per service — cheapest available, per user directive.
-// Matches the naming in price-tracker.ts's getDefaultGradingFees().
+// Names match the `tier_name` column in migration 006's grading_fee_schedules
+// seed rows. Note: PSA's cheapest individual tier is "Value" (renamed from
+// the pre-2023 "Economy"); SGC has no "Economy" tier — "Standard" is the
+// cheapest. resolveGradingCost() falls back to the first tier in the list
+// if the name doesn't match, so misses here degrade to cheapest-available.
 export const DEFAULT_TIER_BY_SERVICE: Record<GradingService, string> = {
-	PSA: 'Economy',
+	PSA: 'Value',
 	CGC: 'Economy',
 	BGS: 'Economy',
-	SGC: 'Economy'
+	SGC: 'Standard'
 };
 
 export interface GradingROIInput {

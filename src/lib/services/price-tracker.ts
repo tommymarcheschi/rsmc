@@ -7,6 +7,7 @@
  */
 
 import * as apiMonitor from './api-monitor';
+import { supabase } from './supabase';
 
 const BASE_URL = 'https://pokemonpricetracker.com/api/v1';
 const SERVICE = 'price-tracker';
@@ -131,53 +132,101 @@ export async function getPriceHistory(
 	}
 }
 
+// Grading fees are sourced from the Supabase `grading_fee_schedules` table
+// (migration 006). The table is the authoritative source — each row carries
+// the grader's published cost + declared-value ceiling, so
+// resolveGradingCost() in grading-roi.ts can escalate tiers for high-value
+// cards. The hardcoded fallback below is a last resort when the query fails
+// and matches the seeded rows' shape.
 export async function getGradingFees(): Promise<GradingFees[]> {
 	try {
-		const res = await fetchPriceTracker('/grading/fees');
-		if (!res.ok) return getDefaultGradingFees();
-		const json = await res.json();
-		return json.data ?? getDefaultGradingFees();
+		const { data, error } = await supabase
+			.from('grading_fee_schedules')
+			.select('service, tier_name, cost_cents, max_value_cents, turnaround_days, sort_order')
+			.eq('active', true)
+			.order('service', { ascending: true })
+			.order('sort_order', { ascending: true });
+
+		if (error || !data || data.length === 0) return getFallbackGradingFees();
+		return groupFeeRows(data);
 	} catch {
-		return getDefaultGradingFees();
+		return getFallbackGradingFees();
 	}
 }
 
-// Fallback data when API unavailable
-function getDefaultGradingFees(): GradingFees[] {
+interface FeeRow {
+	service: string;
+	tier_name: string;
+	cost_cents: number;
+	max_value_cents: number | null;
+	turnaround_days: number | null;
+	sort_order: number;
+}
+
+function groupFeeRows(rows: FeeRow[]): GradingFees[] {
+	const byService = new Map<string, GradingFees>();
+	for (const r of rows) {
+		let svc = byService.get(r.service);
+		if (!svc) {
+			svc = { service: r.service, tiers: [] };
+			byService.set(r.service, svc);
+		}
+		svc.tiers.push({
+			name: r.tier_name,
+			cost: r.cost_cents / 100,
+			turnaround_days: r.turnaround_days ?? 0,
+			max_value: r.max_value_cents != null ? r.max_value_cents / 100 : undefined
+		});
+	}
+	return Array.from(byService.values());
+}
+
+// Last-resort fallback. Values intentionally mirror migration 006's seeds
+// so behavior is continuous if the DB read fails.
+function getFallbackGradingFees(): GradingFees[] {
 	return [
 		{
 			service: 'PSA',
 			tiers: [
-				{ name: 'Economy', cost: 25, turnaround_days: 150 },
-				{ name: 'Regular', cost: 50, turnaround_days: 65 },
-				{ name: 'Express', cost: 100, turnaround_days: 20 },
-				{ name: 'Super Express', cost: 200, turnaround_days: 10 }
+				{ name: 'Value', cost: 25.99, turnaround_days: 65, max_value: 499 },
+				{ name: 'Regular', cost: 49.99, turnaround_days: 45, max_value: 1499 },
+				{ name: 'Express', cost: 100, turnaround_days: 20, max_value: 2499 },
+				{ name: 'Super Express', cost: 200, turnaround_days: 10, max_value: 4999 },
+				{ name: 'Walk-Through', cost: 400, turnaround_days: 5, max_value: 9999 },
+				{ name: 'Premium 1', cost: 600, turnaround_days: 5, max_value: 14999 },
+				{ name: 'Premium 3', cost: 1500, turnaround_days: 3, max_value: 49999 },
+				{ name: 'Premium 5', cost: 3000, turnaround_days: 3, max_value: 99999 },
+				{ name: 'Premium 10', cost: 5000, turnaround_days: 3 }
 			]
 		},
 		{
 			service: 'CGC',
 			tiers: [
-				{ name: 'Economy', cost: 18, turnaround_days: 120 },
-				{ name: 'Standard', cost: 30, turnaround_days: 50 },
-				{ name: 'Express', cost: 65, turnaround_days: 15 },
-				{ name: 'Walk-Through', cost: 150, turnaround_days: 2 }
+				{ name: 'Economy', cost: 18, turnaround_days: 40, max_value: 200 },
+				{ name: 'Standard', cost: 30, turnaround_days: 20, max_value: 400 },
+				{ name: 'Express', cost: 60, turnaround_days: 10, max_value: 1000 },
+				{ name: 'Premium', cost: 125, turnaround_days: 5, max_value: 2500 },
+				{ name: 'Elite', cost: 250, turnaround_days: 3, max_value: 10000 },
+				{ name: 'Elite Plus', cost: 400, turnaround_days: 3 }
 			]
 		},
 		{
 			service: 'BGS',
 			tiers: [
-				{ name: 'Economy', cost: 25, turnaround_days: 120 },
-				{ name: 'Standard', cost: 50, turnaround_days: 50 },
-				{ name: 'Express', cost: 100, turnaround_days: 10 },
-				{ name: 'Premium', cost: 250, turnaround_days: 5 }
+				{ name: 'Economy', cost: 20, turnaround_days: 60, max_value: 500 },
+				{ name: 'Standard', cost: 35, turnaround_days: 30, max_value: 1500 },
+				{ name: 'Express', cost: 100, turnaround_days: 10, max_value: 2500 },
+				{ name: 'Premium', cost: 250, turnaround_days: 5, max_value: 10000 },
+				{ name: 'Premium Plus', cost: 500, turnaround_days: 5 }
 			]
 		},
 		{
 			service: 'SGC',
 			tiers: [
-				{ name: 'Economy', cost: 15, turnaround_days: 90 },
-				{ name: 'Regular', cost: 30, turnaround_days: 30 },
-				{ name: 'Express', cost: 75, turnaround_days: 10 }
+				{ name: 'Standard', cost: 30, turnaround_days: 20, max_value: 1500 },
+				{ name: 'Express', cost: 50, turnaround_days: 10, max_value: 2500 },
+				{ name: 'Premium', cost: 100, turnaround_days: 5, max_value: 5000 },
+				{ name: 'Walk-Through', cost: 250, turnaround_days: 2 }
 			]
 		}
 	];
