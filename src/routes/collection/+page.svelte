@@ -2,10 +2,21 @@
 	import { enhance } from '$app/forms';
 	import type { CollectionEntry, PokemonCard, CardCondition } from '$types';
 
+	interface ValuationRow {
+		nm_price: number | null;
+		unit_value: number | null;
+		line_value: number | null;
+		is_estimate: boolean;
+		discount: number;
+	}
+
 	let { data, form } = $props();
 
 	let entries = $derived(data.entries as CollectionEntry[]);
 	let cardCache = $derived(data.cardCache as Record<string, PokemonCard>);
+	let valuationByEntry = $derived(
+		((data as Record<string, unknown>).valuationByEntry ?? {}) as Record<string, ValuationRow>
+	);
 	let addMode = $derived(data.addMode);
 	let selectedCard = $derived(data.selectedCard as PokemonCard | null);
 	let addSearchResults = $derived(data.addSearchResults as PokemonCard[]);
@@ -19,6 +30,28 @@
 		entries.reduce((sum, e) => sum + (e.purchase_price ?? 0) * e.quantity, 0)
 	);
 	let uniqueCards = $derived(new Set(entries.map((e) => e.card_id)).size);
+	let currentValue = $derived(
+		entries.reduce((sum, e) => sum + (valuationByEntry[e.id]?.line_value ?? 0), 0)
+	);
+	// Only count gain/loss against rows with a known purchase_price — otherwise
+	// the "investment" side is fake and the delta is misleading.
+	let pricedInvested = $derived(
+		entries
+			.filter((e) => e.purchase_price != null)
+			.reduce((sum, e) => sum + (e.purchase_price ?? 0) * e.quantity, 0)
+	);
+	let pricedValue = $derived(
+		entries
+			.filter((e) => e.purchase_price != null)
+			.reduce((sum, e) => sum + (valuationByEntry[e.id]?.line_value ?? 0), 0)
+	);
+	let gainLoss = $derived(pricedValue - pricedInvested);
+	let gainLossPct = $derived(pricedInvested > 0 ? (gainLoss / pricedInvested) * 100 : 0);
+
+	function fmtMoney(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
 
 	// Client-side filter over the server-rendered list. The input is a plain
 	// field (no form submission) — filtering is purely cosmetic, no data
@@ -76,18 +109,37 @@
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Cards</p>
 			<p class="mt-1 text-2xl font-bold text-white">{totalCards}</p>
+			<p class="mt-0.5 text-[11px] text-vault-text-muted">{uniqueCards} unique · {entries.length} entries</p>
 		</div>
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
-			<p class="text-sm text-vault-text-muted">Unique Cards</p>
-			<p class="mt-1 text-2xl font-bold text-white">{uniqueCards}</p>
+			<p class="text-sm text-vault-text-muted">Current Value</p>
+			<p class="mt-1 text-2xl font-bold text-vault-gold">{fmtMoney(currentValue)}</p>
+			<p class="mt-0.5 text-[11px] text-vault-text-muted">NM raw × condition discount</p>
 		</div>
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
 			<p class="text-sm text-vault-text-muted">Total Invested</p>
-			<p class="mt-1 text-2xl font-bold text-vault-gold">${totalInvested.toFixed(2)}</p>
+			<p class="mt-1 text-2xl font-bold text-white">{fmtMoney(totalInvested)}</p>
+			<p class="mt-0.5 text-[11px] text-vault-text-muted">
+				{#if pricedInvested < totalInvested || pricedInvested === 0}
+					Only rows with a recorded price
+				{:else}
+					All {entries.length} entries priced
+				{/if}
+			</p>
 		</div>
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4">
-			<p class="text-sm text-vault-text-muted">Entries</p>
-			<p class="mt-1 text-2xl font-bold text-white">{entries.length}</p>
+			<p class="text-sm text-vault-text-muted">Gain / Loss</p>
+			{#if pricedInvested > 0}
+				<p class="mt-1 text-2xl font-bold {gainLoss >= 0 ? 'text-vault-green' : 'text-vault-red'}">
+					{gainLoss >= 0 ? '+' : ''}{fmtMoney(gainLoss)}
+				</p>
+				<p class="mt-0.5 text-[11px] {gainLoss >= 0 ? 'text-vault-green/80' : 'text-vault-red/80'}">
+					{gainLoss >= 0 ? '+' : ''}{gainLossPct.toFixed(1)}% vs invested
+				</p>
+			{:else}
+				<p class="mt-1 text-2xl font-bold text-vault-text-muted">—</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">Add purchase prices to track</p>
+			{/if}
 		</div>
 	</div>
 
@@ -138,8 +190,20 @@
 								</span>
 								{#if entry.purchase_price}
 									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-gold">
-										${entry.purchase_price} ea
+										${entry.purchase_price} ea · cost
 									</span>
+								{/if}
+								{#if valuationByEntry[entry.id]?.unit_value != null}
+									{@const val = valuationByEntry[entry.id]}
+									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-green" title={val.is_estimate ? `NM ${fmtMoney(val.nm_price)} × ${Math.round(val.discount * 100)}% ${entry.condition} discount` : `PriceCharting Ungraded NM`}>
+										{fmtMoney(val.unit_value)} ea · value{val.is_estimate ? ' (est.)' : ''}
+									</span>
+									{#if entry.purchase_price != null}
+										{@const delta = (val.unit_value ?? 0) - entry.purchase_price}
+										<span class="rounded bg-vault-bg px-2 py-0.5 text-xs {delta >= 0 ? 'text-vault-green' : 'text-vault-red'}">
+											{delta >= 0 ? '+' : ''}{fmtMoney(delta)} ea
+										</span>
+									{/if}
 								{/if}
 								{#if entry.notes}
 									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-text-muted">

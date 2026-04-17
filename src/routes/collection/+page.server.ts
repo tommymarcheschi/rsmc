@@ -34,6 +34,21 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		if (card) cardCache[uniqueCardIds[i]] = card;
 	}
 
+	// Pull canonical Raw NM prices from card_index so the collection's
+	// valuation matches /grading, /insights, and /browse hunt mode. Single
+	// batched query — card_index is keyed on card_id. Cards missing from
+	// card_index get fallback valuation from the TCG API's tcgplayer.prices.
+	const indexPrices: Record<string, number | null> = {};
+	if (uniqueCardIds.length > 0) {
+		const { data: indexRows } = await supabase
+			.from('card_index')
+			.select('card_id, raw_nm_price')
+			.in('card_id', uniqueCardIds);
+		for (const r of (indexRows ?? []) as Array<{ card_id: string; raw_nm_price: number | null }>) {
+			indexPrices[r.card_id] = r.raw_nm_price;
+		}
+	}
+
 	// Add-modal state is driven by URL params so the whole flow works without
 	// JS: `?add=1` opens the modal, `?addSearch=<q>` runs a server-side card
 	// search, `?selectedCard=<id>` pre-fetches that card so the detail preview
@@ -59,9 +74,57 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		selectedCard = await getCard(selectedCardId).catch(() => null);
 	}
 
+	// Per-entry current valuation. NM is the canonical headline price; other
+	// conditions apply standard TCGPlayer discount multipliers (est., not
+	// real per-condition comps — we don't have those at the free-tier data
+	// sources). The UI surfaces that with an `est.` badge so users don't
+	// pattern-match the number as a true market comp.
+	const CONDITION_DISCOUNT: Record<string, number> = {
+		NM: 1.0,
+		LP: 0.85,
+		MP: 0.7,
+		HP: 0.5,
+		DMG: 0.3
+	};
+
+	interface ValuationRow {
+		nm_price: number | null;
+		unit_value: number | null;
+		line_value: number | null;
+		is_estimate: boolean;
+		discount: number;
+	}
+	const valuationByEntry: Record<string, ValuationRow> = {};
+	for (const entry of entries) {
+		let nm = indexPrices[entry.card_id] ?? null;
+		if (nm == null) {
+			// Fallback: TCG API market price off whichever printing has one.
+			const card = cardCache[entry.card_id];
+			if (card?.tcgplayer?.prices) {
+				for (const variant of Object.values(card.tcgplayer.prices)) {
+					if (typeof variant.market === 'number' && variant.market > 0) {
+						nm = variant.market;
+						break;
+					}
+				}
+			}
+		}
+		const discount = CONDITION_DISCOUNT[entry.condition] ?? 1.0;
+		const unitValue = nm != null ? Math.round(nm * discount * 100) / 100 : null;
+		const lineValue = unitValue != null ? Math.round(unitValue * entry.quantity * 100) / 100 : null;
+		valuationByEntry[entry.id] = {
+			nm_price: nm,
+			unit_value: unitValue,
+			line_value: lineValue,
+			is_estimate: discount < 1.0,
+			discount
+		};
+	}
+
 	return {
 		entries,
 		cardCache,
+		valuationByEntry,
 		addMode,
 		addSearch,
 		addSearchResults,
