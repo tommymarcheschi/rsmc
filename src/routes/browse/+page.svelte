@@ -11,6 +11,69 @@
 
 	let activeFilters = $derived(((data as Record<string, unknown>).activeFilters ?? []) as FilterPill[]);
 	let savedSearches = $derived(((data as Record<string, unknown>).savedSearches ?? []) as SavedSearchRow[]);
+
+	// Multi-select state. Off by default so the normal click-to-navigate
+	// grid keeps working. When on, clicking a card toggles its selection
+	// instead of navigating; the action bar at the bottom of the viewport
+	// commits "add all" actions via the existing single-item APIs.
+	let selectionMode = $state(false);
+	let selectedIds = $state<Set<string>>(new Set());
+	let bulkStatus = $state<{ tone: 'info' | 'success' | 'error'; text: string } | null>(null);
+	let bulkBusy = $state(false);
+
+	function toggleSelection(id: string) {
+		const next = new Set(selectedIds);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		selectedIds = next;
+	}
+
+	function clearSelection() {
+		selectedIds = new Set();
+	}
+
+	function exitSelectionMode() {
+		selectionMode = false;
+		selectedIds = new Set();
+		bulkStatus = null;
+	}
+
+	async function bulkAdd(kind: 'collection' | 'watchlist') {
+		if (selectedIds.size === 0 || bulkBusy) return;
+		bulkBusy = true;
+		bulkStatus = { tone: 'info', text: `Adding ${selectedIds.size} card${selectedIds.size === 1 ? '' : 's'}…` };
+		const ids = [...selectedIds];
+		const endpoint = kind === 'collection' ? '/api/collection' : '/api/watchlist';
+		let ok = 0;
+		let failed = 0;
+		const limit = 5; // concurrency cap — don't hammer the API
+		let cursor = 0;
+		async function worker() {
+			while (cursor < ids.length) {
+				const idx = cursor++;
+				const id = ids[idx];
+				try {
+					const res = await fetch(endpoint, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ card_id: id })
+					});
+					if (res.ok || res.status === 409) ok++;
+					else failed++;
+				} catch {
+					failed++;
+				}
+			}
+		}
+		await Promise.all(Array.from({ length: Math.min(limit, ids.length) }, () => worker()));
+		bulkBusy = false;
+		if (failed === 0) {
+			bulkStatus = { tone: 'success', text: `Added ${ok} to ${kind === 'collection' ? 'Collection' : 'Watchlist'}.` };
+			selectedIds = new Set();
+		} else {
+			bulkStatus = { tone: 'error', text: `Added ${ok}, ${failed} failed.` };
+		}
+	}
 	let saveName = $state('');
 	let savePromptOpen = $state(false);
 	let saveMessage = $derived(
@@ -169,6 +232,14 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
+			<button
+				type="button"
+				onclick={() => { if (selectionMode) exitSelectionMode(); else selectionMode = true; }}
+				class="btn-press rounded-xl border px-4 py-2 text-sm font-medium transition-all {selectionMode ? 'border-vault-purple bg-vault-purple/10 text-vault-purple' : 'border-vault-border text-vault-text-muted hover:border-vault-accent/50 hover:text-white'}"
+				aria-pressed={selectionMode}
+			>
+				{selectionMode ? 'Exit select' : 'Select'}
+			</button>
 			{#if hasActiveFilters}
 				<button
 					type="button"
@@ -573,9 +644,61 @@
 		<!-- Card grid -->
 		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
 			{#each allCards as card (card.id)}
-				<CardThumbnail {card} showPrice={true} />
+				{#if selectionMode}
+					{@const isSelected = selectedIds.has(card.id)}
+					<button
+						type="button"
+						onclick={() => toggleSelection(card.id)}
+						class="relative block overflow-hidden rounded-xl text-left transition-all {isSelected ? 'ring-2 ring-vault-purple ring-offset-2 ring-offset-vault-bg' : 'ring-1 ring-vault-border/40 hover:ring-vault-purple/40'}"
+						aria-pressed={isSelected}
+						aria-label={isSelected ? `Deselect ${card.name}` : `Select ${card.name}`}
+					>
+						<div class="pointer-events-none">
+							<CardThumbnail {card} showPrice={true} />
+						</div>
+						<span class="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border-2 {isSelected ? 'border-vault-purple bg-vault-purple text-white' : 'border-white/70 bg-black/40 text-transparent'}" aria-hidden="true">
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+							</svg>
+						</span>
+					</button>
+				{:else}
+					<CardThumbnail {card} showPrice={true} />
+				{/if}
 			{/each}
 		</div>
+
+		{#if selectionMode && selectedIds.size > 0}
+			<div class="fixed inset-x-0 bottom-3 z-40 flex justify-center px-3">
+				<div class="flex items-center gap-3 rounded-2xl border border-vault-border bg-vault-surface/95 px-4 py-3 shadow-2xl backdrop-blur">
+					<span class="text-sm font-medium text-white">
+						{selectedIds.size} selected
+					</span>
+					<button type="button" onclick={clearSelection} class="text-xs text-vault-text-muted hover:text-white">Clear</button>
+					<button
+						type="button"
+						onclick={() => bulkAdd('watchlist')}
+						disabled={bulkBusy}
+						class="btn-press rounded-xl border border-vault-purple/40 px-3 py-1.5 text-sm font-medium text-vault-purple transition-all hover:bg-vault-purple/10 disabled:opacity-50"
+					>
+						+ Watchlist
+					</button>
+					<button
+						type="button"
+						onclick={() => bulkAdd('collection')}
+						disabled={bulkBusy}
+						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-50"
+					>
+						+ Collection
+					</button>
+					{#if bulkStatus}
+						<span class="ml-1 text-xs {bulkStatus.tone === 'success' ? 'text-vault-green' : bulkStatus.tone === 'error' ? 'text-vault-red' : 'text-vault-text-muted'}">
+							{bulkStatus.text}
+						</span>
+					{/if}
+				</div>
+			</div>
+		{/if}
 
 		{#if hasMore}
 			<div bind:this={sentinel} class="flex items-center justify-center py-8">
