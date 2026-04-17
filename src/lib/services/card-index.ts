@@ -11,7 +11,11 @@
  */
 
 import { searchCards } from './tcg-api';
-import { fetchPriceCharting, type PriceChartingData } from './pricecharting-scraper';
+import {
+	fetchPriceCharting,
+	fetchPriceChartingByUrl,
+	type PriceChartingData
+} from './pricecharting-scraper';
 import type { PokemonCard } from '$types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -149,7 +153,7 @@ function getHeadline(card: PokemonCard): { market: number | null; low: number | 
 
 export async function enrichCard(
 	card: PokemonCard,
-	opts?: { force?: boolean }
+	opts?: { force?: boolean; pcUrlOverride?: string | null }
 ): Promise<EnrichmentResult> {
 	const errors: Record<'pricecharting', string | null> = {
 		pricecharting: null
@@ -162,13 +166,17 @@ export async function enrichCard(
 	// PriceCharting is the single source for prices AND pop data.
 	// PSA's website blocks server-side requests (403), but PriceCharting
 	// embeds PSA + CGC pop distributions in a JS variable on each page.
+	// If the user has pinned an override URL (because our fuzzy match
+	// picked the wrong product), skip search and fetch that directly.
 	let pc: PriceChartingData | null = null;
 	try {
-		pc = await fetchPriceCharting({
-			name: card.name,
-			setName: card.set.name,
-			cardNumber: card.number
-		});
+		pc = opts?.pcUrlOverride
+			? await fetchPriceChartingByUrl(opts.pcUrlOverride)
+			: await fetchPriceCharting({
+					name: card.name,
+					setName: card.set.name,
+					cardNumber: card.number
+			  });
 	} catch (e: unknown) {
 		errors.pricecharting = e instanceof Error ? e.message : String(e);
 	}
@@ -269,10 +277,28 @@ export async function enrichSet(
 
 	if (allCards.length === 0) return result;
 
+	// Pre-load pc_url_override for any cards that have one pinned, so
+	// we can pass it into enrichCard without a per-card query.
+	const overridesById = new Map<string, string>();
+	const cardIds = allCards.map((c) => c.id);
+	if (cardIds.length > 0) {
+		const { data } = await supabaseClient
+			.from('card_index')
+			.select('card_id, pc_url_override')
+			.in('card_id', cardIds)
+			.not('pc_url_override', 'is', null);
+		for (const row of (data ?? []) as Array<{ card_id: string; pc_url_override: string }>) {
+			overridesById.set(row.card_id, row.pc_url_override);
+		}
+	}
+
 	// Enrich in parallel with concurrency cap + polite delay
 	const enriched = await parallelMap(allCards, concurrency, async (card, i) => {
 		try {
-			const er = await enrichCard(card, { force: opts?.force });
+			const er = await enrichCard(card, {
+				force: opts?.force,
+				pcUrlOverride: overridesById.get(card.id) ?? null
+			});
 
 			// Upsert into card_index
 			const { error } = await supabaseClient
@@ -336,7 +362,7 @@ export async function enrichStale(
 	const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 	const { data: staleRows } = await supabaseClient
 		.from('card_index')
-		.select('card_id, set_id')
+		.select('card_id, set_id, pc_url_override')
 		.lt('last_enriched_at', staleThreshold)
 		.order('last_enriched_at', { ascending: true })
 		.limit(limit);
@@ -347,10 +373,11 @@ export async function enrichStale(
 	await parallelMap(staleRows, concurrency, async (stale: Record<string, unknown>, i) => {
 		try {
 			const cardId = stale.card_id as string;
+			const pcOverride = (stale.pc_url_override as string | null) ?? null;
 			// Import dynamically to avoid circular deps in the script context
 			const { getCard } = await import('./tcg-api');
 			const card = await getCard(cardId);
-			const er = await enrichCard(card, { force: true });
+			const er = await enrichCard(card, { force: true, pcUrlOverride: pcOverride });
 
 			const { error } = await supabaseClient
 				.from('card_index')

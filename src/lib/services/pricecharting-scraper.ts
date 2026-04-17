@@ -423,6 +423,57 @@ function mapTiers(tiers: Record<string, number>): Pick<PriceChartingData, 'ungra
 // ---------------------------------------------------------------------------
 
 /**
+ * Parse a fetched product page into structured PriceChartingData.
+ * Shared by the search-then-fetch and override-URL paths.
+ */
+async function parseProductPage(url: string, matchedName: string): Promise<PriceChartingData | null> {
+	const productHtml = await fetchPage(url);
+	if (!productHtml) return null;
+
+	const tiers = parsePriceTiers(productHtml);
+	if (Object.keys(tiers).length === 0) return null;
+
+	const mapped = mapTiers(tiers);
+	const popData = parsePopData(productHtml);
+	const psa10Sales = parsePsa10Sales(productHtml);
+	const psa10LastSold = psa10Sales[0]?.sold_at ?? null;
+
+	return {
+		...mapped,
+		allTiers: tiers,
+		psaPop: popData.psa,
+		cgcPop: popData.cgc,
+		psa10LastSold,
+		psa10Sales,
+		pcUrl: url,
+		matchedName
+	};
+}
+
+/**
+ * Fetch PriceCharting data using a known product URL — bypasses the
+ * search+pick step. Used by the card-override flow so the user can
+ * pin a specific match when the fuzzy search picks the wrong card
+ * (common with shadowless / 1st-edition / staff-promo variants).
+ */
+export async function fetchPriceChartingByUrl(url: string): Promise<PriceChartingData | null> {
+	if (!/^https?:\/\/www\.pricecharting\.com\/game\//i.test(url)) return null;
+	try {
+		// Derive a matchedName from the URL slug — the last path segment,
+		// title-cased, minus any trailing -N card number.
+		const slug = url.split('/').filter(Boolean).pop() ?? '';
+		const matchedName = slug
+			.replace(/-\d+$/, '')
+			.split('-')
+			.map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+			.join(' ');
+		return await parseProductPage(url, matchedName);
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Fetch PriceCharting data for a Pokemon card.
  *
  * @param opts.name    Card name (e.g. "Charizard")
@@ -450,28 +501,9 @@ export async function fetchPriceCharting(opts: {
 		// Polite delay before fetching the product page
 		await delay(300);
 
-		const productHtml = await fetchPage(best.url);
-		if (!productHtml) return null;
-
-		const tiers = parsePriceTiers(productHtml);
-		if (Object.keys(tiers).length === 0) return null;
-
-		const mapped = mapTiers(tiers);
-		const popData = parsePopData(productHtml);
-		const psa10Sales = parsePsa10Sales(productHtml);
-		const psa10LastSold = psa10Sales[0]?.sold_at ?? null;
-
-		return {
-			...mapped,
-			allTiers: tiers,
-			psaPop: popData.psa,
-			cgcPop: popData.cgc,
-			psa10LastSold,
-			psa10Sales,
-			pcUrl: best.url,
-			matchedName: best.name
-		};
+		return await parseProductPage(best.url, best.name);
 	} catch {
 		return null;
 	}
 }
+

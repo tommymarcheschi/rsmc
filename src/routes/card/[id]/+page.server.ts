@@ -118,6 +118,22 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		.limit(30);
 	const psa10Sales: Psa10SaleRow[] = (psa10SalesRes.data ?? []) as Psa10SaleRow[];
 
+	// Separate read for the PriceCharting override URL so pre-migration-012
+	// environments don't kill the whole market-signals block. Any error
+	// (missing column, table unreachable) just yields null — the override
+	// form still renders and still saves once the migration lands.
+	let pcUrlOverride: string | null = null;
+	try {
+		const { data } = await supabase
+			.from('card_index')
+			.select('pc_url_override')
+			.eq('card_id', params.id)
+			.maybeSingle();
+		pcUrlOverride = (data as { pc_url_override?: string | null } | null)?.pc_url_override ?? null;
+	} catch {
+		// migration 012 not applied yet
+	}
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
@@ -138,6 +154,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		gradingROI,
 		similarCards,
 		psa10Sales,
+		pcUrlOverride,
 		inCollection,
 		onWatchlist
 	};
@@ -203,6 +220,31 @@ export const actions: Actions = {
 			.insert({ card_id: cardId, quantity: 1, condition: 'NM' });
 		if (err) return fail(500, { action: 'collection', message: err.message });
 		return { action: 'collection', success: true };
+	},
+
+	savePcOverride: async ({ request, params }) => {
+		const cardId = params.id;
+		if (!cardId) return fail(400, { action: 'pcOverride', message: 'Missing card id' });
+
+		const form = await request.formData();
+		const raw = (form.get('pc_url') ?? '').toString().trim();
+		const value = raw === '' ? null : raw;
+
+		// Light validation so we don't persist garbage. A null clears the
+		// override and re-enables fuzzy matching.
+		if (value != null && !/^https?:\/\/www\.pricecharting\.com\/game\//i.test(value)) {
+			return fail(400, {
+				action: 'pcOverride',
+				message: 'URL must start with https://www.pricecharting.com/game/'
+			});
+		}
+
+		const { error: err } = await supabase
+			.from('card_index')
+			.update({ pc_url_override: value })
+			.eq('card_id', cardId);
+		if (err) return fail(500, { action: 'pcOverride', message: err.message });
+		return { action: 'pcOverride', success: true, cleared: value == null };
 	},
 
 	addToWatchlist: async ({ params }) => {

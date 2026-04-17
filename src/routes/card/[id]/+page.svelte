@@ -60,6 +60,7 @@
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
 	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
 	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
+	let pcUrlOverride = $derived(((data as Record<string, unknown>).pcUrlOverride ?? null) as string | null);
 	let hasMarketSignals = $derived(
 		indexRow != null &&
 			(indexRow.raw_nm_price != null ||
@@ -572,6 +573,49 @@
 							{/if}
 						</div>
 					{/if}
+
+					<!-- PriceCharting match override. Small, low-key — most cards
+					     don't need it; power users can pin a URL when the fuzzy
+					     search picked the wrong product (shadowless / 1st-ed /
+					     staff promo variants). -->
+					<details class="mt-4 text-xs">
+						<summary class="cursor-pointer text-vault-text-muted hover:text-white">
+							Wrong card matched? Pin the PriceCharting URL
+							{#if pcUrlOverride}
+								<span class="ml-1 rounded bg-vault-purple/20 px-1.5 py-0.5 text-[10px] text-vault-purple">override set</span>
+							{/if}
+						</summary>
+						<form method="POST" action="?/savePcOverride" use:enhance class="mt-2 space-y-2 rounded-xl border border-vault-border bg-vault-bg p-3">
+							<p class="text-vault-text-muted">
+								Paste the exact PriceCharting product URL for this card. Next enrichment will use it instead of searching by name. Leave blank + save to clear and re-enable fuzzy matching.
+							</p>
+							<input
+								type="url"
+								name="pc_url"
+								value={pcUrlOverride ?? ''}
+								placeholder="https://www.pricecharting.com/game/pokemon-base-set/charizard-4"
+								pattern="https?://www\.pricecharting\.com/game/.+"
+								class="w-full rounded-lg border border-vault-border bg-vault-surface px-3 py-1.5 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
+							/>
+							<div class="flex items-center gap-2">
+								<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-white hover:bg-vault-purple/80">
+									Save override
+								</button>
+								{#if pcUrlOverride}
+									<span class="text-vault-text-muted">
+										Currently pinned: <a href={pcUrlOverride} target="_blank" rel="noopener" class="underline hover:text-vault-purple">{pcUrlOverride}</a>
+									</span>
+								{/if}
+							</div>
+							{#if form && (form as Record<string, unknown>).action === 'pcOverride'}
+								{#if (form as Record<string, unknown>).success}
+									<p class="text-vault-green">Saved. Data refreshes on next enrichment cycle.</p>
+								{:else}
+									<p class="text-vault-red">{(form as Record<string, string>).message}</p>
+								{/if}
+							{/if}
+						</form>
+					</details>
 				</div>
 			{/if}
 
