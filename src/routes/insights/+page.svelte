@@ -21,9 +21,17 @@
 	let setValue = $derived(data.setValue as SetValueResult);
 	let portfolio = $derived(data.portfolio);
 
-	let insightTab = $state<
-		'undervalued' | 'supply' | 'heatmap' | 'sets' | 'trending' | 'movers'
-	>('undervalued');
+	type InsightTab = 'undervalued' | 'supply' | 'heatmap' | 'sets' | 'trending' | 'movers';
+	let insightTab = $state<InsightTab>('undervalued');
+
+	const INSIGHT_TABS: Array<{ id: InsightTab; label: string }> = [
+		{ id: 'undervalued', label: 'Undervalued' },
+		{ id: 'supply', label: 'Supply Squeeze' },
+		{ id: 'heatmap', label: 'Heatmap' },
+		{ id: 'sets', label: 'Sets' },
+		{ id: 'trending', label: 'Trending' },
+		{ id: 'movers', label: 'Movers' }
+	];
 
 	function fmtMoney(n: number | null | undefined): string {
 		if (n == null) return '—';
@@ -73,44 +81,21 @@
 		</div>
 	</div>
 
-	<!-- Tab Navigation -->
-	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
-		<button
-			onclick={() => (insightTab = 'undervalued')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'undervalued' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Undervalued
-		</button>
-		<button
-			onclick={() => (insightTab = 'supply')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'supply' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Supply Squeeze
-		</button>
-		<button
-			onclick={() => (insightTab = 'heatmap')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'heatmap' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Heatmap
-		</button>
-		<button
-			onclick={() => (insightTab = 'sets')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'sets' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Sets
-		</button>
-		<button
-			onclick={() => (insightTab = 'trending')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'trending' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Trending
-		</button>
-		<button
-			onclick={() => (insightTab = 'movers')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'movers' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
-		>
-			Movers
-		</button>
+	<!--
+		Tab Navigation — horizontally scrollable on mobile (6 tabs won't fit
+		as flex-1 children at text-xs on a 375px screen without truncating
+		"Supply Squeeze"). `sm:flex-1` brings equal-width distribution back
+		on tablet and up.
+	-->
+	<div class="flex gap-1 overflow-x-auto rounded-2xl border border-vault-border bg-vault-surface p-1">
+		{#each INSIGHT_TABS as tab}
+			<button
+				onclick={() => (insightTab = tab.id)}
+				class="shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all sm:flex-1 sm:px-4 sm:text-sm {insightTab === tab.id ? 'bg-brand-gradient text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			>
+				{tab.label}
+			</button>
+		{/each}
 	</div>
 
 	<!-- Trending Cards Tab -->

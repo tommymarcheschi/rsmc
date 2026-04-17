@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CardThumbnail } from '$components';
+	import { CardThumbnail, Icon } from '$components';
 	import { getSortOptionsForMode } from '$services/sort';
 	import { parseHuntDSL } from '$services/hunt-dsl';
 	import type { PokemonCard } from '$types';
@@ -222,7 +222,7 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<div>
 			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">
 				{isHuntMode ? 'Sleeper Hunter' : 'Browse Cards'}
@@ -231,7 +231,7 @@
 				{totalCount.toLocaleString()} cards found
 			</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<button
 				type="button"
 				onclick={() => { if (selectionMode) exitSelectionMode(); else selectionMode = true; }}
@@ -657,9 +657,7 @@
 							<CardThumbnail {card} showPrice={true} />
 						</div>
 						<span class="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border-2 {isSelected ? 'border-vault-purple bg-vault-purple text-white' : 'border-white/70 bg-black/40 text-transparent'}" aria-hidden="true">
-							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-							</svg>
+							<Icon name="check" class="h-4 w-4" strokeWidth={3} />
 						</span>
 					</button>
 				{:else}
@@ -670,7 +668,7 @@
 
 		{#if selectionMode && selectedIds.size > 0}
 			<div class="fixed inset-x-0 bottom-3 z-40 flex justify-center px-3">
-				<div class="flex items-center gap-3 rounded-2xl border border-vault-border bg-vault-surface/95 px-4 py-3 shadow-2xl backdrop-blur">
+				<div class="flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl border border-vault-border bg-vault-surface/95 px-3 py-2 shadow-2xl backdrop-blur sm:px-4 sm:py-3">
 					<span class="text-sm font-medium text-white">
 						{selectedIds.size} selected
 					</span>
@@ -687,12 +685,12 @@
 						type="button"
 						onclick={() => bulkAdd('collection')}
 						disabled={bulkBusy}
-						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-50"
+						class="btn-press rounded-xl bg-brand-gradient px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-50"
 					>
 						+ Collection
 					</button>
 					{#if bulkStatus}
-						<span class="ml-1 text-xs {bulkStatus.tone === 'success' ? 'text-vault-green' : bulkStatus.tone === 'error' ? 'text-vault-red' : 'text-vault-text-muted'}">
+						<span class="w-full text-center text-xs sm:w-auto sm:text-left {bulkStatus.tone === 'success' ? 'text-vault-green' : bulkStatus.tone === 'error' ? 'text-vault-red' : 'text-vault-text-muted'}">
 							{bulkStatus.text}
 						</span>
 					{/if}
