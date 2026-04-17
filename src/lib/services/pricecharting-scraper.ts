@@ -52,6 +52,9 @@ export interface PriceChartingData {
 	psaPop: PopDistribution | null;
 	/** CGC population distribution */
 	cgcPop: PopDistribution | null;
+	/** ISO date (YYYY-MM-DD) of the most recent PSA 10 comp sale listed on
+	 *  PriceCharting, or null when none. Used to flag stale graded prices. */
+	psa10LastSold: string | null;
 	/** Full URL of the matched product page */
 	pcUrl: string;
 	/** The product name as shown on PriceCharting */
@@ -346,6 +349,21 @@ function parsePopData(html: string): { psa: PopDistribution | null; cgc: PopDist
 }
 
 /**
+ * Extract the most recent PSA 10 sale date from the completed-auctions
+ * section. PriceCharting wraps the PSA 10 sold-comps table in a div with
+ * class `completed-auctions-manual-only` and renders rows sorted newest
+ * first, each with `<td class="date">YYYY-MM-DD</td>`.
+ */
+function parsePsa10LastSold(html: string): string | null {
+	const section = html.match(
+		/<div class="completed-auctions-manual-only">([\s\S]*?)<\/div>\s*<div class="/i
+	);
+	const scope = section ? section[1] : html;
+	const first = scope.match(/<td class="date">(\d{4}-\d{2}-\d{2})<\/td>/);
+	return first ? first[1] : null;
+}
+
+/**
  * Map the raw tiers dict into the structured PriceChartingData fields.
  */
 function mapTiers(tiers: Record<string, number>): Pick<PriceChartingData, 'ungraded' | 'psa10' | 'cgc10' | 'bgs10' | 'tag10'> {
@@ -412,12 +430,14 @@ export async function fetchPriceCharting(opts: {
 
 		const mapped = mapTiers(tiers);
 		const popData = parsePopData(productHtml);
+		const psa10LastSold = parsePsa10LastSold(productHtml);
 
 		return {
 			...mapped,
 			allTiers: tiers,
 			psaPop: popData.psa,
 			cgcPop: popData.cgc,
+			psa10LastSold,
 			pcUrl: best.url,
 			matchedName: best.name
 		};

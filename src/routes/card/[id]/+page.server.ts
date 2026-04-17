@@ -60,7 +60,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 			.from('card_index')
 			.select(
 				'rarity, set_release_date, raw_nm_price, raw_source, psa10_price, cgc10_price, tag10_price, ' +
-					'psa10_delta, psa10_multiple, psa_pop_total, psa_pop_10, psa_gem_rate, ' +
+					'psa10_delta, psa10_multiple, psa10_last_sold_at, psa_pop_total, psa_pop_10, psa_gem_rate, ' +
 					'cgc_pop_total, cgc_pop_10, cgc_gem_rate, ' +
 					'graded_prices_fetched_at, last_enriched_at'
 			)

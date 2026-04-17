@@ -221,6 +221,7 @@ async function enrichOneCard(card: TcgCard): Promise<Record<string, unknown>> {
 		tag10_price: pc?.tag10 ?? null,
 		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
 		graded_prices_fetched_at: pc ? now : null,
+		psa10_last_sold_at: pc?.psa10LastSold ?? null,
 		psa_pop_total: psaPop?.total ?? null,
 		psa_pop_10: psaPop?.grade10 ?? null,
 		psa_gem_rate: psaPop?.gemRate ?? null,

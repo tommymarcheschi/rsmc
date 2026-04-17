@@ -19,6 +19,7 @@
 		tag10_price: number | null;
 		psa10_delta: number | null;
 		psa10_multiple: number | null;
+		psa10_last_sold_at: string | null;
 		psa_pop_total: number | null;
 		psa_pop_10: number | null;
 		psa_gem_rate: number | null;
@@ -71,6 +72,15 @@
 		if (n == null) return '—';
 		return n.toLocaleString();
 	}
+
+	function daysSince(isoDate: string | null | undefined): number | null {
+		if (!isoDate) return null;
+		const then = new Date(`${isoDate}T00:00:00Z`).getTime();
+		if (Number.isNaN(then)) return null;
+		return Math.max(0, Math.floor((Date.now() - then) / (24 * 60 * 60 * 1000)));
+	}
+
+	const STALE_DAYS = 90;
 
 	const CONDITION_LABEL: Record<string, string> = {
 		NM: 'Near Mint',
@@ -424,6 +434,18 @@
 							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.psa10_price)}</p>
 							{#if indexRow.psa10_multiple != null}
 								<p class="text-[10px] text-vault-text-muted">{indexRow.psa10_multiple.toFixed(1)}× raw</p>
+							{/if}
+							{#if indexRow.psa10_last_sold_at}
+								{@const age = daysSince(indexRow.psa10_last_sold_at)}
+								{#if age != null && age > STALE_DAYS}
+									<p class="mt-1 text-[10px] font-medium text-vault-red" title="Most recent PSA 10 sold comp on PriceCharting is {indexRow.psa10_last_sold_at}. The price above is an algorithmic estimate — treat with caution.">
+										stale · {age}d old
+									</p>
+								{:else if age != null}
+									<p class="mt-1 text-[10px] text-vault-text-muted" title="Most recent PSA 10 sold comp on PriceCharting is {indexRow.psa10_last_sold_at}.">
+										fresh · {age}d
+									</p>
+								{/if}
 							{/if}
 						</div>
 						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
