@@ -5,10 +5,21 @@
 	import type { PokemonCard } from '$types';
 
 	interface FilterPill { label: string; removeHref: string; }
+	interface SavedSearchRow { id: string; name: string; url_search: string; }
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	let activeFilters = $derived(((data as Record<string, unknown>).activeFilters ?? []) as FilterPill[]);
+	let savedSearches = $derived(((data as Record<string, unknown>).savedSearches ?? []) as SavedSearchRow[]);
+	let saveName = $state('');
+	let savePromptOpen = $state(false);
+	let saveMessage = $derived(
+		form && (form as { action?: string }).action === 'saveSearch'
+			? form && !(form as { success?: boolean }).success
+				? ((form as { message?: string }).message ?? 'Failed to save')
+				: `Saved "${(form as { name?: string }).name}"`
+			: null
+	);
 	let dslInput = $state('');
 	let dslErrors = $state<string[]>([]);
 
@@ -159,6 +170,14 @@
 		</div>
 		<div class="flex items-center gap-2">
 			{#if hasActiveFilters}
+				<button
+					type="button"
+					onclick={() => (savePromptOpen = !savePromptOpen)}
+					class="btn-press rounded-xl border border-vault-purple/40 px-4 py-2 text-sm font-medium text-vault-purple transition-all hover:bg-vault-purple/10"
+					aria-expanded={savePromptOpen}
+				>
+					⭐ Save
+				</button>
 				<a
 					href={isHuntMode ? '/browse?mode=hunt' : '/browse'}
 					class="btn-press rounded-xl border border-vault-border px-4 py-2 text-sm font-medium text-vault-text-muted transition-all hover:border-vault-accent/50 hover:bg-vault-surface-hover hover:text-white"
@@ -192,6 +211,56 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
 					</svg>
 				</a>
+			{/each}
+		</div>
+	{/if}
+
+	{#if savePromptOpen && hasActiveFilters}
+		<form method="POST" action="?/saveSearch" use:enhance class="flex flex-wrap items-center gap-2 rounded-xl border border-vault-purple/30 bg-vault-purple/5 px-3 py-2">
+			<label for="saved-search-name" class="text-xs text-vault-text-muted">Name this search:</label>
+			<input
+				id="saved-search-name"
+				type="text"
+				name="name"
+				bind:value={saveName}
+				placeholder="Pre-2017 sleepers"
+				class="flex-1 rounded-lg border border-vault-border bg-vault-surface px-3 py-1.5 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
+				required
+				minlength="1"
+				maxlength="60"
+			/>
+			<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-white hover:bg-vault-purple/80">
+				Save
+			</button>
+			<button type="button" onclick={() => (savePromptOpen = false)} class="text-xs text-vault-text-muted hover:text-white">
+				Cancel
+			</button>
+		</form>
+	{/if}
+
+	{#if saveMessage}
+		<p class="text-xs {form && (form as Record<string, unknown>).success ? 'text-vault-green' : 'text-vault-red'}">
+			{saveMessage}
+		</p>
+	{/if}
+
+	{#if savedSearches.length > 0}
+		<div class="flex flex-wrap items-center gap-2">
+			<span class="text-xs uppercase tracking-wide text-vault-text-muted">Saved:</span>
+			{#each savedSearches as sv}
+				<div class="group inline-flex items-center gap-1 rounded-full border border-vault-border bg-vault-surface py-1 pl-3 pr-1 text-xs text-vault-text transition hover:border-vault-purple/40">
+					<a href="/browse?{sv.url_search}" class="font-medium hover:text-vault-purple">
+						⭐ {sv.name}
+					</a>
+					<form method="POST" action="?/deleteSearch" use:enhance class="contents">
+						<input type="hidden" name="id" value={sv.id} />
+						<button type="submit" class="rounded-full p-1 text-vault-text-muted opacity-70 transition hover:bg-vault-red/20 hover:text-vault-red" aria-label="Delete saved search {sv.name}">
+							<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</form>
+				</div>
 			{/each}
 		</div>
 	{/if}

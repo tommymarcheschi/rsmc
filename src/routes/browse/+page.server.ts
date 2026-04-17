@@ -2,7 +2,8 @@ import { getSets, searchCards } from '$services/tcg-api';
 import { applyClientSort, applyEnrichedSort, resolveSortOption, resolveSortOrderBy } from '$services/sort';
 import { enrichCardsWithPriceCharting } from '$services/enrich';
 import { supabase } from '$services/supabase';
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import type { PageServerLoad, Actions } from './$types';
 import type { PokemonCard } from '$types';
 import type { EnrichedCard } from '$services/sort';
 
@@ -105,11 +106,66 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		sets,
 		filters: { search, set, type, rarity, sort },
 		activeFilters: buildDefaultPills(url, { search, set, type, rarity }, sets),
+		savedSearches: await loadSavedSearches(),
 		initialCards,
 		initialTotalCount: totalCount,
 		clientSort: isClientSort || isEnrichedSort,
 		hiddenByClientSort
 	};
+};
+
+export interface SavedSearchRow {
+	id: string;
+	name: string;
+	url_search: string;
+}
+
+async function loadSavedSearches(): Promise<SavedSearchRow[]> {
+	try {
+		const { data } = await supabase
+			.from('saved_searches')
+			.select('id, name, url_search')
+			.order('created_at', { ascending: false });
+		return (data ?? []) as SavedSearchRow[];
+	} catch {
+		return [];
+	}
+}
+
+/** Strip ephemeral params (page, sort sometimes) from a URL before saving
+ *  so the saved search represents a filter set, not a specific listing
+ *  position. We keep sort — it's part of "the view the user wanted". */
+function stripEphemeralParams(search: URLSearchParams): string {
+	const copy = new URLSearchParams(search);
+	copy.delete('page');
+	return copy.toString();
+}
+
+export const actions: Actions = {
+	saveSearch: async ({ request, url }) => {
+		const form = await request.formData();
+		const name = (form.get('name') ?? '').toString().trim();
+		if (!name) return fail(400, { action: 'saveSearch', message: 'Name is required' });
+
+		const fromForm = (form.get('url_search') ?? '').toString();
+		const urlSearch = fromForm || stripEphemeralParams(url.searchParams);
+		if (!urlSearch) return fail(400, { action: 'saveSearch', message: 'No filters to save' });
+
+		const { error } = await supabase
+			.from('saved_searches')
+			.upsert({ name, url_search: urlSearch }, { onConflict: 'name' });
+		if (error) return fail(500, { action: 'saveSearch', message: error.message });
+		return { action: 'saveSearch', success: true, name };
+	},
+
+	deleteSearch: async ({ request }) => {
+		const form = await request.formData();
+		const id = (form.get('id') ?? '').toString();
+		if (!id) return fail(400, { action: 'deleteSearch', message: 'Missing id' });
+		const { error } = await supabase.from('saved_searches').delete().eq('id', id);
+		if (error) return fail(500, { action: 'deleteSearch', message: error.message });
+		return { action: 'deleteSearch', success: true };
+	}
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -385,6 +441,7 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 			requirePsa10: requirePsa10 ? '1' : ''
 		},
 		activeFilters: buildHuntPills(url, mappedSets),
+		savedSearches: await loadSavedSearches(),
 		initialCards,
 		initialTotalCount: count ?? 0,
 		clientSort: false,
