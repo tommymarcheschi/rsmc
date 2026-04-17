@@ -86,6 +86,9 @@
 	let dslInput = $state('');
 	let dslErrors = $state<string[]>([]);
 	let dslHelpOpen = $state(false);
+	let aiMode = $state(false);
+	let aiBusy = $state(false);
+	let aiStatus = $state<{ tone: 'info' | 'error'; text: string } | null>(null);
 
 	interface DslExample { query: string; description: string; }
 	const DSL_EXAMPLES: DslExample[] = [
@@ -111,10 +114,53 @@
 		e.preventDefault();
 		const text = dslInput.trim();
 		if (!text) return;
+		if (aiMode) {
+			runAiQuery(text);
+			return;
+		}
 		const { params, errors } = parseHuntDSL(text);
 		dslErrors = errors;
 		const search = new URLSearchParams({ mode: 'hunt', ...params });
 		window.location.href = `/browse?${search.toString()}`;
+	}
+
+	async function runAiQuery(prompt: string) {
+		if (aiBusy) return;
+		aiBusy = true;
+		aiStatus = { tone: 'info', text: 'Translating…' };
+		try {
+			const res = await fetch('/api/nl-query', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ prompt })
+			});
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				aiStatus = {
+					tone: 'error',
+					text: body?.message ?? `Server responded ${res.status}`
+				};
+				aiBusy = false;
+				return;
+			}
+			const { dsl, params, errors } = (await res.json()) as {
+				dsl: string;
+				params: Record<string, string>;
+				errors: string[];
+			};
+			// Show user what was translated before navigating — even on no-errors
+			// it's useful feedback that they can copy next time.
+			dslInput = dsl;
+			dslErrors = errors;
+			const search = new URLSearchParams({ mode: 'hunt', ...params });
+			window.location.href = `/browse?${search.toString()}`;
+		} catch (e) {
+			aiStatus = {
+				tone: 'error',
+				text: e instanceof Error ? e.message : 'AI query failed'
+			};
+			aiBusy = false;
+		}
 	}
 
 	function runExample(query: string) {
@@ -378,30 +424,70 @@
 		<div class="relative">
 			<form method="GET" action="/browse" class="space-y-1" onsubmit={applyDsl}>
 				<input type="hidden" name="mode" value="hunt" />
-				<div class="flex gap-2">
-					<div class="relative flex-1">
+				<div class="flex flex-wrap items-center gap-2">
+					<!-- Mode toggle — DSL vs. AI. Small radio-like strip. -->
+					<div class="flex rounded-xl border border-vault-border bg-vault-surface p-0.5 text-xs">
+						<button
+							type="button"
+							onclick={() => {
+								aiMode = false;
+								aiStatus = null;
+							}}
+							class="rounded-lg px-2.5 py-1 font-medium transition {aiMode ? 'text-vault-text-muted hover:text-white' : 'bg-vault-purple/20 text-white'}"
+						>
+							DSL
+						</button>
+						<button
+							type="button"
+							onclick={() => {
+								aiMode = true;
+								aiStatus = null;
+							}}
+							class="rounded-lg px-2.5 py-1 font-medium transition {aiMode ? 'bg-brand-gradient text-white' : 'text-vault-text-muted hover:text-white'}"
+						>
+							✨ Ask
+						</button>
+					</div>
+					<div class="relative flex-1 min-w-[200px]">
 						<input
 							type="text"
 							name="q"
 							bind:value={dslInput}
-							placeholder={'pop:<100 year:2010-2016 rarity:holo price:10-50 psa10'}
-							aria-label="Query language search"
-							class="w-full rounded-xl border border-vault-purple/40 bg-vault-surface px-4 py-2.5 pr-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
+							placeholder={aiMode
+								? "pre-2007 holo cards with pop under 300"
+								: 'pop:<100 year:2010-2016 rarity:holo price:10-50 psa10'}
+							aria-label={aiMode ? 'Natural language card search' : 'Query language search'}
+							disabled={aiBusy}
+							class="w-full rounded-xl border {aiMode ? 'border-vault-accent/40' : 'border-vault-purple/40'} bg-vault-surface px-4 py-2.5 pr-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:outline-none focus:ring-1 {aiMode ? 'focus:border-vault-accent focus:ring-vault-accent/50' : 'focus:border-vault-purple focus:ring-vault-purple/50'} disabled:opacity-60"
 						/>
-						<button
-							type="button"
-							onclick={() => (dslHelpOpen = !dslHelpOpen)}
-							aria-label="Query syntax help"
-							aria-expanded={dslHelpOpen}
-							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-vault-purple/40 bg-vault-surface px-1.5 py-0.5 text-xs font-semibold text-vault-purple transition hover:bg-vault-purple/10"
-						>
-							?
-						</button>
+						{#if !aiMode}
+							<button
+								type="button"
+								onclick={() => (dslHelpOpen = !dslHelpOpen)}
+								aria-label="Query syntax help"
+								aria-expanded={dslHelpOpen}
+								class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-vault-purple/40 bg-vault-surface px-1.5 py-0.5 text-xs font-semibold text-vault-purple transition hover:bg-vault-purple/10"
+							>
+								?
+							</button>
+						{/if}
 					</div>
-					<button type="submit" class="btn-press rounded-xl bg-vault-purple px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-purple/80">
-						Go
+					<button
+						type="submit"
+						disabled={aiBusy}
+						class="btn-press rounded-xl {aiMode ? 'bg-brand-gradient' : 'bg-vault-purple hover:bg-vault-purple/80'} px-4 py-2 text-sm font-medium text-white transition-all disabled:opacity-60"
+					>
+						{aiBusy ? 'Thinking…' : aiMode ? 'Ask' : 'Go'}
 					</button>
 				</div>
+				{#if aiMode && !aiStatus}
+					<p class="text-[11px] text-vault-text-muted">
+						Type what you want in plain English — Claude translates to a filter query. Try: <i>"vintage holos with PSA 10 data under $500"</i>.
+					</p>
+				{/if}
+				{#if aiStatus}
+					<p class="text-[11px] {aiStatus.tone === 'error' ? 'text-vault-red' : 'text-vault-text-muted'}">{aiStatus.text}</p>
+				{/if}
 				{#if dslErrors.length > 0}
 					<p class="text-[11px] text-vault-red">
 						Didn't understand: <code>{dslErrors.join(' ')}</code> — went with what I could parse.
