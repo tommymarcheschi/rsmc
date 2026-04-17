@@ -162,6 +162,102 @@ async function getBucketMedians(): Promise<Map<string, { median: number; size: n
 	return map;
 }
 
+export interface HeatmapCell {
+	era: Era;
+	rarity: string;
+	card_count: number;
+	median_pop: number;
+	median_psa10_price: number | null;
+	/** Share of cards in this bucket with PSA 10 pop ≤ 50 (the "graded hunt" zone). */
+	scarce_share: number;
+}
+
+export interface HeatmapResult {
+	/** Era order for the grid rows. */
+	eras: Era[];
+	/** Rarity columns, sorted by total card count descending. */
+	rarities: string[];
+	cells: HeatmapCell[];
+	totalCards: number;
+}
+
+/**
+ * Era × rarity grid summarizing PSA population density. Purpose: help the
+ * user spot pockets where graded supply is genuinely thin — the places
+ * their grading budget moves the needle. No price floor here; low-value
+ * cards are the ones with the most uncertain pop numbers and belong on
+ * the map too.
+ */
+export async function getPopDensityHeatmap(): Promise<HeatmapResult> {
+	const rows: Array<{
+		rarity: string | null;
+		set_release_date: string | null;
+		psa_pop_total: number | null;
+		psa_pop_10: number | null;
+		psa10_price: number | null;
+	}> = [];
+	let from = 0;
+	const pageSize = 1000;
+	while (true) {
+		const { data, error } = await supabase
+			.from('card_index')
+			.select('rarity, set_release_date, psa_pop_total, psa_pop_10, psa10_price')
+			.not('rarity', 'is', null)
+			.not('psa_pop_total', 'is', null)
+			.order('card_id', { ascending: true })
+			.range(from, from + pageSize - 1);
+		if (error) break;
+		const batch = data ?? [];
+		rows.push(...batch);
+		if (batch.length < pageSize) break;
+		from += pageSize;
+	}
+
+	type Bucket = { pops: number[]; prices: number[]; scarce: number };
+	const buckets = new Map<string, Bucket>();
+	for (const r of rows) {
+		const rar = r.rarity ?? 'Unknown';
+		const era = eraForDate(r.set_release_date);
+		const key = bucketKey(era, rar);
+		if (!buckets.has(key)) buckets.set(key, { pops: [], prices: [], scarce: 0 });
+		const b = buckets.get(key)!;
+		b.pops.push(r.psa_pop_total ?? 0);
+		if (r.psa10_price != null) b.prices.push(r.psa10_price);
+		if ((r.psa_pop_10 ?? 0) <= 50) b.scarce += 1;
+	}
+
+	const cells: HeatmapCell[] = [];
+	const rarityCounts = new Map<string, number>();
+	for (const [key, bucket] of buckets) {
+		if (bucket.pops.length < 3) continue;
+		const [era, rarity] = key.split('::') as [Era, string];
+		const sortedPops = [...bucket.pops].sort((a, b) => a - b);
+		const sortedPrices = [...bucket.prices].sort((a, b) => a - b);
+		cells.push({
+			era,
+			rarity,
+			card_count: bucket.pops.length,
+			median_pop: median(sortedPops),
+			median_psa10_price: sortedPrices.length ? median(sortedPrices) : null,
+			scarce_share: bucket.scarce / bucket.pops.length
+		});
+		rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + bucket.pops.length);
+	}
+
+	const ERA_ORDER: Era[] = ['vintage', 'ex', 'modern', 'current', 'unknown'];
+	const presentEras = ERA_ORDER.filter((e) => cells.some((c) => c.era === e));
+	const rarities = [...rarityCounts.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.map(([r]) => r);
+
+	return {
+		eras: presentEras,
+		rarities,
+		cells,
+		totalCards: rows.length
+	};
+}
+
 export interface SupplySqueezeRow {
 	card_id: string;
 	name: string;

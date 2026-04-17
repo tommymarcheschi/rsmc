@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { TrendingCard } from '$services/poketrace';
-	import type { UndervaluedResult, SupplySqueezeRow } from '$services/insights';
+	import type {
+		UndervaluedResult,
+		SupplySqueezeRow,
+		HeatmapResult,
+		HeatmapCell,
+		Era
+	} from '$services/insights';
 	import { ERA_LABELS } from '$services/insights';
 
 	let { data } = $props();
@@ -10,14 +16,32 @@
 	let moversDown = $derived(data.moversDown as TrendingCard[]);
 	let undervalued = $derived(data.undervalued as UndervaluedResult);
 	let supplySqueeze = $derived(data.supplySqueeze as SupplySqueezeRow[]);
+	let heatmap = $derived(data.heatmap as HeatmapResult);
 	let portfolio = $derived(data.portfolio);
 
-	// "undervalued" is the default — it uses our own data (not PokeTrace).
-	let insightTab = $state<'undervalued' | 'supply' | 'trending' | 'movers'>('undervalued');
+	let insightTab = $state<'undervalued' | 'supply' | 'heatmap' | 'trending' | 'movers'>(
+		'undervalued'
+	);
 
 	function fmtMoney(n: number | null | undefined): string {
 		if (n == null) return '—';
 		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
+
+	function cellFor(era: Era, rarity: string): HeatmapCell | undefined {
+		return heatmap.cells.find((c) => c.era === era && c.rarity === rarity);
+	}
+
+	// Map median pop → background color. Low pop = green (hunt zone),
+	// high pop = red (saturated). Log scale because pop distribution is
+	// skewed heavily toward very large populations on old Charizards.
+	function popBg(pop: number): string {
+		const logged = Math.log10(Math.max(1, pop));
+		if (logged < 1.3) return 'bg-vault-green/35 text-vault-green';
+		if (logged < 1.85) return 'bg-vault-green/20 text-vault-green';
+		if (logged < 2.4) return 'bg-vault-gold/20 text-vault-gold';
+		if (logged < 3) return 'bg-vault-red/20 text-vault-red';
+		return 'bg-vault-red/35 text-vault-red';
 	}
 </script>
 
@@ -60,6 +84,12 @@
 			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'supply' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Supply Squeeze
+		</button>
+		<button
+			onclick={() => (insightTab = 'heatmap')}
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'heatmap' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+		>
+			Heatmap
 		</button>
 		<button
 			onclick={() => (insightTab = 'trending')}
@@ -158,6 +188,74 @@
 					<div class="text-center">
 						<p class="text-lg">No supply-squeeze cards found yet</p>
 						<p class="mt-1 text-sm">Pop data grows as more sets get indexed.</p>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	<!-- Pop Density Heatmap Tab -->
+	{#if insightTab === 'heatmap'}
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
+			<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+				<p class="text-sm text-white">Where is PSA supply thin?</p>
+				<p class="mt-1 text-xs text-vault-text-muted">
+					Median PSA population by era × rarity. Green cells are buckets where most cards have small populations — your grading budget moves the needle more here. Red cells are saturated: a PSA 10 Base Set Charizard is not scarce anymore. Based on <b>{heatmap.totalCards.toLocaleString()}</b> indexed cards with PSA pop data.
+				</p>
+			</div>
+			{#if heatmap.cells.length > 0}
+				<div class="overflow-x-auto px-3 py-4 sm:px-6">
+					<table class="min-w-full border-separate border-spacing-1 text-xs">
+						<thead>
+							<tr>
+								<th class="sticky left-0 z-10 bg-vault-surface px-2 py-1 text-left font-medium text-vault-text-muted">Era</th>
+								{#each heatmap.rarities as rarity}
+									<th class="whitespace-nowrap px-2 py-1 text-left font-medium text-vault-text-muted">{rarity}</th>
+								{/each}
+							</tr>
+						</thead>
+						<tbody>
+							{#each heatmap.eras as era}
+								<tr>
+									<th class="sticky left-0 z-10 whitespace-nowrap bg-vault-surface px-2 py-2 text-left font-medium text-white">
+										{ERA_LABELS[era]}
+									</th>
+									{#each heatmap.rarities as rarity}
+										{@const cell = cellFor(era, rarity)}
+										<td class="min-w-[110px] align-top">
+											{#if cell}
+												<div class="rounded-lg px-2 py-1.5 {popBg(cell.median_pop)}">
+													<p class="text-sm font-bold">pop {Math.round(cell.median_pop).toLocaleString()}</p>
+													<p class="mt-0.5 text-[10px] opacity-80">
+														n={cell.card_count}{#if cell.median_psa10_price != null} · PSA10 {fmtMoney(cell.median_psa10_price)}{/if}
+													</p>
+													{#if cell.scarce_share >= 0.5}
+														<p class="mt-0.5 text-[10px] font-medium">{Math.round(cell.scarce_share * 100)}% pop≤50</p>
+													{/if}
+												</div>
+											{:else}
+												<div class="rounded-lg border border-dashed border-vault-border/50 px-2 py-1.5 text-[10px] text-vault-text-muted">—</div>
+											{/if}
+										</td>
+									{/each}
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<div class="border-t border-vault-border px-4 py-3 text-[11px] text-vault-text-muted sm:px-6">
+					<span class="inline-block rounded bg-vault-green/35 px-2 py-0.5 text-vault-green">pop &lt; 20</span>
+					<span class="ml-2 inline-block rounded bg-vault-green/20 px-2 py-0.5 text-vault-green">20–70</span>
+					<span class="ml-2 inline-block rounded bg-vault-gold/20 px-2 py-0.5 text-vault-gold">70–250</span>
+					<span class="ml-2 inline-block rounded bg-vault-red/20 px-2 py-0.5 text-vault-red">250–1k</span>
+					<span class="ml-2 inline-block rounded bg-vault-red/35 px-2 py-0.5 text-vault-red">1k+</span>
+					<span class="ml-3">Buckets with fewer than 3 indexed cards are omitted.</span>
+				</div>
+			{:else}
+				<div class="flex items-center justify-center py-16 text-vault-text-muted">
+					<div class="text-center">
+						<p class="text-lg">Not enough PSA pop data yet</p>
+						<p class="mt-1 text-sm">The heatmap fills in as more sets finish enriching.</p>
 					</div>
 				</div>
 			{/if}
