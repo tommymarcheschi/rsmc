@@ -85,6 +85,27 @@
 	);
 	let dslInput = $state('');
 	let dslErrors = $state<string[]>([]);
+	let dslHelpOpen = $state(false);
+
+	interface DslExample { query: string; description: string; }
+	const DSL_EXAMPLES: DslExample[] = [
+		{
+			query: 'pop:<100 year:<2017 rarity:holo psa10',
+			description: 'Pre-2017 holo sleepers with a PSA 10 comp'
+		},
+		{
+			query: 'price:10-50 rarity:ultra year:2019-2023',
+			description: 'Mid-priced modern ultra rares (under $50)'
+		},
+		{
+			query: 'pikachu pop:<500',
+			description: 'Any Pikachu card with fewer than 500 PSA-graded copies'
+		},
+		{
+			query: 'set:me3 price:>50',
+			description: 'Perfect Order chase cards $50+'
+		}
+	];
 
 	function applyDsl(e: Event) {
 		e.preventDefault();
@@ -92,6 +113,14 @@
 		if (!text) return;
 		const { params, errors } = parseHuntDSL(text);
 		dslErrors = errors;
+		const search = new URLSearchParams({ mode: 'hunt', ...params });
+		window.location.href = `/browse?${search.toString()}`;
+	}
+
+	function runExample(query: string) {
+		dslInput = query;
+		dslHelpOpen = false;
+		const { params } = parseHuntDSL(query);
 		const search = new URLSearchParams({ mode: 'hunt', ...params });
 		window.location.href = `/browse?${search.toString()}`;
 	}
@@ -346,30 +375,108 @@
 			text submits as a plain name search (q=...), so the feature
 			degrades to a simple search box instead of breaking.
 		-->
-		<form method="GET" action="/browse" class="space-y-1" onsubmit={applyDsl}>
-			<input type="hidden" name="mode" value="hunt" />
-			<div class="flex gap-2">
-				<input
-					type="text"
-					name="q"
-					bind:value={dslInput}
-					placeholder={'pop:<100 year:2010-2016 rarity:holo price:10-50 psa10'}
-					aria-label="Query language search"
-					class="flex-1 rounded-xl border border-vault-purple/40 bg-vault-surface px-4 py-2.5 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
-				/>
-				<button type="submit" class="btn-press rounded-xl bg-vault-purple px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-purple/80">
-					Go
-				</button>
-			</div>
-			<p class="text-[11px] text-vault-text-muted">
-				Fields: <code>pop:</code> <code>year:</code> <code>price:</code> <code>raw:</code> <code>rarity:</code> <code>set:</code> · operators <code>&lt;N</code> <code>&gt;N</code> <code>A-B</code> · flags <code>psa10</code> <code>holo</code> <code>reverse</code>. Without JavaScript, the text becomes a name search.
-			</p>
-			{#if dslErrors.length > 0}
-				<p class="text-[11px] text-vault-red">
-					Didn't understand: <code>{dslErrors.join(' ')}</code> — went with what I could parse.
-				</p>
+		<div class="relative">
+			<form method="GET" action="/browse" class="space-y-1" onsubmit={applyDsl}>
+				<input type="hidden" name="mode" value="hunt" />
+				<div class="flex gap-2">
+					<div class="relative flex-1">
+						<input
+							type="text"
+							name="q"
+							bind:value={dslInput}
+							placeholder={'pop:<100 year:2010-2016 rarity:holo price:10-50 psa10'}
+							aria-label="Query language search"
+							class="w-full rounded-xl border border-vault-purple/40 bg-vault-surface px-4 py-2.5 pr-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
+						/>
+						<button
+							type="button"
+							onclick={() => (dslHelpOpen = !dslHelpOpen)}
+							aria-label="Query syntax help"
+							aria-expanded={dslHelpOpen}
+							class="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-vault-purple/40 bg-vault-surface px-1.5 py-0.5 text-xs font-semibold text-vault-purple transition hover:bg-vault-purple/10"
+						>
+							?
+						</button>
+					</div>
+					<button type="submit" class="btn-press rounded-xl bg-vault-purple px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-purple/80">
+						Go
+					</button>
+				</div>
+				{#if dslErrors.length > 0}
+					<p class="text-[11px] text-vault-red">
+						Didn't understand: <code>{dslErrors.join(' ')}</code> — went with what I could parse.
+					</p>
+				{/if}
+			</form>
+
+			<!--
+				Help panel — opens on ? button click. Click-outside to dismiss
+				via the backdrop (mirrors the modal pattern). Drawer-style
+				so it doesn't compete with the filter form for vertical space
+				on mobile.
+			-->
+			{#if dslHelpOpen}
+				<button
+					type="button"
+					aria-label="Close help"
+					class="fixed inset-0 z-30 bg-transparent"
+					onclick={() => (dslHelpOpen = false)}
+				></button>
+				<div class="absolute right-0 top-full z-40 mt-2 w-full max-w-md rounded-2xl border border-vault-purple/40 bg-vault-surface p-4 shadow-2xl sm:p-5">
+					<div class="flex items-start justify-between gap-3">
+						<div>
+							<h3 class="text-sm font-semibold text-white">Query syntax</h3>
+							<p class="mt-0.5 text-[11px] text-vault-text-muted">Chain fields + flags with spaces. Bare words search card names.</p>
+						</div>
+						<button
+							type="button"
+							onclick={() => (dslHelpOpen = false)}
+							class="-mr-1 -mt-1 rounded-lg p-1 text-vault-text-muted hover:bg-vault-surface-hover hover:text-white"
+							aria-label="Close help"
+						>
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+						</button>
+					</div>
+
+					<dl class="mt-3 space-y-1.5 text-xs text-vault-text-muted">
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">pop:</dt><dd>Max combined PSA+CGC population (<code>&lt;100</code>)</dd></div>
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">year:</dt><dd>Release year range (<code>2010-2016</code>, <code>&lt;2017</code>, <code>&gt;=2020</code>)</dd></div>
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">price:</dt><dd>Raw NM price range in USD (<code>10-50</code>, <code>&lt;20</code>)</dd></div>
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">raw:</dt><dd>Alias for <code>price:</code></dd></div>
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">rarity:</dt><dd>Rarity contains (<code>rarity:holo</code>, <code>rarity:"Rare Ultra"</code>)</dd></div>
+						<div class="flex gap-2"><dt class="w-20 shrink-0 font-mono text-vault-purple">set:</dt><dd>Exact set id (<code>set:base1</code>, <code>set:me3</code>)</dd></div>
+					</dl>
+
+					<p class="mt-3 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Operators</p>
+					<p class="mt-1 text-[11px] text-vault-text-muted">
+						<code>&lt;N</code> <code>&gt;N</code> <code>&lt;=N</code> <code>&gt;=N</code> <code>A-B</code> — and quote multi-word values.
+					</p>
+
+					<p class="mt-3 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Flags</p>
+					<p class="mt-1 text-[11px] text-vault-text-muted">
+						<code>psa10</code> requires a PSA 10 comp · <code>holo</code> and <code>reverse</code> filter by printing.
+					</p>
+
+					<p class="mt-4 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Try one</p>
+					<div class="mt-1 space-y-1">
+						{#each DSL_EXAMPLES as ex}
+							<button
+								type="button"
+								onclick={() => runExample(ex.query)}
+								class="group block w-full rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-left transition hover:border-vault-purple/40 hover:bg-vault-surface-hover"
+							>
+								<code class="text-xs text-vault-purple group-hover:text-white">{ex.query}</code>
+								<p class="mt-0.5 text-[10px] text-vault-text-muted">{ex.description}</p>
+							</button>
+						{/each}
+					</div>
+
+					<p class="mt-4 text-[10px] italic text-vault-text-muted">
+						Without JavaScript the input posts as a plain name search — the power-query syntax needs JS to work.
+					</p>
+				</div>
 			{/if}
-		</form>
+		</div>
 
 		<!-- Preset buttons -->
 		<div class="flex flex-wrap gap-2">
