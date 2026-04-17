@@ -83,6 +83,17 @@
 	}
 
 	const STALE_DAYS = 90;
+	/** Minimum PSA-graded sample size for a trustworthy gem rate — mirrors
+	 *  grading-roi.ts::GEM_RATE_MIN_SAMPLE so the visible confidence bar
+	 *  here lines up with the ROI calculator's `confident` flag. */
+	const GEM_RATE_MIN_SAMPLE = 20;
+
+	function rawSourceLabel(src: string | null | undefined): string | null {
+		if (!src) return null;
+		if (src === 'pricecharting') return 'PriceCharting Ungraded';
+		if (src === 'tcgplayer') return 'TCGPlayer market';
+		return src;
+	}
 
 	const CONDITION_LABEL: Record<string, string> = {
 		NM: 'Near Mint',
@@ -429,7 +440,7 @@
 						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
 							<p class="text-[11px] font-medium text-vault-text-muted">Raw NM</p>
 							<p class="mt-1 text-base font-bold text-white">{fmtMoney(indexRow.raw_nm_price)}</p>
-							<p class="text-[10px] text-vault-text-muted">PriceCharting</p>
+							<p class="text-[10px] text-vault-text-muted">{rawSourceLabel(indexRow.raw_source) ?? 'PriceCharting'}</p>
 						</div>
 						<div class="rounded-xl border border-vault-border bg-vault-bg p-3 text-center">
 							<p class="text-[11px] font-medium text-vault-gold">PSA 10</p>
@@ -464,6 +475,7 @@
 					{#if indexRow.psa_pop_total != null || indexRow.cgc_pop_total != null}
 						<div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
 							{#if indexRow.psa_pop_total != null}
+								{@const thin = (indexRow.psa_pop_total ?? 0) < GEM_RATE_MIN_SAMPLE}
 								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
 									<p class="text-[11px] font-medium text-vault-gold">PSA Population</p>
 									<div class="mt-1 flex items-baseline justify-between">
@@ -473,11 +485,15 @@
 									{#if indexRow.psa_gem_rate != null}
 										<p class="mt-0.5 text-xs text-vault-text-muted">
 											Gem rate <span class="text-vault-green">{indexRow.psa_gem_rate.toFixed(1)}%</span>
+											{#if thin}
+												<span class="ml-1 rounded bg-vault-red/15 px-1.5 py-0.5 text-[10px] font-medium text-vault-red" title="Under {GEM_RATE_MIN_SAMPLE} PSA-graded copies — gem rate is noisy and shouldn't anchor a grading decision on its own.">low sample (n={indexRow.psa_pop_total})</span>
+											{/if}
 										</p>
 									{/if}
 								</div>
 							{/if}
 							{#if indexRow.cgc_pop_total != null}
+								{@const thin = (indexRow.cgc_pop_total ?? 0) < GEM_RATE_MIN_SAMPLE}
 								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
 									<p class="text-[11px] font-medium text-blue-400">CGC Population</p>
 									<div class="mt-1 flex items-baseline justify-between">
@@ -487,6 +503,9 @@
 									{#if indexRow.cgc_gem_rate != null}
 										<p class="mt-0.5 text-xs text-vault-text-muted">
 											Gem rate <span class="text-vault-green">{indexRow.cgc_gem_rate.toFixed(1)}%</span>
+											{#if thin}
+												<span class="ml-1 rounded bg-vault-red/15 px-1.5 py-0.5 text-[10px] font-medium text-vault-red" title="Under {GEM_RATE_MIN_SAMPLE} CGC-graded copies — gem rate is noisy.">low sample (n={indexRow.cgc_pop_total})</span>
+											{/if}
 										</p>
 									{/if}
 								</div>
