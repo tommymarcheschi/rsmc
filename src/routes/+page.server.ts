@@ -1,6 +1,7 @@
 import { supabase } from '$services/supabase';
 import { getCard } from '$services/tcg-api';
 import { getCachedPricesForCards } from '$services/price-cache';
+import { getPsa10Momentum } from '$services/insights';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
@@ -11,15 +12,66 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		'cache-control': 'private, no-cache, must-revalidate'
 	});
 
-	const [collectionRes, watchlistRes, gradingRes] = await Promise.all([
+	const [collectionRes, watchlistRes, gradingRes, momentum] = await Promise.all([
 		supabase.from('collection').select('*'),
 		supabase.from('watchlist').select('*'),
-		supabase.from('grading').select('*').neq('status', 'complete')
+		supabase.from('grading').select('*').neq('status', 'complete'),
+		getPsa10Momentum(5).catch(() => ({ rising: [], cooling: [], cardsAnalyzed: 0 }))
 	]);
 
 	const collection = collectionRes.data ?? [];
 	const watchlist = watchlistRes.data ?? [];
 	const grading = gradingRes.data ?? [];
+
+	// Triggered watchlist alerts — same shape as /watchlist computes.
+	// Pulled here so the dashboard can surface the count + top rows
+	// without duplicating the logic.
+	interface WatchRow { id: string; card_id: string; target_price: number | null; alert_enabled: boolean; }
+	const watchRows = watchlist as WatchRow[];
+	const watchIds = watchRows.filter((w) => w.alert_enabled && w.target_price != null).map((w) => w.card_id);
+	const pricesByCard = new Map<string, number>();
+	const cardMetaById = new Map<string, { name: string; image: string | null }>();
+	if (watchIds.length > 0) {
+		const { data: idxRows } = await supabase
+			.from('card_index')
+			.select('card_id, name, image_small_url, raw_nm_price')
+			.in('card_id', watchIds);
+		for (const r of (idxRows ?? []) as Array<{
+			card_id: string;
+			name: string;
+			image_small_url: string | null;
+			raw_nm_price: number | null;
+		}>) {
+			if (r.raw_nm_price != null) pricesByCard.set(r.card_id, r.raw_nm_price);
+			cardMetaById.set(r.card_id, { name: r.name, image: r.image_small_url });
+		}
+	}
+	interface TriggeredAlert {
+		id: string;
+		card_id: string;
+		name: string;
+		image: string | null;
+		current: number;
+		target: number;
+		delta_pct: number;
+	}
+	const triggeredAlerts: TriggeredAlert[] = [];
+	for (const w of watchRows) {
+		if (!w.alert_enabled || w.target_price == null) continue;
+		const current = pricesByCard.get(w.card_id);
+		if (current == null || current > w.target_price) continue;
+		const meta = cardMetaById.get(w.card_id);
+		triggeredAlerts.push({
+			id: w.id,
+			card_id: w.card_id,
+			name: meta?.name ?? w.card_id,
+			image: meta?.image ?? null,
+			current,
+			target: w.target_price,
+			delta_pct: w.target_price > 0 ? ((current - w.target_price) / w.target_price) * 100 : 0
+		});
+	}
+	triggeredAlerts.sort((a, b) => a.delta_pct - b.delta_pct); // biggest dips first
 
 	const totalCards = collection.reduce((sum, e) => sum + e.quantity, 0);
 	const uniqueSets = new Set(collection.map((e) => e.card_id.split('-')[0])).size;
@@ -88,6 +140,11 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			gainLossPct,
 			watchlistCount: watchlist.length,
 			gradingPending: grading.length
+		},
+		attention: {
+			triggeredAlerts: triggeredAlerts.slice(0, 5),
+			triggeredAlertsTotal: triggeredAlerts.length,
+			rising: momentum.rising.slice(0, 3)
 		},
 		topHoldings,
 		recentCollection: collection.slice(0, 5)

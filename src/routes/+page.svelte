@@ -1,7 +1,17 @@
 <script lang="ts">
+	interface TriggeredAlert { id: string; card_id: string; name: string; image: string | null; current: number; target: number; delta_pct: number; }
+	interface RisingRow { card_id: string; name: string; set_name: string; image_small_url: string | null; recent_median: number; prior_median: number; delta_pct: number; }
+	interface Attention { triggeredAlerts: TriggeredAlert[]; triggeredAlertsTotal: number; rising: RisingRow[]; }
+
 	let { data } = $props();
 	let stats = $derived(data.stats);
 	let topHoldings = $derived(data.topHoldings as { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[]);
+	let attention = $derived(((data as Record<string, unknown>).attention ?? { triggeredAlerts: [], triggeredAlertsTotal: 0, rising: [] }) as Attention);
+
+	function fmtMoney(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
 </script>
 
 <svelte:head>
@@ -36,6 +46,69 @@
 					</a>
 				</div>
 			</div>
+		</div>
+	{/if}
+
+	<!-- Attention — daily check-in: triggered alerts + hot movers -->
+	{#if attention.triggeredAlerts.length > 0 || attention.rising.length > 0}
+		<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			{#if attention.triggeredAlerts.length > 0}
+				<div class="rounded-2xl border border-vault-green/40 bg-vault-green/5 p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<div>
+							<h2 class="text-lg font-semibold text-vault-green">🔔 Triggered alerts</h2>
+							<p class="mt-0.5 text-xs text-vault-text-muted">Watched cards that hit your target</p>
+						</div>
+						{#if attention.triggeredAlertsTotal > 5}
+							<a href="/watchlist" class="text-xs text-vault-green hover:underline">View all {attention.triggeredAlertsTotal}</a>
+						{/if}
+					</div>
+					<div class="mt-3 divide-y divide-vault-green/10">
+						{#each attention.triggeredAlerts as alert}
+							<a href="/card/{alert.card_id}" class="flex items-center gap-3 py-2 transition hover:bg-vault-green/5">
+								{#if alert.image}
+									<img src={alert.image} alt={alert.name} class="h-12 w-9 rounded object-cover" loading="lazy" />
+								{/if}
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-sm font-medium text-white">{alert.name}</p>
+									<p class="text-[11px] text-vault-text-muted">
+										{fmtMoney(alert.current)} · target {fmtMoney(alert.target)}
+									</p>
+								</div>
+								<span class="text-sm font-bold text-vault-green">{alert.delta_pct >= 0 ? '+' : ''}{alert.delta_pct.toFixed(1)}%</span>
+							</a>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			{#if attention.rising.length > 0}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between">
+						<div>
+							<h2 class="text-lg font-semibold text-white">📈 Rising PSA 10</h2>
+							<p class="mt-0.5 text-xs text-vault-text-muted">Biggest PSA 10 median jumps — last 30d vs prior month</p>
+						</div>
+						<a href="/insights" class="text-xs text-vault-purple hover:underline">More →</a>
+					</div>
+					<div class="mt-3 divide-y divide-vault-border">
+						{#each attention.rising as row}
+							<a href="/card/{row.card_id}" class="flex items-center gap-3 py-2 transition hover:bg-vault-bg/50">
+								{#if row.image_small_url}
+									<img src={row.image_small_url} alt={row.name} class="h-12 w-9 rounded object-cover" loading="lazy" />
+								{/if}
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-sm font-medium text-white">{row.name}</p>
+									<p class="text-[11px] text-vault-text-muted">
+										{fmtMoney(row.prior_median)} → {fmtMoney(row.recent_median)}
+									</p>
+								</div>
+								<span class="text-sm font-bold text-vault-green">+{row.delta_pct.toFixed(0)}%</span>
+							</a>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
