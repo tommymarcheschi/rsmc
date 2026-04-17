@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
-	import { ApiStatus } from '$components';
+	import { ApiStatus, Icon } from '$components';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -40,8 +40,8 @@
 	<aside class="hidden w-64 flex-shrink-0 flex-col border-r border-vault-border bg-vault-surface lg:flex">
 		<!-- Logo -->
 		<div class="flex h-16 items-center gap-3 border-b border-vault-border px-6">
-			<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-vault-accent to-vault-purple">
-				<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+			<div class="brand-chip h-8 w-8">
+				<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 					<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
 					<line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/>
 					<circle cx="12" cy="12" r="3" fill="currentColor"/>
@@ -95,9 +95,7 @@
 					type="submit"
 					class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-vault-text-muted transition-all duration-200 hover:bg-vault-surface-hover hover:text-white"
 				>
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-					</svg>
+					<Icon name="sign-out" class="h-5 w-5" strokeWidth={1.5} />
 					Sign Out
 				</button>
 			</form>
@@ -114,9 +112,7 @@
 				onclick={() => (mobileMenuOpen = !mobileMenuOpen)}
 				class="rounded-xl p-2 text-vault-text-muted hover:bg-vault-surface-hover hover:text-white lg:hidden"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-				</svg>
+				<Icon name="menu" class="h-6 w-6" />
 			</button>
 			<div class="hidden lg:block"></div>
 
@@ -134,9 +130,7 @@
 						placeholder="Search cards..."
 						class="w-full rounded-xl border border-vault-border bg-vault-bg px-4 py-2 pl-10 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
 					/>
-					<svg class="absolute left-3 top-2.5 h-4 w-4 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-					</svg>
+					<Icon name="search" class="absolute left-3 top-2.5 h-4 w-4 text-vault-text-muted" />
 				</div>
 			</form>
 

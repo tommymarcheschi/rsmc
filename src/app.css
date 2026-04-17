@@ -39,6 +39,24 @@
 
 	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+	/* Brand gradient — the Trove signature. Swap this to restyle every
+	 * primary button / logo chip / headline accent in one place. */
+	--brand-gradient: linear-gradient(135deg, var(--color-vault-accent), var(--color-vault-purple));
+	--brand-gradient-hover: linear-gradient(135deg, var(--color-vault-accent-hover), var(--color-vault-purple-hover));
+
+	/* Elevation — subtle for resting cards, stronger on hover.
+	 * These are tied to the palette so re-branding the accent colors
+	 * doesn't desync the glow underneath. */
+	--shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25);
+	--shadow-card-lift: 0 8px 25px rgba(0, 0, 0, 0.3);
+	--shadow-accent-glow: 0 0 20px rgba(255, 87, 87, 0.12), 0 0 40px rgba(167, 139, 250, 0.06);
+
+	/* Radii — the app currently picks between "small chip", "button/card",
+	 * and "hero card". Tokens keep the ramp consistent as we restyle. */
+	--radius-chip: 0.5rem;   /* rounded-lg */
+	--radius-card: 0.75rem;  /* rounded-xl */
+	--radius-hero: 1rem;     /* rounded-2xl */
 }
 
 /* Base styles */
@@ -131,4 +149,56 @@ body {
 
 .price-down {
 	color: var(--color-vault-red);
+}
+
+/* ============================================================
+ * Brand utilities
+ *
+ * These exist so the ~100+ spots that repeat the same surface
+ * treatments (card shell, primary gradient button, etc.) can be
+ * re-skinned from one place when new branding lands. Migrate
+ * existing inline classes opportunistically — both forms render
+ * identically so the codebase can coexist during the transition.
+ * ============================================================ */
+
+/* Card surface — the ubiquitous bordered panel on a dark base.
+ * Add padding separately (p-4 sm:p-6 etc.) since not every card
+ * needs the same inset. */
+.card-shell {
+	border-radius: var(--radius-hero);
+	border: 1px solid var(--color-vault-border);
+	background-color: var(--color-vault-surface);
+}
+
+/* Pre-padded variant for the common case (4 on mobile, 6 on desktop). */
+.card-panel {
+	border-radius: var(--radius-hero);
+	border: 1px solid var(--color-vault-border);
+	background-color: var(--color-vault-surface);
+	padding: 1rem;
+}
+@media (min-width: 640px) {
+	.card-panel {
+		padding: 1.5rem;
+	}
+}
+
+/* Primary gradient backdrop — used on the big CTA buttons and brand chips. */
+.bg-brand-gradient {
+	background: var(--brand-gradient);
+}
+.bg-brand-gradient:hover,
+.hover\:bg-brand-gradient-hover:hover {
+	background: var(--brand-gradient-hover);
+}
+
+/* Brand chip — small square tile with the gradient, used for logos,
+ * section icons, and the header brand mark. */
+.brand-chip {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-card);
+	background: var(--brand-gradient);
+	color: #fff;
 }
