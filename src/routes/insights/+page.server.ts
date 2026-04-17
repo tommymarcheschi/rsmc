@@ -10,6 +10,10 @@ import {
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
+	// Bump pool sizes so the client can shuffle/slice without going back
+	// to the server. The display shows a random 15 per list; 40-60 in the
+	// pool gives enough headroom that re-shuffles feel fresh without
+	// dipping into low-confidence tails.
 	const [
 		trending,
 		momentum,
@@ -20,10 +24,10 @@ export const load: PageServerLoad = async () => {
 		setValue
 	] = await Promise.all([
 		getTrendingCards('7d', 10),
-		getPsa10Momentum(15).catch(() => ({ rising: [], cooling: [], cardsAnalyzed: 0 })),
+		getPsa10Momentum(40).catch(() => ({ rising: [], cooling: [], cardsAnalyzed: 0 })),
 		supabase.from('collection').select('card_id, quantity, purchase_price'),
-		getUndervaluedCards(15),
-		getSupplySqueezeCards(20),
+		getUndervaluedCards(50),
+		getSupplySqueezeCards(40),
 		getPopDensityHeatmap(),
 		getSetValueTracker()
 	]);

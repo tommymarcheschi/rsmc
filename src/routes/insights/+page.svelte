@@ -42,6 +42,102 @@
 		return heatmap.cells.find((c) => c.era === era && c.rarity === rarity);
 	}
 
+	// ─── Shuffle + filter state ──────────────────────────────────
+	// Each list pulls a pool (40-50) from the server; the client filters
+	// by era + price band, then samples 15 per render. A shuffle counter
+	// bumps on button click to force a re-sample. Same interface across
+	// all list tabs so users learn the pattern once.
+
+	const DISPLAY_COUNT = 15;
+	const ERA_OPTIONS: Array<{ id: Era | 'all'; label: string }> = [
+		{ id: 'all', label: 'All eras' },
+		{ id: 'vintage', label: 'Vintage' },
+		{ id: 'ex', label: 'EX era' },
+		{ id: 'modern', label: 'Modern' },
+		{ id: 'current', label: 'Current' }
+	];
+
+	type EraFilter = Era | 'all';
+	interface PriceBand { id: string; label: string; min: number; max: number; }
+	const PRICE_BANDS: PriceBand[] = [
+		{ id: 'any', label: 'Any price', min: 0, max: Infinity },
+		{ id: 'under25', label: '<$25', min: 0, max: 25 },
+		{ id: '25to100', label: '$25-100', min: 25, max: 100 },
+		{ id: '100to500', label: '$100-500', min: 100, max: 500 },
+		{ id: 'over500', label: '$500+', min: 500, max: Infinity }
+	];
+
+	let undervaluedEra = $state<EraFilter>('all');
+	let undervaluedBand = $state('any');
+	let undervaluedSeed = $state(0);
+
+	let supplyEra = $state<EraFilter>('all');
+	let supplyBand = $state('any');
+	let supplySeed = $state(0);
+
+	let moversEra = $state<EraFilter>('all');
+	let moversSeed = $state(0);
+
+	function bandMatches(price: number | null | undefined, bandId: string): boolean {
+		const band = PRICE_BANDS.find((b) => b.id === bandId);
+		if (!band || band.id === 'any') return true;
+		if (price == null) return false;
+		return price >= band.min && price < band.max;
+	}
+
+	// Seeded-ish pick — uses the seed to perturb order and slice. Same
+	// seed on same pool = same output; bumping the seed gives a fresh
+	// sample. Not cryptographic; Math.random per re-shuffle is fine
+	// because we want variety, not reproducibility.
+	function sample<T>(pool: T[], count: number, seed: number): T[] {
+		// seed is referenced so Svelte tracks it as a dependency in $derived.
+		void seed;
+		if (pool.length <= count) return pool;
+		const copy = [...pool];
+		for (let i = copy.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[copy[i], copy[j]] = [copy[j], copy[i]];
+		}
+		return copy.slice(0, count);
+	}
+
+	function filterByEra<T extends { era: Era }>(rows: T[], filter: EraFilter): T[] {
+		if (filter === 'all') return rows;
+		return rows.filter((r) => r.era === filter);
+	}
+
+	const undervaluedCheapDisplay = $derived.by(() => {
+		void undervaluedSeed;
+		const pool = filterByEra(undervalued.cheapPsa10, undervaluedEra).filter((r) =>
+			bandMatches(r.psa10_price, undervaluedBand)
+		);
+		return sample(pool, DISPLAY_COUNT, undervaluedSeed);
+	});
+	const undervaluedHotDisplay = $derived.by(() => {
+		void undervaluedSeed;
+		const pool = filterByEra(undervalued.hotPsa10, undervaluedEra).filter((r) =>
+			bandMatches(r.psa10_price, undervaluedBand)
+		);
+		return sample(pool, DISPLAY_COUNT, undervaluedSeed);
+	});
+
+	const supplySqueezeDisplay = $derived.by(() => {
+		void supplySeed;
+		const pool = filterByEra(supplySqueeze, supplyEra).filter((r) =>
+			bandMatches(r.psa10_price, supplyBand)
+		);
+		return sample(pool, DISPLAY_COUNT, supplySeed);
+	});
+
+	const risingDisplay = $derived.by(() => {
+		void moversSeed;
+		return sample(filterByEra(momentum.rising, moversEra), DISPLAY_COUNT, moversSeed);
+	});
+	const coolingDisplay = $derived.by(() => {
+		void moversSeed;
+		return sample(filterByEra(momentum.cooling, moversEra), DISPLAY_COUNT, moversSeed);
+	});
+
 	// Map median pop → background color. Low pop = green (hunt zone),
 	// high pop = red (saturated). Log scale because pop distribution is
 	// skewed heavily toward very large populations on old Charizards.
@@ -137,16 +233,29 @@
 
 	<!-- Supply Squeeze Tab -->
 	{#if insightTab === 'supply'}
+		<div class="flex flex-wrap items-center gap-2 rounded-xl border border-vault-border bg-vault-surface p-2 text-xs">
+			<span class="ml-1 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Era</span>
+			{#each ERA_OPTIONS as opt}
+				<button type="button" onclick={() => (supplyEra = opt.id)} class="rounded-lg px-2 py-1 text-[11px] {supplyEra === opt.id ? 'bg-vault-purple/20 text-white' : 'text-vault-text-muted hover:text-white'}">{opt.label}</button>
+			{/each}
+			<span class="mx-2 h-4 w-px bg-vault-border"></span>
+			<span class="text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">PSA 10</span>
+			{#each PRICE_BANDS as band}
+				<button type="button" onclick={() => (supplyBand = band.id)} class="rounded-lg px-2 py-1 text-[11px] {supplyBand === band.id ? 'bg-vault-purple/20 text-white' : 'text-vault-text-muted hover:text-white'}">{band.label}</button>
+			{/each}
+			<button type="button" onclick={() => supplySeed++} class="ml-auto rounded-lg border border-vault-purple/40 px-3 py-1 text-[11px] font-medium text-vault-purple hover:bg-vault-purple/10">Reshuffle</button>
+		</div>
+
 		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="border-b border-vault-border px-6 py-4">
 				<p class="text-sm text-white">Low supply, high value</p>
 				<p class="mt-1 text-xs text-vault-text-muted">
-					Cards where fewer than 200 copies exist in the total PSA population and a PSA 10 still sells for $100+. Low supply + real demand = potential upside as more people hunt them. Sorted by fewest PSA-graded copies.
+					Cards where fewer than 200 copies exist in the total PSA population and a PSA 10 still sells for $100+. Showing a random sample from the top-40 scarcity pool; reshuffle for a fresh draw.
 				</p>
 			</div>
-			{#if supplySqueeze.length > 0}
+			{#if supplySqueezeDisplay.length > 0}
 				<div class="divide-y divide-vault-border">
-					{#each supplySqueeze as row}
+					{#each supplySqueezeDisplay as row}
 						<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
 							{#if row.image_small_url}
 								<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
@@ -331,10 +440,23 @@
 	<!-- Undervalued Tab -->
 	{#if insightTab === 'undervalued'}
 		<div class="space-y-6">
+			<div class="flex flex-wrap items-center gap-2 rounded-xl border border-vault-border bg-vault-surface p-2 text-xs">
+				<span class="ml-1 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Era</span>
+				{#each ERA_OPTIONS as opt}
+					<button type="button" onclick={() => (undervaluedEra = opt.id)} class="rounded-lg px-2 py-1 text-[11px] {undervaluedEra === opt.id ? 'bg-vault-purple/20 text-white' : 'text-vault-text-muted hover:text-white'}">{opt.label}</button>
+				{/each}
+				<span class="mx-2 h-4 w-px bg-vault-border"></span>
+				<span class="text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">PSA 10</span>
+				{#each PRICE_BANDS as band}
+					<button type="button" onclick={() => (undervaluedBand = band.id)} class="rounded-lg px-2 py-1 text-[11px] {undervaluedBand === band.id ? 'bg-vault-purple/20 text-white' : 'text-vault-text-muted hover:text-white'}">{band.label}</button>
+				{/each}
+				<button type="button" onclick={() => undervaluedSeed++} class="ml-auto rounded-lg border border-vault-purple/40 px-3 py-1 text-[11px] font-medium text-vault-purple hover:bg-vault-purple/10">Reshuffle</button>
+			</div>
+
 			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-sm text-vault-text-muted">
 				<p class="text-white">How much more does a PSA 10 cost than a raw copy?</p>
 				<p class="mt-1">
-					For every card, we compare its raw → PSA 10 jump to what's typical for cards of the same rarity <i>and</i> era. (1999 promos and 2024 promos live in different markets — bucketing by era too keeps the median honest.) The two lists flag cards where the jump is way bigger or way smaller than normal — possible mispricings to investigate. Based on <b>{undervalued.cardsAnalyzed.toLocaleString()}</b> indexed cards across <b>{undervalued.bucketsSampled}</b> era × rarity buckets.
+					For every card, we compare its raw → PSA 10 jump to what's typical for cards of the same rarity <i>and</i> era. Lists below flag cards where the jump is way bigger or way smaller than normal. Showing a random sample from the top-50 pool in each direction; reshuffle for a fresh draw. Based on <b>{undervalued.cardsAnalyzed.toLocaleString()}</b> indexed cards across <b>{undervalued.bucketsSampled}</b> era × rarity buckets.
 				</p>
 			</div>
 
@@ -347,9 +469,9 @@
 							The jump from raw to PSA 10 is smaller than usual for the rarity. A graded copy may be a bargain right now.
 						</p>
 					</div>
-					{#if undervalued.cheapPsa10.length > 0}
+					{#if undervaluedCheapDisplay.length > 0}
 						<div class="divide-y divide-vault-border">
-							{#each undervalued.cheapPsa10 as row}
+							{#each undervaluedCheapDisplay as row}
 								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
 									{#if row.image_small_url}
 										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
@@ -388,9 +510,9 @@
 							The jump from raw to PSA 10 is much bigger than usual. Either the graded market is hot, or the raw is still cheap — worth a closer look before grading or buying.
 						</p>
 					</div>
-					{#if undervalued.hotPsa10.length > 0}
+					{#if undervaluedHotDisplay.length > 0}
 						<div class="divide-y divide-vault-border">
-							{#each undervalued.hotPsa10 as row}
+							{#each undervaluedHotDisplay as row}
 								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
 									{#if row.image_small_url}
 										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
@@ -427,10 +549,18 @@
 	<!-- PSA 10 Movers Tab — backed by psa10_sales, not PokeTrace -->
 	{#if insightTab === 'movers'}
 		<div class="space-y-6">
+			<div class="flex flex-wrap items-center gap-2 rounded-xl border border-vault-border bg-vault-surface p-2 text-xs">
+				<span class="ml-1 text-[11px] font-semibold uppercase tracking-wide text-vault-text-muted">Era</span>
+				{#each ERA_OPTIONS as opt}
+					<button type="button" onclick={() => (moversEra = opt.id)} class="rounded-lg px-2 py-1 text-[11px] {moversEra === opt.id ? 'bg-vault-purple/20 text-white' : 'text-vault-text-muted hover:text-white'}">{opt.label}</button>
+				{/each}
+				<button type="button" onclick={() => moversSeed++} class="ml-auto rounded-lg border border-vault-purple/40 px-3 py-1 text-[11px] font-medium text-vault-purple hover:bg-vault-purple/10">Reshuffle</button>
+			</div>
+
 			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-sm text-vault-text-muted">
 				<p class="text-white">PSA 10 median: last 30 days vs prior 30–60 days</p>
 				<p class="mt-1">
-					Real sold-comp momentum, not PokeTrace guesses. For every card with at least 3 PSA 10 sales in each window, we compare the median prices and rank by percentage change. Based on <b>{momentum.cardsAnalyzed.toLocaleString()}</b> cards with enough sale volume to compare. Fills in more as cards get enriched.
+					Real sold-comp momentum, not PokeTrace guesses. For every card with at least 3 PSA 10 sales in each window, we compare the median prices and rank by percentage change. Based on <b>{momentum.cardsAnalyzed.toLocaleString()}</b> cards; showing a random sample from the top-40 each direction.
 				</p>
 			</div>
 
@@ -440,9 +570,9 @@
 						<h3 class="font-semibold text-vault-green">Rising stars</h3>
 						<p class="mt-0.5 text-xs text-vault-text-muted">PSA 10 median up vs the prior month.</p>
 					</div>
-					{#if momentum.rising.length > 0}
+					{#if risingDisplay.length > 0}
 						<div class="divide-y divide-vault-border">
-							{#each momentum.rising as row}
+							{#each risingDisplay as row}
 								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
 									{#if row.image_small_url}
 										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
@@ -473,9 +603,9 @@
 						<h3 class="font-semibold text-vault-red">Cooling off</h3>
 						<p class="mt-0.5 text-xs text-vault-text-muted">PSA 10 median down vs the prior month.</p>
 					</div>
-					{#if momentum.cooling.length > 0}
+					{#if coolingDisplay.length > 0}
 						<div class="divide-y divide-vault-border">
-							{#each momentum.cooling as row}
+							{#each coolingDisplay as row}
 								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
 									{#if row.image_small_url}
 										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />

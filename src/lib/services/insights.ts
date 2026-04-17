@@ -266,6 +266,7 @@ export interface Psa10MoverRow {
 	set_name: string;
 	card_number: string | null;
 	rarity: string | null;
+	era: Era;
 	image_small_url: string | null;
 	raw_nm_price: number | null;
 	/** Median PSA 10 sale price in the recent 30-day window. */
@@ -312,6 +313,7 @@ export async function getPsa10Momentum(limit = 15): Promise<Psa10MomentumResult>
 			rarity: string | null;
 			image_small_url: string | null;
 			raw_nm_price: number | null;
+			set_release_date: string | null;
 		} | null;
 	};
 
@@ -322,7 +324,7 @@ export async function getPsa10Momentum(limit = 15): Promise<Psa10MomentumResult>
 		const { data, error } = await supabase
 			.from('psa10_sales')
 			.select(
-				'card_id, sold_at, price_cents, card_index(name, set_name, card_number, rarity, image_small_url, raw_nm_price)'
+				'card_id, sold_at, price_cents, card_index(name, set_name, card_number, rarity, image_small_url, raw_nm_price, set_release_date)'
 			)
 			.gte('sold_at', since)
 			.order('card_id', { ascending: true })
@@ -363,6 +365,7 @@ export async function getPsa10Momentum(limit = 15): Promise<Psa10MomentumResult>
 			set_name: b.meta.set_name,
 			card_number: b.meta.card_number,
 			rarity: b.meta.rarity,
+			era: eraForDate(b.meta.set_release_date),
 			image_small_url: b.meta.image_small_url,
 			raw_nm_price: b.meta.raw_nm_price,
 			recent_median: Math.round(recentMedian * 100) / 100,
@@ -621,6 +624,7 @@ export interface SupplySqueezeRow {
 	set_name: string;
 	card_number: string | null;
 	rarity: string | null;
+	era: Era;
 	image_small_url: string | null;
 	raw_nm_price: number | null;
 	psa10_price: number;
@@ -639,7 +643,7 @@ export async function getSupplySqueezeCards(limit = 20): Promise<SupplySqueezeRo
 	const { data, error } = await supabase
 		.from('card_index')
 		.select(
-			'card_id, name, set_name, card_number, rarity, image_small_url, ' +
+			'card_id, name, set_name, card_number, rarity, image_small_url, set_release_date, ' +
 				'raw_nm_price, psa10_price, psa_pop_total, psa_pop_10, psa_gem_rate'
 		)
 		.gte('psa10_price', 100)
@@ -650,7 +654,11 @@ export async function getSupplySqueezeCards(limit = 20): Promise<SupplySqueezeRo
 		.limit(limit);
 
 	if (error || !data) return [];
-	return data as SupplySqueezeRow[];
+	type Raw = Omit<SupplySqueezeRow, 'era'> & { set_release_date: string | null };
+	return (data as Raw[]).map(({ set_release_date, ...rest }) => ({
+		...rest,
+		era: eraForDate(set_release_date)
+	}));
 }
 
 /** Per-card deviation vs peers in the same era × rarity bucket. Null when we can't compute. */
