@@ -7,7 +7,8 @@
 	import type { PriceHistory } from '$services/price-tracker';
 	import type { EbaySoldResult } from '$services/ebay-scraper';
 	import type { PSAPopData } from '$services/psa-scraper';
-	import type { CardSignal } from '$services/insights';
+	import type { CardSignal, SimilarCard } from '$services/insights';
+	import { ERA_LABELS } from '$services/insights';
 	import type { GradingROIResult } from '$services/grading-roi';
 
 	interface IndexRow {
@@ -56,6 +57,7 @@
 	let indexRow = $derived(data.indexRow as IndexRow | null);
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
+	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
 	let hasMarketSignals = $derived(
 		indexRow != null &&
 			(indexRow.raw_nm_price != null ||
@@ -776,6 +778,42 @@
 							<p class="text-sm italic text-vault-text-muted">"{pokedexData.flavor_text}"</p>
 						</div>
 					{/if}
+				</div>
+			{/if}
+
+			<!-- Similar cards -->
+			{#if similarCards.length > 0}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-start justify-between gap-3">
+						<div>
+							<h2 class="text-lg font-semibold text-white">Similar cards</h2>
+							<p class="mt-0.5 text-xs text-vault-text-muted">
+								Same rarity + era ({ERA_LABELS[similarCards[0].era]}) with a comparable PSA 10 price. Click through to compare.
+							</p>
+						</div>
+					</div>
+					<div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+						{#each similarCards as sim}
+							<a href="/card/{sim.card_id}" class="flex flex-col gap-2 rounded-xl border border-vault-border bg-vault-bg p-3 transition hover:border-vault-accent/50 hover:bg-vault-surface-hover">
+								{#if sim.image_small_url}
+									<img src={sim.image_small_url} alt={sim.name} class="h-32 w-full rounded-lg object-contain" loading="lazy" />
+								{/if}
+								<div class="min-w-0">
+									<p class="truncate text-sm font-medium text-white">{sim.name}</p>
+									<p class="truncate text-[11px] text-vault-text-muted">
+										{sim.set_name}{#if sim.card_number} · #{sim.card_number}{/if}
+									</p>
+									<div class="mt-1 flex items-baseline gap-2">
+										<span class="text-sm font-bold text-vault-gold">{fmtMoney(sim.psa10_price)}</span>
+										<span class="text-[10px] text-vault-text-muted">PSA 10</span>
+									</div>
+									{#if sim.psa_pop_total != null}
+										<p class="text-[10px] text-vault-text-muted">pop {fmtInt(sim.psa_pop_total)}</p>
+									{/if}
+								</div>
+							</a>
+						{/each}
+					</div>
 				</div>
 			{/if}
 

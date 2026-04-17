@@ -4,7 +4,7 @@ import { getCardPrices } from '$services/poketrace';
 import { getGradedPrices, getGradingFees } from '$services/price-tracker';
 import { cacheTcgPlayerPrices, getPriceHistoryFromCache } from '$services/price-cache';
 import { supabase } from '$services/supabase';
-import { getCardSignal } from '$services/insights';
+import { getCardSignal, getSimilarCards } from '$services/insights';
 import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
@@ -98,6 +98,15 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		  )
 		: null;
 
+	const similarCards = indexRow
+		? await getSimilarCards(
+				params.id,
+				indexRow.rarity,
+				indexRow.set_release_date,
+				indexRow.psa10_price
+		  ).catch(() => [])
+		: [];
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
@@ -116,6 +125,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		indexRow,
 		cardSignal,
 		gradingROI,
+		similarCards,
 		inCollection,
 		onWatchlist
 	};

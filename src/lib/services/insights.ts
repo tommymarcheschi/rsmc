@@ -260,6 +260,94 @@ export async function getPopDensityHeatmap(): Promise<HeatmapResult> {
 	};
 }
 
+export interface SimilarCard {
+	card_id: string;
+	name: string;
+	set_name: string;
+	card_number: string | null;
+	rarity: string | null;
+	image_small_url: string | null;
+	raw_nm_price: number | null;
+	psa10_price: number;
+	psa_pop_total: number | null;
+	era: Era;
+}
+
+/**
+ * Peer cards from the same era × rarity bucket with a comparable PSA 10
+ * price — for the "Similar cards" panel on /card/[id]. Excludes the
+ * current card and returns up to `limit` rows sorted by smallest price
+ * deviation. Returns [] if the seed card lacks enough signal to compare.
+ */
+export async function getSimilarCards(
+	cardId: string,
+	rarity: string | null,
+	releaseDate: string | null,
+	psa10Price: number | null,
+	limit = 8
+): Promise<SimilarCard[]> {
+	if (!rarity || psa10Price == null || psa10Price <= 0) return [];
+
+	const era = eraForDate(releaseDate);
+	// Date range for the era bucket. Matches eraForDate() exactly so the
+	// peer set mirrors the Undervalued Finder / Heatmap bucketing.
+	const eraRange: Record<Era, { gte?: string; lt?: string }> = {
+		vintage: { lt: '2003-01-01' },
+		ex: { gte: '2003-01-01', lt: '2011-01-01' },
+		modern: { gte: '2011-01-01', lt: '2020-01-01' },
+		current: { gte: '2020-01-01' },
+		unknown: {}
+	};
+	const range = eraRange[era];
+
+	const priceFloor = psa10Price * 0.5;
+	const priceCeil = psa10Price * 1.5;
+
+	let query = supabase
+		.from('card_index')
+		.select(
+			'card_id, name, set_name, card_number, rarity, image_small_url, raw_nm_price, psa10_price, psa_pop_total, set_release_date'
+		)
+		.eq('rarity', rarity)
+		.neq('card_id', cardId)
+		.gte('psa10_price', priceFloor)
+		.lte('psa10_price', priceCeil);
+
+	if (range.gte) query = query.gte('set_release_date', range.gte);
+	if (range.lt) query = query.lt('set_release_date', range.lt);
+
+	const { data, error } = await query.limit(100);
+	if (error || !data) return [];
+
+	type Raw = {
+		card_id: string;
+		name: string;
+		set_name: string;
+		card_number: string | null;
+		rarity: string | null;
+		image_small_url: string | null;
+		raw_nm_price: number | null;
+		psa10_price: number;
+		psa_pop_total: number | null;
+		set_release_date: string | null;
+	};
+	return (data as Raw[])
+		.sort((a, b) => Math.abs(a.psa10_price - psa10Price) - Math.abs(b.psa10_price - psa10Price))
+		.slice(0, limit)
+		.map((r) => ({
+			card_id: r.card_id,
+			name: r.name,
+			set_name: r.set_name,
+			card_number: r.card_number,
+			rarity: r.rarity,
+			image_small_url: r.image_small_url,
+			raw_nm_price: r.raw_nm_price,
+			psa10_price: r.psa10_price,
+			psa_pop_total: r.psa_pop_total,
+			era: eraForDate(r.set_release_date)
+		}));
+}
+
 export interface SetValueRow {
 	set_id: string;
 	set_name: string;
