@@ -104,12 +104,108 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		mode: mode || 'default',
 		sets,
 		filters: { search, set, type, rarity, sort },
+		activeFilters: buildDefaultPills(url, { search, set, type, rarity }, sets),
 		initialCards,
 		initialTotalCount: totalCount,
 		clientSort: isClientSort || isEnrichedSort,
 		hiddenByClientSort
 	};
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Active-filter pill builders (Tier 3.13)
+//
+// One canonical place to compute the removable-chip list per mode.
+// Each pill has a label (what the user sees) and a removeHref that drops
+// the matching filter from the URL — works without JS because it's just
+// an <a> link the page re-renders from.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FilterPill {
+	label: string;
+	removeHref: string;
+}
+
+function hrefWithout(
+	url: URL,
+	mutate: (params: URLSearchParams) => void
+): string {
+	const next = new URLSearchParams(url.searchParams);
+	mutate(next);
+	// Reset pagination when filters change.
+	next.delete('page');
+	const qs = next.toString();
+	return qs ? `${url.pathname}?${qs}` : url.pathname;
+}
+
+function dropParam(url: URL, key: string): string {
+	return hrefWithout(url, (p) => p.delete(key));
+}
+
+function dropValueFromList(url: URL, key: string, value: string): string {
+	return hrefWithout(url, (p) => {
+		const list = (p.get(key) ?? '').split(',').filter((v) => v && v !== value);
+		if (list.length) p.set(key, list.join(','));
+		else p.delete(key);
+	});
+}
+
+function buildDefaultPills(
+	url: URL,
+	f: { search: string; set: string; type: string; rarity: string },
+	sets: Array<{ id: string; name: string }>
+): FilterPill[] {
+	const pills: FilterPill[] = [];
+	if (f.search) pills.push({ label: `Search: ${f.search}`, removeHref: dropParam(url, 'q') });
+	if (f.set) {
+		const name = sets.find((s) => s.id === f.set)?.name ?? f.set;
+		pills.push({ label: `Set: ${name}`, removeHref: dropParam(url, 'set') });
+	}
+	if (f.type) pills.push({ label: `Type: ${f.type}`, removeHref: dropParam(url, 'type') });
+	if (f.rarity) pills.push({ label: `Rarity: ${f.rarity}`, removeHref: dropParam(url, 'rarity') });
+	return pills;
+}
+
+const VARIANT_LABELS: Record<string, string> = {
+	holo: 'Holo',
+	reverse: 'Reverse Holo'
+};
+
+function buildHuntPills(
+	url: URL,
+	sets: Array<{ id: string; name: string }>
+): FilterPill[] {
+	const p = url.searchParams;
+	const pills: FilterPill[] = [];
+	const q = p.get('q');
+	if (q) pills.push({ label: `Search: ${q}`, removeHref: dropParam(url, 'q') });
+	const set = p.get('set');
+	if (set) {
+		const name = sets.find((s) => s.id === set)?.name ?? set;
+		pills.push({ label: `Set: ${name}`, removeHref: dropParam(url, 'set') });
+	}
+	const popLt = p.get('pop_lt');
+	if (popLt) pills.push({ label: `Max pop ${popLt}`, removeHref: dropParam(url, 'pop_lt') });
+	const before = p.get('before');
+	if (before) pills.push({ label: `Before ${before}`, removeHref: dropParam(url, 'before') });
+	const after = p.get('after');
+	if (after) pills.push({ label: `After ${after}`, removeHref: dropParam(url, 'after') });
+	const rawGt = p.get('raw_gt');
+	if (rawGt) pills.push({ label: `Raw ≥ $${rawGt}`, removeHref: dropParam(url, 'raw_gt') });
+	const rawLt = p.get('raw_lt');
+	if (rawLt) pills.push({ label: `Raw ≤ $${rawLt}`, removeHref: dropParam(url, 'raw_lt') });
+	const variants = (p.get('variants') ?? '').split(',').filter(Boolean);
+	for (const v of variants) {
+		pills.push({
+			label: VARIANT_LABELS[v] ?? v,
+			removeHref: dropValueFromList(url, 'variants', v)
+		});
+	}
+	if (p.get('require_psa10') === '1') {
+		pills.push({ label: 'Has PSA 10', removeHref: dropParam(url, 'require_psa10') });
+	}
+	return pills;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hunt Mode loader — queries card_index in Supabase
@@ -253,17 +349,19 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 		// Table doesn't exist yet
 	}
 
+	const mappedSets = (trackedSets ?? []).map((s: Record<string, unknown>) => ({
+		id: s.set_id as string,
+		name: s.set_name as string,
+		series: '',
+		printedTotal: 0,
+		total: 0,
+		releaseDate: (s.release_date as string) ?? '',
+		images: { symbol: '', logo: '' }
+	}));
+
 	return {
 		mode: 'hunt' as const,
-		sets: (trackedSets ?? []).map((s: Record<string, unknown>) => ({
-			id: s.set_id as string,
-			name: s.set_name as string,
-			series: '',
-			printedTotal: 0,
-			total: 0,
-			releaseDate: (s.release_date as string) ?? '',
-			images: { symbol: '', logo: '' }
-		})),
+		sets: mappedSets,
 		filters: {
 			search,
 			set,
@@ -278,6 +376,7 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 			rawGt: rawGt ?? '',
 			requirePsa10: requirePsa10 ? '1' : ''
 		},
+		activeFilters: buildHuntPills(url, mappedSets),
 		initialCards,
 		initialTotalCount: count ?? 0,
 		clientSort: false,

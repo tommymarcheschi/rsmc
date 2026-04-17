@@ -3,7 +3,11 @@
 	import { getSortOptionsForMode } from '$services/sort';
 	import type { PokemonCard } from '$types';
 
+	interface FilterPill { label: string; removeHref: string; }
+
 	let { data } = $props();
+
+	let activeFilters = $derived(((data as Record<string, unknown>).activeFilters ?? []) as FilterPill[]);
 
 	let isHuntMode = $derived(data.mode === 'hunt');
 	let sortOptions = $derived(getSortOptionsForMode(data.mode ?? 'default'));
@@ -160,6 +164,24 @@
 			</a>
 		</div>
 	</div>
+
+	{#if activeFilters.length > 0}
+		<div class="flex flex-wrap items-center gap-2">
+			<span class="text-xs uppercase tracking-wide text-vault-text-muted">Active:</span>
+			{#each activeFilters as pill}
+				<a
+					href={pill.removeHref}
+					class="inline-flex items-center gap-1.5 rounded-full border border-vault-purple/30 bg-vault-purple/10 px-3 py-1 text-xs font-medium text-vault-purple transition hover:border-vault-purple/60 hover:bg-vault-purple/20"
+					aria-label="Remove filter: {pill.label}"
+				>
+					<span>{pill.label}</span>
+					<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</a>
+			{/each}
+		</div>
+	{/if}
 
 	{#if isHuntMode}
 		<!-- ─── Hunt Mode Filter Form ──────────────────────────────────── -->
