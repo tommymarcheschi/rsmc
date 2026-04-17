@@ -7,3 +7,4 @@ export { default as ComparisonChart } from './ComparisonChart.svelte';
 export { default as ApiStatus } from './ApiStatus.svelte';
 export { default as Icon } from './Icon.svelte';
 export type { IconName } from './icon-names';
+export { default as CommandPalette } from './CommandPalette.svelte';

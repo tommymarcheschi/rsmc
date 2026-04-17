@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
-	import { ApiStatus, Icon } from '$components';
+	import { ApiStatus, Icon, CommandPalette } from '$components';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -35,6 +35,9 @@
 {#if isLoginPage}
 	{@render children()}
 {:else}
+<!-- Global ⌘K palette — mounts once, listens for the global keystroke. -->
+<CommandPalette />
+
 <div class="flex h-screen overflow-hidden bg-vault-bg">
 	<!-- Sidebar (desktop) -->
 	<aside class="hidden w-64 flex-shrink-0 flex-col border-r border-vault-border bg-vault-surface lg:flex">
