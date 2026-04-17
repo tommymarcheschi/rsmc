@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.trove.auto-heal-sets</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/tommymarcheschi/dev/rsmc/scripts/cron-auto-heal-sets.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/tommymarcheschi/dev/rsmc</string>
+
+    <!-- 03:30 local — detect-new-sets runs at 03:00, refresh-stale at
+         04:00. Auto-heal sits between so new sets get their TCGPlayer
+         prices + missing rows filled before the stale refresh kicks in. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/tommymarcheschi/Library/Logs/Trove/launchd.auto-heal.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/tommymarcheschi/Library/Logs/Trove/launchd.auto-heal.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
