@@ -93,7 +93,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 				totalCount = initialCards.length;
 				hiddenByClientSort = result.data.length - initialCards.length;
 			} else {
-				initialCards = result.data;
+				initialCards = await attachCardIndexEnrichment(result.data);
 				totalCount = result.totalCount;
 			}
 		} catch {
@@ -113,6 +113,44 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		hiddenByClientSort
 	};
 };
+
+/**
+ * Batch-read card_index.raw_nm_price for the cards shown on a default
+ * /browse page and attach as _enrichment. Covers recent sets where
+ * pokemontcg.io hasn't populated tcgplayer.prices yet (Mega Evolution
+ * era, etc.) — the thumbnail's price badge falls back to enrichment
+ * when TCG API market is null.
+ */
+async function attachCardIndexEnrichment(cards: PokemonCard[]): Promise<EnrichedCard[]> {
+	if (cards.length === 0) return [];
+	const ids = cards.map((c) => c.id);
+	const { data } = await supabase
+		.from('card_index')
+		.select('card_id, raw_nm_price, raw_source, psa10_price, psa10_delta, psa10_multiple, psa_pop_total, cgc_pop_total, combined_pop_total')
+		.in('card_id', ids);
+	const byId = new Map<string, Record<string, unknown>>();
+	for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+		byId.set(row.card_id as string, row);
+	}
+	return cards.map((card) => {
+		const idx = byId.get(card.id);
+		if (!idx) return card as EnrichedCard;
+		return {
+			...card,
+			_enrichment: {
+				raw_nm_price: idx.raw_nm_price as number | null,
+				raw_source: idx.raw_source as string | null,
+				psa10_price: idx.psa10_price as number | null,
+				psa10_delta: idx.psa10_delta as number | null,
+				psa10_multiple: idx.psa10_multiple as number | null,
+				psa_pop_total: idx.psa_pop_total as number | null,
+				cgc_pop_total: idx.cgc_pop_total as number | null,
+				combined_pop_total: idx.combined_pop_total as number | null,
+				pcUrl: null
+			}
+		};
+	});
+}
 
 export interface SavedSearchRow {
 	id: string;

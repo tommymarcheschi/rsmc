@@ -79,13 +79,51 @@ export const GET: RequestHandler = async ({ url }) => {
 				{ headers: { 'cache-control': 'private, max-age=300, stale-while-revalidate=3600' } }
 			);
 		}
-		return json(result, {
+		// Attach card_index enrichment so recent-set cards (Mega Evolution
+		// era etc.) render with prices even when pokemontcg.io still has
+		// no tcgplayer.prices for them. Matches what /browse does server-
+		// side for its first page; this endpoint serves infinite-scroll.
+		const enrichedData = await attachCardIndexEnrichmentApi(result.data);
+		return json({ ...result, data: enrichedData }, {
 			headers: { 'cache-control': 'private, max-age=300, stale-while-revalidate=3600' }
 		});
 	} catch {
 		return json({ data: [], totalCount: 0, page, pageSize, count: 0 });
 	}
 };
+
+async function attachCardIndexEnrichmentApi<T extends { id: string }>(cards: T[]): Promise<T[]> {
+	if (cards.length === 0) return cards;
+	const { data } = await supabase
+		.from('card_index')
+		.select('card_id, raw_nm_price, raw_source, psa10_price, psa10_delta, psa10_multiple, psa_pop_total, cgc_pop_total, combined_pop_total')
+		.in(
+			'card_id',
+			cards.map((c) => c.id)
+		);
+	const byId = new Map<string, Record<string, unknown>>();
+	for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+		byId.set(row.card_id as string, row);
+	}
+	return cards.map((card) => {
+		const idx = byId.get(card.id);
+		if (!idx) return card;
+		return {
+			...card,
+			_enrichment: {
+				raw_nm_price: idx.raw_nm_price ?? null,
+				raw_source: idx.raw_source ?? null,
+				psa10_price: idx.psa10_price ?? null,
+				psa10_delta: idx.psa10_delta ?? null,
+				psa10_multiple: idx.psa10_multiple ?? null,
+				psa_pop_total: idx.psa_pop_total ?? null,
+				cgc_pop_total: idx.cgc_pop_total ?? null,
+				combined_pop_total: idx.combined_pop_total ?? null,
+				pcUrl: null
+			}
+		} as T;
+	});
+}
 
 // ─── Hunt Mode handler ───────────────────────────────────────────────────────
 

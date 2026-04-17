@@ -31,6 +31,23 @@
 	function fmtPrice(n: number): string {
 		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
 	}
+
+	// Resolve a single headline price for the badge. Prefer TCG API's
+	// tcgplayer.prices when populated, otherwise fall back to our own
+	// card_index enrichment (which covers new sets pokemontcg.io hasn't
+	// priced yet, like the Mega Evolution era). `tcgplayer.prices` being
+	// present-but-empty or having null markets should NOT block the
+	// fallback — the previous {#if/else if} structure did, hiding prices
+	// for any card whose variants all had null market.
+	let tcgMarket = $derived.by(() => {
+		const prices = card.tcgplayer?.prices;
+		if (!prices) return null;
+		for (const p of Object.values(prices)) {
+			if (p?.market != null && p.market > 0) return p.market;
+		}
+		return null;
+	});
+	let headlinePrice = $derived(tcgMarket ?? enrichment?.raw_nm_price ?? null);
 </script>
 
 <a href="/card/{card.id}" class="card-glow group relative overflow-hidden rounded-2xl border border-vault-border bg-vault-surface transition-all duration-300 hover:border-vault-purple/40 hover:-translate-y-1">
@@ -44,16 +61,9 @@
 	</div>
 
 	<!-- Price badge (top right) -->
-	{#if showPrice && card.tcgplayer?.prices}
-		{@const firstPrice = Object.values(card.tcgplayer.prices)[0]}
-		{#if firstPrice?.market}
-			<div class="absolute right-2 top-2 rounded-full bg-vault-bg/90 px-2.5 py-1 text-xs font-bold text-vault-green shadow-lg backdrop-blur-sm">
-				${firstPrice.market.toFixed(2)}
-			</div>
-		{/if}
-	{:else if enrichment?.raw_nm_price != null}
+	{#if showPrice && headlinePrice != null}
 		<div class="absolute right-2 top-2 rounded-full bg-vault-bg/90 px-2.5 py-1 text-xs font-bold text-vault-green shadow-lg backdrop-blur-sm">
-			{fmtPrice(enrichment.raw_nm_price)}
+			{fmtPrice(headlinePrice)}
 		</div>
 	{/if}
 
