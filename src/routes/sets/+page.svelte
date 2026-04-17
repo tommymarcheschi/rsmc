@@ -1,12 +1,45 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
+	interface MarketSet {
+		id: string;
+		name: string;
+		releaseYear: string;
+		series: string;
+		symbol: string;
+		total: number;
+		indexedCards: number;
+		raw_basis: number;
+		psa10_ceiling: number;
+		avg_gem_rate: number | null;
+		expected_roi: number;
+		positive_roi_cards: number;
+		confident_cards: number;
+		owned: number;
+	}
+
 	let { data } = $props();
 
 	let setProgress = $derived(data.setProgress as {
 		id: string; name: string; series: string; total: number;
 		owned: number; pct: number; releaseDate: string; logo: string; symbol: string;
 	}[]);
+
+	let marketSets = $derived(((data as Record<string, unknown>).marketSets ?? []) as MarketSet[]);
+
+	let marketSortKey = $state<'roi' | 'ceiling' | 'release'>('roi');
+	let marketSorted = $derived.by(() => {
+		const arr = [...marketSets];
+		if (marketSortKey === 'roi') arr.sort((a, b) => b.expected_roi - a.expected_roi);
+		else if (marketSortKey === 'ceiling') arr.sort((a, b) => b.psa10_ceiling - a.psa10_ceiling);
+		else if (marketSortKey === 'release') arr.sort((a, b) => b.releaseYear.localeCompare(a.releaseYear));
+		return arr.slice(0, 12);
+	});
+
+	function fmtMoney(n: number): string {
+		if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+		return `$${n.toFixed(2)}`;
+	}
 
 	let selectedSet = $derived(data.selectedSet as {
 		name: string; total: number; owned: number;
@@ -61,6 +94,77 @@
 			{/each}
 		</select>
 	</div>
+
+	<!-- Market ranking — per-set grading ROI + PSA 10 ceiling + completion -->
+	{#if marketSorted.length > 0}
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
+			<div class="flex flex-col gap-2 border-b border-vault-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+				<div>
+					<h2 class="font-semibold text-white">Sets by market value</h2>
+					<p class="mt-0.5 text-xs text-vault-text-muted">
+						Every tracked set ranked by expected grading ROI (PSA Value tier, weighted by gem rate). Click a set to see completion.
+					</p>
+				</div>
+				<div class="flex items-center gap-1 rounded-xl border border-vault-border bg-vault-bg p-1">
+					{#each [ { id: 'roi', label: 'ROI' }, { id: 'ceiling', label: 'PSA 10 ceiling' }, { id: 'release', label: 'Newest' } ] as tab}
+						<button
+							type="button"
+							onclick={() => (marketSortKey = tab.id as typeof marketSortKey)}
+							class="shrink-0 rounded-lg px-3 py-1 text-xs font-medium transition {marketSortKey === tab.id ? 'bg-brand-gradient text-white' : 'text-vault-text-muted hover:text-white'}"
+						>
+							{tab.label}
+						</button>
+					{/each}
+				</div>
+			</div>
+			<div class="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:gap-4 sm:p-6 lg:grid-cols-3">
+				{#each marketSorted as s}
+					<button
+						type="button"
+						onclick={() => selectSet(s.id)}
+						class="flex flex-col gap-2 rounded-xl border border-vault-border bg-vault-bg p-3 text-left transition hover:border-vault-purple/40 hover:bg-vault-surface-hover"
+					>
+						<div class="flex items-center gap-2">
+							{#if s.symbol}
+								<img src={s.symbol} alt="" class="h-6 w-6 flex-shrink-0 object-contain" />
+							{/if}
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-white">{s.name}</p>
+								<p class="truncate text-[10px] text-vault-text-muted">{s.series}{#if s.releaseYear} · {s.releaseYear}{/if}</p>
+							</div>
+						</div>
+						<div class="grid grid-cols-2 gap-1.5 text-[11px]">
+							<div>
+								<p class="text-vault-text-muted">Expected ROI</p>
+								<p class="font-bold {s.expected_roi > 0 ? 'text-vault-green' : s.expected_roi < 0 ? 'text-vault-red' : 'text-vault-text-muted'}">
+									{s.expected_roi >= 0 ? '+' : ''}{fmtMoney(s.expected_roi)}
+								</p>
+							</div>
+							<div>
+								<p class="text-vault-text-muted">PSA 10 ceiling</p>
+								<p class="font-semibold text-vault-gold">{fmtMoney(s.psa10_ceiling)}</p>
+							</div>
+							<div>
+								<p class="text-vault-text-muted">Gem rate</p>
+								<p class="text-vault-text">
+									{#if s.avg_gem_rate != null}{s.avg_gem_rate.toFixed(1)}%{:else}—{/if}
+								</p>
+							</div>
+							<div>
+								<p class="text-vault-text-muted">Profitable</p>
+								<p class="text-vault-text">{s.positive_roi_cards}/{s.confident_cards}</p>
+							</div>
+						</div>
+						{#if s.owned > 0}
+							<p class="mt-1 border-t border-vault-border pt-2 text-[10px] text-vault-purple">
+								{s.owned} owned · {Math.round((s.owned / s.total) * 100)}% complete
+							</p>
+						{/if}
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Your Set Progress -->
 	{#if setProgress.length > 0}

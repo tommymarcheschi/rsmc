@@ -1,14 +1,16 @@
 import { getSets, getCardsBySet } from '$services/tcg-api';
 import { supabase } from '$services/supabase';
+import { getSetValueTracker } from '$services/insights';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const selectedSetId = url.searchParams.get('set') ?? '';
 
-	// Load all sets and collection entries
-	const [sets, collectionRes] = await Promise.all([
+	// Load all sets, collection entries, and market-value rollup in parallel
+	const [sets, collectionRes, setValue] = await Promise.all([
 		getSets().catch(() => []),
-		supabase.from('collection').select('card_id, quantity')
+		supabase.from('collection').select('card_id, quantity'),
+		getSetValueTracker().catch(() => ({ rows: [], totalSets: 0, totalCards: 0 }))
 	]);
 
 	const collection = collectionRes.data ?? [];
@@ -115,10 +117,54 @@ export const load: PageServerLoad = async ({ url }) => {
 		}
 	}
 
+	// Build a "Market" ranking of tracked sets by expected grading ROI,
+	// merging in collection-completion info so users can see at a glance
+	// how much of each set they own.
+	const ownedCountBySet = new Map<string, number>();
+	for (const [cardId] of ownedCards) {
+		const setId = cardId.split('-')[0];
+		ownedCountBySet.set(setId, (ownedCountBySet.get(setId) ?? 0) + 1);
+	}
+	const setMetaById = new Map<string, { name: string; series: string; total: number; releaseDate: string; logo: string; symbol: string }>();
+	for (const s of sets) {
+		setMetaById.set(s.id, {
+			name: s.name,
+			series: s.series,
+			total: s.total,
+			releaseDate: s.releaseDate,
+			logo: s.images.logo,
+			symbol: s.images.symbol
+		});
+	}
+
+	const marketSets = setValue.rows.slice(0, 30).map((r) => {
+		const meta = setMetaById.get(r.set_id);
+		const owned = ownedCountBySet.get(r.set_id) ?? 0;
+		const releaseYear = (meta?.releaseDate ?? '')
+			.split(/[-/]/)[0];
+		return {
+			id: r.set_id,
+			name: r.set_name,
+			releaseYear,
+			series: meta?.series ?? '',
+			symbol: meta?.symbol ?? '',
+			total: meta?.total ?? r.indexed_cards,
+			indexedCards: r.indexed_cards,
+			raw_basis: r.raw_basis,
+			psa10_ceiling: r.psa10_ceiling,
+			avg_gem_rate: r.avg_gem_rate,
+			expected_roi: r.expected_roi,
+			positive_roi_cards: r.positive_roi_cards,
+			confident_cards: r.confident_cards,
+			owned
+		};
+	});
+
 	return {
 		sets: sets.slice(0, 50), // Limit for the set picker
 		setProgress,
 		selectedSet,
-		selectedSetId
+		selectedSetId,
+		marketSets
 	};
 };
