@@ -2,32 +2,31 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { WatchlistEntry, PokemonCard } from '$types';
 
+	interface Valuation {
+		current_nm: number | null;
+		current_source: 'pricecharting' | 'tcgplayer' | null;
+		triggered: boolean;
+		distance_pct: number | null;
+	}
+
 	let { data } = $props();
 
 	let entries = $derived(data.entries as WatchlistEntry[]);
+	let cardCache = $derived(data.cardCache as Record<string, PokemonCard>);
+	let valuationByEntry = $derived(
+		((data as Record<string, unknown>).valuationByEntry ?? {}) as Record<string, Valuation>
+	);
+	let triggeredCount = $derived(((data as Record<string, unknown>).triggeredCount ?? 0) as number);
 
-	// Card lookup cache
-	let cardCache = $state<Record<string, PokemonCard>>({});
-
-	async function lookupCard(cardId: string) {
-		if (cardCache[cardId]) return;
-		try {
-			const res = await fetch(`https://api.pokemontcg.io/v2/cards/${cardId}`);
-			if (!res.ok) return;
-			const json = await res.json();
-			cardCache[cardId] = json.data;
-		} catch {
-			// silently fail
-		}
-	}
-
-	$effect(() => {
-		for (const entry of entries) {
-			if (!cardCache[entry.card_id]) {
-				lookupCard(entry.card_id);
-			}
-		}
-	});
+	// Sort so triggered entries rise to the top. Within each group, keep
+	// the server's created_at order (newest-first).
+	let sortedEntries = $derived(
+		[...entries].sort((a, b) => {
+			const aTrig = valuationByEntry[a.id]?.triggered ? 1 : 0;
+			const bTrig = valuationByEntry[b.id]?.triggered ? 1 : 0;
+			return bTrig - aTrig;
+		})
+	);
 
 	async function removeFromWatchlist(id: string) {
 		const res = await fetch(`/api/watchlist?id=${id}`, { method: 'DELETE' });
@@ -41,6 +40,7 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ id, target_price: target })
 		});
+		await invalidateAll();
 	}
 
 	async function toggleAlert(id: string, enabled: boolean) {
@@ -51,6 +51,11 @@
 		});
 		await invalidateAll();
 	}
+
+	function fmtMoney(n: number | null | undefined): string {
+		if (n == null) return '—';
+		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
+	}
 </script>
 
 <svelte:head>
@@ -58,19 +63,27 @@
 </svelte:head>
 
 <div class="space-y-6">
-	<div>
-		<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Watchlist</h1>
-		<p class="mt-1 text-vault-text-muted">
-			{entries.length} card{entries.length !== 1 ? 's' : ''} tracked
-		</p>
+	<div class="flex items-start justify-between gap-3">
+		<div>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">Watchlist</h1>
+			<p class="mt-1 text-vault-text-muted">
+				{entries.length} card{entries.length !== 1 ? 's' : ''} tracked · triggered alerts rise to the top
+			</p>
+		</div>
+		{#if triggeredCount > 0}
+			<span class="rounded-xl border border-vault-green/40 bg-vault-green/10 px-3 py-2 text-sm font-medium text-vault-green">
+				🔔 {triggeredCount} triggered
+			</span>
+		{/if}
 	</div>
 
-	{#if entries.length > 0}
+	{#if sortedEntries.length > 0}
 		<div class="rounded-2xl border border-vault-border bg-vault-surface">
 			<div class="divide-y divide-vault-border">
-				{#each entries as entry (entry.id)}
+				{#each sortedEntries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
-					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
+					{@const val = valuationByEntry[entry.id]}
+					<div class="flex flex-wrap items-center gap-3 px-3 py-3 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-4 {val?.triggered ? 'bg-vault-green/5' : ''}">
 						{#if card}
 							<a href="/card/{card.id}" class="flex-shrink-0">
 								<img src={card.images.small} alt={card.name} class="h-20 w-14 rounded-lg object-cover" />
@@ -82,28 +95,52 @@
 						{/if}
 
 						<div class="min-w-0 flex-1">
-							{#if card}
-								<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-purple">{card.name}</a>
-								<p class="text-xs text-vault-text-muted">{card.set.name} · #{card.number}</p>
-								{#if card.tcgplayer?.prices}
-									{@const firstPrice = Object.values(card.tcgplayer.prices)[0]}
-									{#if firstPrice?.market}
-										<p class="mt-1 text-sm font-semibold text-vault-green">
-											Market: ${firstPrice.market.toFixed(2)}
-										</p>
-									{/if}
+							<div class="flex items-center gap-2">
+								{#if card}
+									<a href="/card/{card.id}" class="font-medium text-white hover:text-vault-purple">{card.name}</a>
+								{:else}
+									<p class="font-medium text-white">{entry.card_id}</p>
 								{/if}
-							{:else}
-								<p class="font-medium text-white">{entry.card_id}</p>
+								{#if val?.triggered}
+									<span class="rounded-full bg-vault-green/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vault-green">Triggered</span>
+								{/if}
+							</div>
+							{#if card}
+								<p class="text-xs text-vault-text-muted">{card.set.name} · #{card.number}</p>
 							{/if}
+							<div class="mt-1 flex flex-wrap items-baseline gap-3 text-sm">
+								{#if val?.current_nm != null}
+									<span class="font-semibold {val.triggered ? 'text-vault-green' : 'text-white'}">
+										{fmtMoney(val.current_nm)}
+									</span>
+									<span class="text-[11px] text-vault-text-muted">
+										{val.current_source === 'pricecharting' ? 'PriceCharting NM' : 'TCGPlayer market'}
+									</span>
+								{:else}
+									<span class="text-[11px] text-vault-text-muted">No current price yet</span>
+								{/if}
+								{#if entry.target_price != null && val?.distance_pct != null}
+									<span class="text-[11px] {val.triggered ? 'text-vault-green' : 'text-vault-text-muted'}">
+										{val.distance_pct >= 0 ? '+' : ''}{val.distance_pct.toFixed(1)}% vs target
+									</span>
+								{/if}
+							</div>
 						</div>
 
 						<div class="flex flex-shrink-0 items-center gap-2 sm:gap-3">
-							{#if entry.target_price}
-								<span class="rounded-lg bg-vault-bg px-3 py-1 text-sm text-vault-gold">
-									Target: ${entry.target_price}
-								</span>
-							{/if}
+							<div class="flex items-center gap-1">
+								<label for="target-{entry.id}" class="text-[10px] uppercase text-vault-text-muted">Target</label>
+								<input
+									id="target-{entry.id}"
+									type="number"
+									step="0.01"
+									min="0"
+									value={entry.target_price ?? ''}
+									placeholder="—"
+									onchange={(e) => updateTargetPrice(entry.id, (e.currentTarget as HTMLInputElement).value)}
+									class="w-20 rounded-lg border border-vault-border bg-vault-bg px-2 py-1 text-sm text-vault-gold focus:border-vault-purple focus:outline-none"
+								/>
+							</div>
 
 							<button
 								onclick={() => toggleAlert(entry.id, entry.alert_enabled)}
