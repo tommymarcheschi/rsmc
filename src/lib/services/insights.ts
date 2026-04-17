@@ -260,6 +260,126 @@ export async function getPopDensityHeatmap(): Promise<HeatmapResult> {
 	};
 }
 
+export interface Psa10MoverRow {
+	card_id: string;
+	name: string;
+	set_name: string;
+	card_number: string | null;
+	rarity: string | null;
+	image_small_url: string | null;
+	raw_nm_price: number | null;
+	/** Median PSA 10 sale price in the recent 30-day window. */
+	recent_median: number;
+	recent_sample: number;
+	/** Median PSA 10 sale price in the prior 30–60 day window. */
+	prior_median: number;
+	prior_sample: number;
+	delta_pct: number;
+	delta_dollars: number;
+}
+
+export interface Psa10MomentumResult {
+	rising: Psa10MoverRow[];
+	cooling: Psa10MoverRow[];
+	cardsAnalyzed: number;
+}
+
+const MOMENTUM_MIN_SAMPLE = 3;
+
+/**
+ * PSA 10 momentum ranker. Uses the psa10_sales table (populated by
+ * Tier 5.21) — no 7-day wait for card_index_history snapshots. For
+ * each card with enough sales in both the recent (last 30d) and prior
+ * (30–60d) windows, compares median prices. Cards appear on rising
+ * or cooling leaderboards based on the signed delta.
+ *
+ * "rising" = recent median > prior median (hot).
+ * "cooling" = recent median < prior median (cooling).
+ */
+export async function getPsa10Momentum(limit = 15): Promise<Psa10MomentumResult> {
+	// 60-day window — we need both halves. Single SQL read, joined to
+	// card_index for display metadata.
+	const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+	type Row = {
+		card_id: string;
+		sold_at: string;
+		price_cents: number;
+		card_index: {
+			name: string;
+			set_name: string;
+			card_number: string | null;
+			rarity: string | null;
+			image_small_url: string | null;
+			raw_nm_price: number | null;
+		} | null;
+	};
+
+	const rows: Row[] = [];
+	let from = 0;
+	const pageSize = 1000;
+	while (true) {
+		const { data, error } = await supabase
+			.from('psa10_sales')
+			.select(
+				'card_id, sold_at, price_cents, card_index(name, set_name, card_number, rarity, image_small_url, raw_nm_price)'
+			)
+			.gte('sold_at', since)
+			.order('card_id', { ascending: true })
+			.range(from, from + pageSize - 1);
+		if (error) break;
+		const batch = (data ?? []) as unknown as Row[];
+		rows.push(...batch);
+		if (batch.length < pageSize) break;
+		from += pageSize;
+	}
+
+	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+	type Bucket = { recent: number[]; prior: number[]; meta: Row['card_index'] };
+	const byCard = new Map<string, Bucket>();
+	for (const r of rows) {
+		if (!byCard.has(r.card_id)) {
+			byCard.set(r.card_id, { recent: [], prior: [], meta: r.card_index });
+		}
+		const b = byCard.get(r.card_id)!;
+		if (r.sold_at >= thirtyDaysAgo) b.recent.push(r.price_cents);
+		else b.prior.push(r.price_cents);
+	}
+
+	const analyzed: Psa10MoverRow[] = [];
+	for (const [cardId, b] of byCard) {
+		if (b.recent.length < MOMENTUM_MIN_SAMPLE || b.prior.length < MOMENTUM_MIN_SAMPLE) continue;
+		if (!b.meta) continue;
+		const recentSorted = [...b.recent].sort((a, b) => a - b);
+		const priorSorted = [...b.prior].sort((a, b) => a - b);
+		const recentMedian = median(recentSorted) / 100;
+		const priorMedian = median(priorSorted) / 100;
+		if (priorMedian <= 0) continue;
+		const deltaDollars = recentMedian - priorMedian;
+		analyzed.push({
+			card_id: cardId,
+			name: b.meta.name,
+			set_name: b.meta.set_name,
+			card_number: b.meta.card_number,
+			rarity: b.meta.rarity,
+			image_small_url: b.meta.image_small_url,
+			raw_nm_price: b.meta.raw_nm_price,
+			recent_median: Math.round(recentMedian * 100) / 100,
+			recent_sample: b.recent.length,
+			prior_median: Math.round(priorMedian * 100) / 100,
+			prior_sample: b.prior.length,
+			delta_pct: Math.round(((deltaDollars / priorMedian) * 100) * 10) / 10,
+			delta_dollars: Math.round(deltaDollars * 100) / 100
+		});
+	}
+
+	const rising = [...analyzed].sort((a, b) => b.delta_pct - a.delta_pct).slice(0, limit);
+	const cooling = [...analyzed].sort((a, b) => a.delta_pct - b.delta_pct).slice(0, limit);
+
+	return { rising, cooling, cardsAnalyzed: analyzed.length };
+}
+
 export interface SimilarCard {
 	card_id: string;
 	name: string;

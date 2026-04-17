@@ -1,18 +1,18 @@
-import { getTrendingCards, getBiggestMovers } from '$services/poketrace';
+import { getTrendingCards } from '$services/poketrace';
 import { supabase } from '$services/supabase';
 import {
 	getUndervaluedCards,
 	getSupplySqueezeCards,
 	getPopDensityHeatmap,
-	getSetValueTracker
+	getSetValueTracker,
+	getPsa10Momentum
 } from '$services/insights';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
 	const [
 		trending,
-		moversUp,
-		moversDown,
+		momentum,
 		collectionRes,
 		undervalued,
 		supplySqueeze,
@@ -20,8 +20,7 @@ export const load: PageServerLoad = async () => {
 		setValue
 	] = await Promise.all([
 		getTrendingCards('7d', 10),
-		getBiggestMovers('up', 10),
-		getBiggestMovers('down', 10),
+		getPsa10Momentum(15).catch(() => ({ rising: [], cooling: [], cardsAnalyzed: 0 })),
 		supabase.from('collection').select('card_id, quantity, purchase_price'),
 		getUndervaluedCards(15),
 		getSupplySqueezeCards(20),
@@ -38,8 +37,7 @@ export const load: PageServerLoad = async () => {
 
 	return {
 		trending,
-		moversUp,
-		moversDown,
+		momentum,
 		undervalued,
 		supplySqueeze,
 		heatmap,

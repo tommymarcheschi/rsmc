@@ -6,6 +6,7 @@
 		HeatmapResult,
 		HeatmapCell,
 		SetValueResult,
+		Psa10MomentumResult,
 		Era
 	} from '$services/insights';
 	import { ERA_LABELS } from '$services/insights';
@@ -13,8 +14,7 @@
 	let { data } = $props();
 
 	let trending = $derived(data.trending as TrendingCard[]);
-	let moversUp = $derived(data.moversUp as TrendingCard[]);
-	let moversDown = $derived(data.moversDown as TrendingCard[]);
+	let momentum = $derived(data.momentum as Psa10MomentumResult);
 	let undervalued = $derived(data.undervalued as UndervaluedResult);
 	let supplySqueeze = $derived(data.supplySqueeze as SupplySqueezeRow[]);
 	let heatmap = $derived(data.heatmap as HeatmapResult);
@@ -439,61 +439,82 @@
 		</div>
 	{/if}
 
-	<!-- Biggest Movers Tab -->
+	<!-- PSA 10 Movers Tab — backed by psa10_sales, not PokeTrace -->
 	{#if insightTab === 'movers'}
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Biggest Gainers -->
-			<div class="rounded-2xl border border-vault-border bg-vault-surface">
-				<div class="border-b border-vault-border px-6 py-4">
-					<h3 class="font-semibold text-vault-green">Biggest Gainers</h3>
-				</div>
-				{#if moversUp.length > 0}
-					<div class="divide-y divide-vault-border">
-						{#each moversUp as card}
-							<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6">
-								<div class="min-w-0 flex-1">
-									<p class="text-sm font-medium text-white">{card.card_name}</p>
-									<p class="text-xs text-vault-text-muted">{card.set_name}</p>
-								</div>
-								<div class="text-right">
-									<p class="text-sm font-bold text-white">${card.current_price.toFixed(2)}</p>
-									<p class="text-xs text-vault-green">+{card.change_pct.toFixed(1)}%</p>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
-						Data accumulating — lights up after ~7 days of snapshots.
-					</div>
-				{/if}
+		<div class="space-y-6">
+			<div class="rounded-2xl border border-vault-border bg-vault-surface px-4 py-3 text-sm text-vault-text-muted">
+				<p class="text-white">PSA 10 median: last 30 days vs prior 30–60 days</p>
+				<p class="mt-1">
+					Real sold-comp momentum, not PokeTrace guesses. For every card with at least 3 PSA 10 sales in each window, we compare the median prices and rank by percentage change. Based on <b>{momentum.cardsAnalyzed.toLocaleString()}</b> cards with enough sale volume to compare. Fills in more as cards get enriched.
+				</p>
 			</div>
 
-			<!-- Biggest Losers -->
-			<div class="rounded-2xl border border-vault-border bg-vault-surface">
-				<div class="border-b border-vault-border px-6 py-4">
-					<h3 class="font-semibold text-vault-red">Biggest Losers</h3>
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				<div class="rounded-2xl border border-vault-border bg-vault-surface">
+					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+						<h3 class="font-semibold text-vault-green">Rising stars</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">PSA 10 median up vs the prior month.</p>
+					</div>
+					{#if momentum.rising.length > 0}
+						<div class="divide-y divide-vault-border">
+							{#each momentum.rising as row}
+								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
+									{#if row.image_small_url}
+										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+									{/if}
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium text-white">{row.name}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name}{#if row.rarity} · {row.rarity}{/if}</p>
+										<p class="mt-0.5 truncate text-[11px] text-vault-text-muted">
+											{fmtMoney(row.prior_median)} → {fmtMoney(row.recent_median)} · n={row.prior_sample}→{row.recent_sample}
+										</p>
+									</div>
+									<div class="shrink-0 text-right">
+										<p class="text-sm font-bold text-vault-green">+{row.delta_pct.toFixed(0)}%</p>
+										<p class="text-[10px] text-vault-text-muted">+{fmtMoney(row.delta_dollars)}</p>
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+							No cards with enough PSA 10 sales yet — backfills as enrichment runs.
+						</div>
+					{/if}
 				</div>
-				{#if moversDown.length > 0}
-					<div class="divide-y divide-vault-border">
-						{#each moversDown as card}
-							<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6">
-								<div class="min-w-0 flex-1">
-									<p class="text-sm font-medium text-white">{card.card_name}</p>
-									<p class="text-xs text-vault-text-muted">{card.set_name}</p>
-								</div>
-								<div class="text-right">
-									<p class="text-sm font-bold text-white">${card.current_price.toFixed(2)}</p>
-									<p class="text-xs text-vault-red">{card.change_pct.toFixed(1)}%</p>
-								</div>
-							</div>
-						{/each}
+
+				<div class="rounded-2xl border border-vault-border bg-vault-surface">
+					<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+						<h3 class="font-semibold text-vault-red">Cooling off</h3>
+						<p class="mt-0.5 text-xs text-vault-text-muted">PSA 10 median down vs the prior month.</p>
 					</div>
-				{:else}
-					<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
-						Data accumulating — lights up after ~7 days of snapshots.
-					</div>
-				{/if}
+					{#if momentum.cooling.length > 0}
+						<div class="divide-y divide-vault-border">
+							{#each momentum.cooling as row}
+								<a href="/card/{row.card_id}" class="flex items-center gap-3 px-3 py-3 transition hover:bg-vault-bg/30 sm:gap-4 sm:px-6 sm:py-4">
+									{#if row.image_small_url}
+										<img src={row.image_small_url} alt={row.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+									{/if}
+									<div class="min-w-0 flex-1">
+										<p class="truncate text-sm font-medium text-white">{row.name}</p>
+										<p class="truncate text-xs text-vault-text-muted">{row.set_name}{#if row.rarity} · {row.rarity}{/if}</p>
+										<p class="mt-0.5 truncate text-[11px] text-vault-text-muted">
+											{fmtMoney(row.prior_median)} → {fmtMoney(row.recent_median)} · n={row.prior_sample}→{row.recent_sample}
+										</p>
+									</div>
+									<div class="shrink-0 text-right">
+										<p class="text-sm font-bold text-vault-red">{row.delta_pct.toFixed(0)}%</p>
+										<p class="text-[10px] text-vault-text-muted">{fmtMoney(row.delta_dollars)}</p>
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<div class="px-6 py-8 text-center text-sm text-vault-text-muted">
+							No cards with enough PSA 10 sales yet — backfills as enrichment runs.
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	{/if}
