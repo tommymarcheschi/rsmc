@@ -852,6 +852,14 @@
 				{@const medianCents = sortedPrices.length % 2 === 0
 					? (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2
 					: sortedPrices[(sortedPrices.length - 1) / 2]}
+				{@const chartHistory = {
+					card_id: card.id,
+					period: 'psa10',
+					data_points: [...psa10Sales].reverse().map((s) => ({
+						date: s.sold_at,
+						price: s.price_cents / 100
+					}))
+				}}
 				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 					<div class="flex items-center justify-between gap-3">
 						<div>
@@ -865,6 +873,11 @@
 							<p class="text-base font-bold text-vault-gold">{fmtMoney(medianCents / 100)}</p>
 						</div>
 					</div>
+					{#if psa10Sales.length >= 2}
+						<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-2">
+							<PriceChart priceHistory={chartHistory} height={200} />
+						</div>
+					{/if}
 					<div class="mt-3 divide-y divide-vault-border rounded-xl border border-vault-border">
 						{#each psa10Sales.slice(0, 10) as sale}
 							<div class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
