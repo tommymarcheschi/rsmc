@@ -5,6 +5,7 @@
 		SupplySqueezeRow,
 		HeatmapResult,
 		HeatmapCell,
+		SetValueResult,
 		Era
 	} from '$services/insights';
 	import { ERA_LABELS } from '$services/insights';
@@ -17,11 +18,12 @@
 	let undervalued = $derived(data.undervalued as UndervaluedResult);
 	let supplySqueeze = $derived(data.supplySqueeze as SupplySqueezeRow[]);
 	let heatmap = $derived(data.heatmap as HeatmapResult);
+	let setValue = $derived(data.setValue as SetValueResult);
 	let portfolio = $derived(data.portfolio);
 
-	let insightTab = $state<'undervalued' | 'supply' | 'heatmap' | 'trending' | 'movers'>(
-		'undervalued'
-	);
+	let insightTab = $state<
+		'undervalued' | 'supply' | 'heatmap' | 'sets' | 'trending' | 'movers'
+	>('undervalued');
 
 	function fmtMoney(n: number | null | undefined): string {
 		if (n == null) return '—';
@@ -90,6 +92,12 @@
 			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'heatmap' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Heatmap
+		</button>
+		<button
+			onclick={() => (insightTab = 'sets')}
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {insightTab === 'sets' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+		>
+			Sets
 		</button>
 		<button
 			onclick={() => (insightTab = 'trending')}
@@ -256,6 +264,79 @@
 					<div class="text-center">
 						<p class="text-lg">Not enough PSA pop data yet</p>
 						<p class="mt-1 text-sm">The heatmap fills in as more sets finish enriching.</p>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	<!-- Set Value Tracker Tab -->
+	{#if insightTab === 'sets'}
+		<div class="rounded-2xl border border-vault-border bg-vault-surface">
+			<div class="border-b border-vault-border px-4 py-3 sm:px-6 sm:py-4">
+				<p class="text-sm text-white">Which sets are best to grade out of?</p>
+				<p class="mt-1 text-xs text-vault-text-muted">
+					Aggregates per set: what it'd cost to buy one of each card raw, what the all-PSA-10 ceiling is worth, and the expected realistic net profit if you bought and graded every card (PSA Value tier, with tier escalation on high-value cards, weighted by each card's gem rate). Only cards with enough PSA pop data to trust the gem rate contribute to the ROI sum. Ranked by expected ROI. Based on <b>{setValue.totalCards.toLocaleString()}</b> indexed cards across <b>{setValue.totalSets}</b> sets.
+				</p>
+			</div>
+			{#if setValue.rows.length > 0}
+				<div class="overflow-x-auto">
+					<table class="min-w-full text-sm">
+						<thead class="border-b border-vault-border bg-vault-bg/30">
+							<tr class="text-left text-[11px] font-medium uppercase tracking-wide text-vault-text-muted">
+								<th class="px-4 py-2">Set</th>
+								<th class="px-2 py-2 text-right">Indexed</th>
+								<th class="px-2 py-2 text-right">Raw basis</th>
+								<th class="px-2 py-2 text-right">PSA 10 ceiling</th>
+								<th class="px-2 py-2 text-right">Avg gem rate</th>
+								<th class="px-2 py-2 text-right">Expected ROI</th>
+							</tr>
+						</thead>
+						<tbody class="divide-y divide-vault-border">
+							{#each setValue.rows.slice(0, 40) as row}
+								<tr class="hover:bg-vault-bg/20">
+									<td class="px-4 py-2">
+										<a href="/sets?set={row.set_id}" class="text-white hover:text-vault-accent">
+											{row.set_name}
+										</a>
+										{#if row.set_release_date}
+											<span class="ml-2 text-[10px] text-vault-text-muted">{row.set_release_date.slice(0, 4)}</span>
+										{/if}
+									</td>
+									<td class="px-2 py-2 text-right text-vault-text-muted">{row.indexed_cards}</td>
+									<td class="px-2 py-2 text-right text-vault-text-muted">{fmtMoney(row.raw_basis)}</td>
+									<td class="px-2 py-2 text-right font-medium text-vault-gold">{fmtMoney(row.psa10_ceiling)}</td>
+									<td class="px-2 py-2 text-right text-vault-text-muted">
+										{#if row.avg_gem_rate != null}
+											{row.avg_gem_rate.toFixed(1)}%
+											<span class="ml-1 text-[10px] opacity-70">(n={row.confident_cards})</span>
+										{:else}
+											<span class="text-[11px]">—</span>
+										{/if}
+									</td>
+									<td class="px-2 py-2 text-right">
+										<span class="font-bold {row.expected_roi > 0 ? 'text-vault-green' : row.expected_roi < 0 ? 'text-vault-red' : 'text-vault-text-muted'}">
+											{row.expected_roi >= 0 ? '+' : ''}{fmtMoney(row.expected_roi)}
+										</span>
+										{#if row.confident_cards > 0}
+											<p class="text-[10px] text-vault-text-muted">{row.positive_roi_cards}/{row.confident_cards} profitable</p>
+										{/if}
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				{#if setValue.rows.length > 40}
+					<div class="border-t border-vault-border px-4 py-3 text-[11px] text-vault-text-muted sm:px-6">
+						Showing top 40 of {setValue.rows.length} sets by expected ROI.
+					</div>
+				{/if}
+			{:else}
+				<div class="flex items-center justify-center py-16 text-vault-text-muted">
+					<div class="text-center">
+						<p class="text-lg">No set-level data yet</p>
+						<p class="mt-1 text-sm">Needs indexed PSA 10 prices — fills in as sets finish enriching.</p>
 					</div>
 				</div>
 			{/if}

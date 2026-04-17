@@ -12,6 +12,8 @@
  */
 
 import { supabase } from './supabase';
+import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from './grading-roi';
+import { getGradingFees } from './price-tracker';
 
 export type Era = 'vintage' | 'ex' | 'modern' | 'current' | 'unknown';
 
@@ -254,6 +256,153 @@ export async function getPopDensityHeatmap(): Promise<HeatmapResult> {
 		eras: presentEras,
 		rarities,
 		cells,
+		totalCards: rows.length
+	};
+}
+
+export interface SetValueRow {
+	set_id: string;
+	set_name: string;
+	set_release_date: string | null;
+	indexed_cards: number;
+	/** Sum of raw_nm_price across indexed cards (what it'd cost to acquire one of each raw). */
+	raw_basis: number;
+	/** Sum of psa10_price across indexed cards (hypothetical value if every one were PSA 10). */
+	psa10_ceiling: number;
+	/** Card count weighted by gem-rate confidence (pop ≥ GEM_RATE_MIN_SAMPLE). */
+	confident_cards: number;
+	/** Pop-weighted average PSA gem rate, in percent. null when no confident cards. */
+	avg_gem_rate: number | null;
+	/** Expected realistic net profit if you bought + graded one of each card in the set
+	 *  (sum of per-card realistic grading ROI via PSA Value tier, tier-escalated). */
+	expected_roi: number;
+	/** How many cards have positive realistic ROI under the same assumptions. */
+	positive_roi_cards: number;
+}
+
+export interface SetValueResult {
+	rows: SetValueRow[];
+	totalSets: number;
+	totalCards: number;
+}
+
+/**
+ * Set-level market rollup: pick the best sets to grade out of. Computes
+ * aggregate expected grading ROI per set using real PSA Value-tier fees
+ * (with tier escalation) and the per-card gem rate. Only cards that have
+ * the full signal — raw, PSA 10, gem rate, and enough pop to trust it —
+ * contribute to the ROI sum. Raw_basis / psa10_ceiling include all
+ * indexed cards so users still see the total spend + headline value.
+ */
+export async function getSetValueTracker(): Promise<SetValueResult> {
+	const fees = await getGradingFees().catch(() => []);
+
+	const rows: Array<{
+		card_id: string;
+		set_id: string;
+		set_name: string;
+		set_release_date: string | null;
+		raw_nm_price: number | null;
+		psa10_price: number | null;
+		psa_gem_rate: number | null;
+		psa_pop_total: number | null;
+	}> = [];
+	let from = 0;
+	const pageSize = 1000;
+	while (true) {
+		const { data, error } = await supabase
+			.from('card_index')
+			.select(
+				'card_id, set_id, set_name, set_release_date, raw_nm_price, psa10_price, psa_gem_rate, psa_pop_total'
+			)
+			.not('psa10_price', 'is', null)
+			.order('card_id', { ascending: true })
+			.range(from, from + pageSize - 1);
+		if (error) break;
+		const batch = data ?? [];
+		rows.push(...batch);
+		if (batch.length < pageSize) break;
+		from += pageSize;
+	}
+
+	type Agg = {
+		set_id: string;
+		set_name: string;
+		set_release_date: string | null;
+		indexed_cards: number;
+		raw_basis: number;
+		psa10_ceiling: number;
+		confident_cards: number;
+		weighted_gem_numerator: number;
+		expected_roi: number;
+		positive_roi_cards: number;
+	};
+	const bySet = new Map<string, Agg>();
+
+	for (const r of rows) {
+		if (!bySet.has(r.set_id)) {
+			bySet.set(r.set_id, {
+				set_id: r.set_id,
+				set_name: r.set_name,
+				set_release_date: r.set_release_date,
+				indexed_cards: 0,
+				raw_basis: 0,
+				psa10_ceiling: 0,
+				confident_cards: 0,
+				weighted_gem_numerator: 0,
+				expected_roi: 0,
+				positive_roi_cards: 0
+			});
+		}
+		const agg = bySet.get(r.set_id)!;
+		agg.indexed_cards += 1;
+		agg.raw_basis += r.raw_nm_price ?? 0;
+		agg.psa10_ceiling += r.psa10_price ?? 0;
+
+		const roi = computeGradingROI(
+			{
+				raw_nm_price: r.raw_nm_price,
+				psa10_price: r.psa10_price,
+				psa_gem_rate: r.psa_gem_rate,
+				psa_pop_total: r.psa_pop_total
+			},
+			'PSA',
+			DEFAULT_TIER_BY_SERVICE.PSA,
+			fees
+		);
+
+		if (roi.confident && roi.realisticProfit != null) {
+			agg.confident_cards += 1;
+			agg.weighted_gem_numerator += r.psa_gem_rate ?? 0;
+			agg.expected_roi += roi.realisticProfit;
+			if (roi.realisticProfit > 0) agg.positive_roi_cards += 1;
+		}
+	}
+
+	const result: SetValueRow[] = [];
+	for (const agg of bySet.values()) {
+		result.push({
+			set_id: agg.set_id,
+			set_name: agg.set_name,
+			set_release_date: agg.set_release_date,
+			indexed_cards: agg.indexed_cards,
+			raw_basis: Math.round(agg.raw_basis * 100) / 100,
+			psa10_ceiling: Math.round(agg.psa10_ceiling * 100) / 100,
+			confident_cards: agg.confident_cards,
+			avg_gem_rate:
+				agg.confident_cards > 0
+					? Math.round((agg.weighted_gem_numerator / agg.confident_cards) * 10) / 10
+					: null,
+			expected_roi: Math.round(agg.expected_roi * 100) / 100,
+			positive_roi_cards: agg.positive_roi_cards
+		});
+	}
+
+	result.sort((a, b) => b.expected_roi - a.expected_roi);
+
+	return {
+		rows: result,
+		totalSets: result.length,
 		totalCards: rows.length
 	};
 }
