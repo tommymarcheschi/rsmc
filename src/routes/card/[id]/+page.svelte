@@ -764,88 +764,6 @@
 				</div>
 			{/if}
 
-			<!-- Attacks -->
-			{#if card.attacks?.length}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
-					<h2 class="text-lg font-semibold text-white">Attacks</h2>
-					<div class="mt-4 space-y-4">
-						{#each card.attacks as attack}
-							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<div class="flex gap-0.5">
-											{#each attack.cost as costType}
-												<span class="inline-block h-5 w-5 rounded-full text-center text-[10px] font-bold leading-5 text-white {typeColor(costType)}">{costType[0]}</span>
-											{/each}
-										</div>
-										<span class="font-semibold text-white">{attack.name}</span>
-									</div>
-									{#if attack.damage}
-										<span class="text-xl font-bold text-vault-gold">{attack.damage}</span>
-									{/if}
-								</div>
-								{#if attack.text}
-									<p class="mt-2 text-sm text-vault-text-muted">{attack.text}</p>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
-
-			<!-- Weaknesses / Resistances / Retreat -->
-			{#if card.weaknesses?.length || card.resistances?.length || card.retreatCost?.length}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
-					<div class="grid grid-cols-3 gap-2 text-center sm:gap-4">
-						<div>
-							<h3 class="text-sm font-medium text-vault-text-muted">Weakness</h3>
-							{#if card.weaknesses?.length}
-								{#each card.weaknesses as w}
-									<p class="mt-1"><span class="rounded-full px-2 py-0.5 text-xs font-bold text-white {typeColor(w.type)}">{w.type}</span> <span class="text-vault-red">{w.value}</span></p>
-								{/each}
-							{:else}<p class="mt-1 text-vault-text-muted">None</p>{/if}
-						</div>
-						<div>
-							<h3 class="text-sm font-medium text-vault-text-muted">Resistance</h3>
-							{#if card.resistances?.length}
-								{#each card.resistances as r}
-									<p class="mt-1"><span class="rounded-full px-2 py-0.5 text-xs font-bold text-white {typeColor(r.type)}">{r.type}</span> <span class="text-vault-green">{r.value}</span></p>
-								{/each}
-							{:else}<p class="mt-1 text-vault-text-muted">None</p>{/if}
-						</div>
-						<div>
-							<h3 class="text-sm font-medium text-vault-text-muted">Retreat Cost</h3>
-							{#if card.retreatCost?.length}
-								<div class="mt-1 flex justify-center gap-0.5">
-									{#each card.retreatCost as costType}
-										<span class="inline-block h-5 w-5 rounded-full text-center text-[10px] font-bold leading-5 text-white {typeColor(costType)}">{costType[0]}</span>
-									{/each}
-								</div>
-							{:else}<p class="mt-1 text-vault-text-muted">0</p>{/if}
-						</div>
-					</div>
-				</div>
-			{/if}
-
-			<!-- PokéAPI Enrichment -->
-			{#if pokedexData}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
-					<h2 class="text-lg font-semibold text-white">Pokédex Data</h2>
-					<div class="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-						<div><span class="text-vault-text-muted">National Dex #</span><p class="font-medium text-white">#{pokedexData.id}</p></div>
-						<div><span class="text-vault-text-muted">Species</span><p class="font-medium text-white">{pokedexData.genus}</p></div>
-						<div><span class="text-vault-text-muted">Types</span><div class="mt-0.5 flex gap-1">{#each pokedexData.types as type}<span class="capitalize text-white">{type}</span>{/each}</div></div>
-						<div><span class="text-vault-text-muted">Height</span><p class="font-medium text-white">{(pokedexData.height / 10).toFixed(1)}m</p></div>
-						<div><span class="text-vault-text-muted">Weight</span><p class="font-medium text-white">{(pokedexData.weight / 10).toFixed(1)}kg</p></div>
-					</div>
-					{#if pokedexData.flavor_text}
-						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-4">
-							<p class="text-sm italic text-vault-text-muted">"{pokedexData.flavor_text}"</p>
-						</div>
-					{/if}
-				</div>
-			{/if}
-
 			<!-- Recent PSA 10 sales -->
 			{#if psa10Sales.length > 0}
 				{@const sortedPrices = psa10Sales.map((s) => s.price_cents).sort((a, b) => a - b)}
@@ -935,22 +853,120 @@
 				</div>
 			{/if}
 
-			<!-- Evolution Chain -->
-			{#if evolutions.length > 1}
-				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
-					<h2 class="text-lg font-semibold text-white">Evolution Chain</h2>
-					<div class="mt-4 flex flex-wrap items-center gap-3">
-						{#each evolutions as evo, i}
-							{#if i > 0}
-								<svg class="h-5 w-5 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-							{/if}
-							<div class="flex items-center gap-2 rounded-lg border border-vault-border bg-vault-bg px-3 py-2">
-								<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{evo.id}.png" alt={evo.name} class="h-10 w-10" />
-								<span class="text-sm font-medium capitalize text-white">{evo.name}</span>
+			<!-- Card details accordion — pokemon/TCG metadata lives here so
+			     market data stays the focus at first glance. Collapsed by
+			     default; users who want flavor text / attacks / evolution
+			     can click to expand. -->
+			{#if card.attacks?.length || card.weaknesses?.length || card.resistances?.length || card.retreatCost?.length || pokedexData || evolutions.length > 1}
+				<details class="rounded-2xl border border-vault-border bg-vault-surface">
+					<summary class="cursor-pointer select-none px-4 py-4 text-sm font-medium text-vault-text-muted transition hover:text-white sm:px-6">
+						<span class="inline-flex items-center gap-2">
+							<svg class="h-4 w-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+							Card details — attacks, stats, Pokédex, evolution
+						</span>
+					</summary>
+					<div class="space-y-4 border-t border-vault-border px-4 py-4 sm:space-y-6 sm:px-6 sm:py-6">
+						<!-- Attacks -->
+						{#if card.attacks?.length}
+							<div>
+								<h3 class="text-lg font-semibold text-white">Attacks</h3>
+								<div class="mt-3 space-y-3">
+									{#each card.attacks as attack}
+										<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
+											<div class="flex items-center justify-between">
+												<div class="flex items-center gap-3">
+													<div class="flex gap-0.5">
+														{#each attack.cost as costType}
+															<span class="inline-block h-5 w-5 rounded-full text-center text-[10px] font-bold leading-5 text-white {typeColor(costType)}">{costType[0]}</span>
+														{/each}
+													</div>
+													<span class="font-semibold text-white">{attack.name}</span>
+												</div>
+												{#if attack.damage}
+													<span class="text-xl font-bold text-vault-gold">{attack.damage}</span>
+												{/if}
+											</div>
+											{#if attack.text}
+												<p class="mt-2 text-sm text-vault-text-muted">{attack.text}</p>
+											{/if}
+										</div>
+									{/each}
+								</div>
 							</div>
-						{/each}
+						{/if}
+
+						<!-- Weaknesses / Resistances / Retreat -->
+						{#if card.weaknesses?.length || card.resistances?.length || card.retreatCost?.length}
+							<div class="rounded-xl border border-vault-border bg-vault-bg p-4">
+								<div class="grid grid-cols-3 gap-2 text-center sm:gap-4">
+									<div>
+										<h4 class="text-sm font-medium text-vault-text-muted">Weakness</h4>
+										{#if card.weaknesses?.length}
+											{#each card.weaknesses as w}
+												<p class="mt-1"><span class="rounded-full px-2 py-0.5 text-xs font-bold text-white {typeColor(w.type)}">{w.type}</span> <span class="text-vault-red">{w.value}</span></p>
+											{/each}
+										{:else}<p class="mt-1 text-vault-text-muted">None</p>{/if}
+									</div>
+									<div>
+										<h4 class="text-sm font-medium text-vault-text-muted">Resistance</h4>
+										{#if card.resistances?.length}
+											{#each card.resistances as r}
+												<p class="mt-1"><span class="rounded-full px-2 py-0.5 text-xs font-bold text-white {typeColor(r.type)}">{r.type}</span> <span class="text-vault-green">{r.value}</span></p>
+											{/each}
+										{:else}<p class="mt-1 text-vault-text-muted">None</p>{/if}
+									</div>
+									<div>
+										<h4 class="text-sm font-medium text-vault-text-muted">Retreat Cost</h4>
+										{#if card.retreatCost?.length}
+											<div class="mt-1 flex justify-center gap-0.5">
+												{#each card.retreatCost as costType}
+													<span class="inline-block h-5 w-5 rounded-full text-center text-[10px] font-bold leading-5 text-white {typeColor(costType)}">{costType[0]}</span>
+												{/each}
+											</div>
+										{:else}<p class="mt-1 text-vault-text-muted">0</p>{/if}
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						<!-- Pokédex Data -->
+						{#if pokedexData}
+							<div>
+								<h3 class="text-lg font-semibold text-white">Pokédex Data</h3>
+								<div class="mt-3 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+									<div><span class="text-vault-text-muted">National Dex #</span><p class="font-medium text-white">#{pokedexData.id}</p></div>
+									<div><span class="text-vault-text-muted">Species</span><p class="font-medium text-white">{pokedexData.genus}</p></div>
+									<div><span class="text-vault-text-muted">Types</span><div class="mt-0.5 flex gap-1">{#each pokedexData.types as type}<span class="capitalize text-white">{type}</span>{/each}</div></div>
+									<div><span class="text-vault-text-muted">Height</span><p class="font-medium text-white">{(pokedexData.height / 10).toFixed(1)}m</p></div>
+									<div><span class="text-vault-text-muted">Weight</span><p class="font-medium text-white">{(pokedexData.weight / 10).toFixed(1)}kg</p></div>
+								</div>
+								{#if pokedexData.flavor_text}
+									<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-4">
+										<p class="text-sm italic text-vault-text-muted">"{pokedexData.flavor_text}"</p>
+									</div>
+								{/if}
+							</div>
+						{/if}
+
+						<!-- Evolution Chain -->
+						{#if evolutions.length > 1}
+							<div>
+								<h3 class="text-lg font-semibold text-white">Evolution Chain</h3>
+								<div class="mt-3 flex flex-wrap items-center gap-3">
+									{#each evolutions as evo, i}
+										{#if i > 0}
+											<svg class="h-5 w-5 text-vault-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+										{/if}
+										<div class="flex items-center gap-2 rounded-lg border border-vault-border bg-vault-bg px-3 py-2">
+											<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{evo.id}.png" alt={evo.name} class="h-10 w-10" />
+											<span class="text-sm font-medium capitalize text-white">{evo.name}</span>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
-				</div>
+				</details>
 			{/if}
 
 			<!--
