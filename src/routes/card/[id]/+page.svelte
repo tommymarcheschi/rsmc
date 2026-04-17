@@ -58,6 +58,8 @@
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
+	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
+	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
 	let hasMarketSignals = $derived(
 		indexRow != null &&
 			(indexRow.raw_nm_price != null ||
@@ -796,6 +798,46 @@
 						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-4">
 							<p class="text-sm italic text-vault-text-muted">"{pokedexData.flavor_text}"</p>
 						</div>
+					{/if}
+				</div>
+			{/if}
+
+			<!-- Recent PSA 10 sales -->
+			{#if psa10Sales.length > 0}
+				{@const sortedPrices = psa10Sales.map((s) => s.price_cents).sort((a, b) => a - b)}
+				{@const medianCents = sortedPrices.length % 2 === 0
+					? (sortedPrices[sortedPrices.length / 2 - 1] + sortedPrices[sortedPrices.length / 2]) / 2
+					: sortedPrices[(sortedPrices.length - 1) / 2]}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-center justify-between gap-3">
+						<div>
+							<h2 class="text-lg font-semibold text-white">Recent PSA 10 sales</h2>
+							<p class="mt-0.5 text-xs text-vault-text-muted">
+								{psa10Sales.length} sold comp{psa10Sales.length === 1 ? '' : 's'} from PriceCharting, newest first. Prices are realized sales, not asks.
+							</p>
+						</div>
+						<div class="text-right">
+							<p class="text-[10px] uppercase tracking-wide text-vault-text-muted">Median</p>
+							<p class="text-base font-bold text-vault-gold">{fmtMoney(medianCents / 100)}</p>
+						</div>
+					</div>
+					<div class="mt-3 divide-y divide-vault-border rounded-xl border border-vault-border">
+						{#each psa10Sales.slice(0, 10) as sale}
+							<div class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+								<div class="text-vault-text-muted">
+									{sale.sold_at}
+									{#if sale.marketplace}
+										<span class="ml-2 rounded bg-vault-bg px-1.5 py-0.5 text-[10px] text-vault-text-muted">{sale.marketplace}</span>
+									{/if}
+								</div>
+								<div class="font-medium text-white">{fmtMoney(sale.price_cents / 100)}</div>
+							</div>
+						{/each}
+					</div>
+					{#if psa10Sales.length > 10}
+						<p class="mt-2 text-center text-[11px] text-vault-text-muted">
+							+{psa10Sales.length - 10} earlier sale{psa10Sales.length - 10 === 1 ? '' : 's'} in history
+						</p>
 					{/if}
 				</div>
 			{/if}

@@ -159,7 +159,12 @@ function getHeadline(card: TcgCard): { market: number | null; low: number | null
 	return { market: bestMarket, low: bestLow };
 }
 
-async function enrichOneCard(card: TcgCard): Promise<Record<string, unknown>> {
+interface EnrichedCardOutput {
+	row: Record<string, unknown>;
+	psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+}
+
+async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 	const errors: Record<string, string | null> = { pricecharting: null };
 	const printings = derivePrintings(card);
 	const headline = getHeadline(card);
@@ -193,45 +198,48 @@ async function enrichOneCard(card: TcgCard): Promise<Record<string, unknown>> {
 	const cgcPop = pc?.cgcPop ?? null;
 
 	return {
-		card_id: card.id,
-		name: card.name,
-		set_id: card.set.id,
-		set_name: card.set.name,
-		set_series: card.set.series ?? null,
-		set_release_date: card.set.releaseDate,
-		card_number: card.number ?? null,
-		rarity: card.rarity ?? null,
-		supertype: card.supertype ?? null,
-		subtypes: card.subtypes ?? [],
-		types: card.types ?? [],
-		artist: card.artist ?? null,
-		image_small_url: card.images.small ?? null,
-		image_large_url: card.images.large ?? null,
-		...printings,
-		tcg_normal_market: normalPrices?.market ?? null,
-		tcg_holofoil_market: holoPrices?.market ?? null,
-		tcg_reverse_holofoil_market: reversePrices?.market ?? null,
-		tcg_headline_market: headline.market,
-		tcg_headline_low: headline.low,
-		raw_nm_price: rawPrice,
-		raw_source: rawSource,
-		raw_fetched_at: now,
-		psa10_price: pc?.psa10 ?? null,
-		psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
-		tag10_price: pc?.tag10 ?? null,
-		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
-		graded_prices_fetched_at: pc ? now : null,
-		psa10_last_sold_at: pc?.psa10LastSold ?? null,
-		psa_pop_total: psaPop?.total ?? null,
-		psa_pop_10: psaPop?.grade10 ?? null,
-		psa_gem_rate: psaPop?.gemRate ?? null,
-		psa_fetched_at: psaPop ? now : null,
-		tag_pop_total: cgcPop?.total ?? null,  // Using tag_pop columns for CGC until TAG scraper exists
-		tag_pop_10: cgcPop?.grade10 ?? null,
-		tag_fetched_at: cgcPop ? now : null,
-		last_enriched_at: now,
-		enrich_version: 2,
-		enrich_errors: errors
+		row: {
+			card_id: card.id,
+			name: card.name,
+			set_id: card.set.id,
+			set_name: card.set.name,
+			set_series: card.set.series ?? null,
+			set_release_date: card.set.releaseDate,
+			card_number: card.number ?? null,
+			rarity: card.rarity ?? null,
+			supertype: card.supertype ?? null,
+			subtypes: card.subtypes ?? [],
+			types: card.types ?? [],
+			artist: card.artist ?? null,
+			image_small_url: card.images.small ?? null,
+			image_large_url: card.images.large ?? null,
+			...printings,
+			tcg_normal_market: normalPrices?.market ?? null,
+			tcg_holofoil_market: holoPrices?.market ?? null,
+			tcg_reverse_holofoil_market: reversePrices?.market ?? null,
+			tcg_headline_market: headline.market,
+			tcg_headline_low: headline.low,
+			raw_nm_price: rawPrice,
+			raw_source: rawSource,
+			raw_fetched_at: now,
+			psa10_price: pc?.psa10 ?? null,
+			psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
+			tag10_price: pc?.tag10 ?? null,
+			tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
+			graded_prices_fetched_at: pc ? now : null,
+			psa10_last_sold_at: pc?.psa10LastSold ?? null,
+			psa_pop_total: psaPop?.total ?? null,
+			psa_pop_10: psaPop?.grade10 ?? null,
+			psa_gem_rate: psaPop?.gemRate ?? null,
+			psa_fetched_at: psaPop ? now : null,
+			tag_pop_total: cgcPop?.total ?? null,  // Using tag_pop columns for CGC until TAG scraper exists
+			tag_pop_10: cgcPop?.grade10 ?? null,
+			tag_fetched_at: cgcPop ? now : null,
+			last_enriched_at: now,
+			enrich_version: 2,
+			enrich_errors: errors
+		},
+		psa10Sales: pc?.psa10Sales ?? []
 	};
 }
 
@@ -263,13 +271,28 @@ async function indexSet(setId: string, concurrency: number, dryRun: boolean) {
 
 	await parallelMap(allCards, concurrency, async (card, i) => {
 		try {
-			const row = await enrichOneCard(card);
+			const { row, psa10Sales } = await enrichOneCard(card);
 			const { error } = await supabase.from('card_index').upsert(row, { onConflict: 'card_id' });
 			if (error) {
 				errors++;
 				console.error(`  [${card.id}] DB error: ${error.message}`);
 			} else {
 				processed++;
+			}
+
+			if (psa10Sales.length > 0) {
+				await supabase
+					.from('psa10_sales')
+					.upsert(
+						psa10Sales.map((s) => ({
+							card_id: card.id,
+							sold_at: s.sold_at,
+							price_cents: Math.round(s.price * 100),
+							marketplace: s.marketplace
+						})),
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					)
+					.then(() => {}, () => {});
 			}
 
 			if (processed % 10 === 0 || processed === allCards.length) {
@@ -333,10 +356,25 @@ async function indexStale(limit: number, concurrency: number, dryRun: boolean) {
 			const tcgRes = await fetch(`${TCG_BASE}/cards/${cardId}`, { headers: tcgHeaders() });
 			if (!tcgRes.ok) { errors++; return; }
 			const card = (await tcgRes.json()).data as TcgCard;
-			const row = await enrichOneCard(card);
+			const { row, psa10Sales } = await enrichOneCard(card);
 			const { error } = await supabase.from('card_index').upsert(row, { onConflict: 'card_id' });
 			if (error) errors++;
 			else processed++;
+
+			if (psa10Sales.length > 0) {
+				await supabase
+					.from('psa10_sales')
+					.upsert(
+						psa10Sales.map((s) => ({
+							card_id: cardId,
+							sold_at: s.sold_at,
+							price_cents: Math.round(s.price * 100),
+							marketplace: s.marketplace
+						})),
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					)
+					.then(() => {}, () => {});
+			}
 
 			if (processed % 10 === 0) {
 				process.stdout.write(`\r  Stale: ${processed}/${staleRows.length} (${errors} errors)`);
@@ -419,13 +457,24 @@ async function main() {
 		const tcgRes = await fetch(`${TCG_BASE}/cards/${cardId}`, { headers: tcgHeaders() });
 		if (!tcgRes.ok) { console.error(`TCG API ${tcgRes.status}`); return; }
 		const card = (await tcgRes.json()).data as TcgCard;
-		const row = await enrichOneCard(card);
+		const { row, psa10Sales } = await enrichOneCard(card);
 		if (dryRun) {
 			console.log('DRY RUN result:');
-			console.log(JSON.stringify(row, null, 2));
+			console.log(JSON.stringify({ row, psa10Sales }, null, 2));
 		} else {
 			await supabase.from('card_index').upsert(row, { onConflict: 'card_id' });
-			console.log('Upserted into card_index');
+			console.log(`Upserted into card_index (${psa10Sales.length} PSA 10 sales)`);
+			if (psa10Sales.length > 0) {
+				await supabase.from('psa10_sales').upsert(
+					psa10Sales.map((s) => ({
+						card_id: cardId,
+						sold_at: s.sold_at,
+						price_cents: Math.round(s.price * 100),
+						marketplace: s.marketplace
+					})),
+					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+				);
+			}
 			console.log(JSON.stringify(row, null, 2));
 		}
 		return;

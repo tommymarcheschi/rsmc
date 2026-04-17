@@ -71,6 +71,7 @@ export interface CardIndexRow {
 export interface EnrichmentResult {
 	card_id: string;
 	row: CardIndexRow;
+	psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
 	errors: Record<'pricecharting', string | null>;
 }
 
@@ -230,7 +231,12 @@ export async function enrichCard(
 		enrich_errors: errors
 	};
 
-	return { card_id: card.id, row, errors };
+	return {
+		card_id: card.id,
+		row,
+		psa10Sales: pc?.psa10Sales ?? [],
+		errors
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -276,6 +282,24 @@ export async function enrichSet(
 			if (error) {
 				result.errors++;
 				return;
+			}
+
+			// Persist the full PSA 10 sale history. card_index's
+			// psa10_last_sold_at is derived from this; this table unlocks
+			// real time-series depth (30-day windows, price vs time).
+			if (er.psa10Sales.length > 0) {
+				await supabaseClient
+					.from('psa10_sales')
+					.upsert(
+						er.psa10Sales.map((s) => ({
+							card_id: card.id,
+							sold_at: s.sold_at,
+							price_cents: Math.round(s.price * 100),
+							marketplace: s.marketplace
+						})),
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					)
+					.then(() => {}, () => {});
 			}
 
 			result.processed++;
@@ -335,6 +359,21 @@ export async function enrichStale(
 			if (error) {
 				result.errors++;
 				return;
+			}
+
+			if (er.psa10Sales.length > 0) {
+				await supabaseClient
+					.from('psa10_sales')
+					.upsert(
+						er.psa10Sales.map((s) => ({
+							card_id: cardId,
+							sold_at: s.sold_at,
+							price_cents: Math.round(s.price * 100),
+							marketplace: s.marketplace
+						})),
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					)
+					.then(() => {}, () => {});
 			}
 
 			result.processed++;

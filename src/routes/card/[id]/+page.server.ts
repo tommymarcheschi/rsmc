@@ -107,6 +107,17 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		  ).catch(() => [])
 		: [];
 
+	// PSA 10 historical sales for the time-series list on card detail.
+	// Newest first, capped at 30 — matches what PriceCharting surfaces.
+	interface Psa10SaleRow { sold_at: string; price_cents: number; marketplace: string | null; }
+	const psa10SalesRes = await supabase
+		.from('psa10_sales')
+		.select('sold_at, price_cents, marketplace')
+		.eq('card_id', params.id)
+		.order('sold_at', { ascending: false })
+		.limit(30);
+	const psa10Sales: Psa10SaleRow[] = (psa10SalesRes.data ?? []) as Psa10SaleRow[];
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
@@ -126,6 +137,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		cardSignal,
 		gradingROI,
 		similarCards,
+		psa10Sales,
 		inCollection,
 		onWatchlist
 	};

@@ -55,6 +55,10 @@ export interface PriceChartingData {
 	/** ISO date (YYYY-MM-DD) of the most recent PSA 10 comp sale listed on
 	 *  PriceCharting, or null when none. Used to flag stale graded prices. */
 	psa10LastSold: string | null;
+	/** Up to 30 most recent PSA 10 sold comps, newest first. Each row has
+	 *  an ISO date, a USD price, and the marketplace the sale happened on
+	 *  (eBay, Goldin, Fanatics, etc.) when detectable. */
+	psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
 	/** Full URL of the matched product page */
 	pcUrl: string;
 	/** The product name as shown on PriceCharting */
@@ -349,18 +353,42 @@ function parsePopData(html: string): { psa: PopDistribution | null; cgc: PopDist
 }
 
 /**
- * Extract the most recent PSA 10 sale date from the completed-auctions
- * section. PriceCharting wraps the PSA 10 sold-comps table in a div with
- * class `completed-auctions-manual-only` and renders rows sorted newest
- * first, each with `<td class="date">YYYY-MM-DD</td>`.
+ * Extract all PSA 10 sold comps from the completed-auctions section.
+ * PriceCharting wraps the PSA 10 table in `div.completed-auctions-manual-only`
+ * and renders up to 30 rows sorted newest first. Each row has
+ *   <td class="date">YYYY-MM-DD</td> ... <td class="title">...[MARKETPLACE]</td>
+ *   ... <span class="js-price">$PRICE</span>
+ * Returns rows newest-first. Empty array when the section isn't present.
  */
-function parsePsa10LastSold(html: string): string | null {
+function parsePsa10Sales(
+	html: string
+): Array<{ sold_at: string; price: number; marketplace: string | null }> {
 	const section = html.match(
 		/<div class="completed-auctions-manual-only">([\s\S]*?)<\/div>\s*<div class="/i
 	);
-	const scope = section ? section[1] : html;
-	const first = scope.match(/<td class="date">(\d{4}-\d{2}-\d{2})<\/td>/);
-	return first ? first[1] : null;
+	if (!section) return [];
+
+	const rows: Array<{ sold_at: string; price: number; marketplace: string | null }> = [];
+	// Iterate each <tr>…</tr> within the section's tbody.
+	const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+	for (const m of section[1].matchAll(trRegex)) {
+		const row = m[1];
+		const dateMatch = row.match(/<td class="date">(\d{4}-\d{2}-\d{2})<\/td>/);
+		if (!dateMatch) continue;
+		const priceMatch = row.match(/<span class="js-price"[^>]*>\$?([\d,]+(?:\.\d+)?)/);
+		if (!priceMatch) continue;
+		const price = parsePrice(priceMatch[1]);
+		if (price == null) continue;
+		// Marketplace: PriceCharting appends `[eBay]`, `[Goldin]`, `[Fanatics]`, etc.
+		// after the auction title. It's not always present on every row.
+		const mpMatch = row.match(/\[([A-Za-z][A-Za-z ]{1,40})\]/);
+		rows.push({
+			sold_at: dateMatch[1],
+			price,
+			marketplace: mpMatch ? mpMatch[1].trim() : null
+		});
+	}
+	return rows;
 }
 
 /**
@@ -430,7 +458,8 @@ export async function fetchPriceCharting(opts: {
 
 		const mapped = mapTiers(tiers);
 		const popData = parsePopData(productHtml);
-		const psa10LastSold = parsePsa10LastSold(productHtml);
+		const psa10Sales = parsePsa10Sales(productHtml);
+		const psa10LastSold = psa10Sales[0]?.sold_at ?? null;
 
 		return {
 			...mapped,
@@ -438,6 +467,7 @@ export async function fetchPriceCharting(opts: {
 			psaPop: popData.psa,
 			cgcPop: popData.cgc,
 			psa10LastSold,
+			psa10Sales,
 			pcUrl: best.url,
 			matchedName: best.name
 		};
