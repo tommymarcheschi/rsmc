@@ -135,6 +135,101 @@ export async function fetchTcgPlayerSet(
 }
 
 /**
+ * Discover the TCGPlayer `setName` slug that matches a pokemontcg.io
+ * set name. Works by fetching TCGPlayer's full Pokemon set aggregation
+ * once per call, then picking the closest textual match.
+ *
+ * This is the critical piece that lets the auto-heal pass operate
+ * without a hardcoded mapping — new sets become indexable within hours
+ * of TCGPlayer adding them, no hand-tended lookup table required.
+ *
+ * Returns null when no candidate scores above a minimum confidence —
+ * safer to leave tcgplayer_set_name null than guess wrong (which would
+ * pollute prices with data from an unrelated set).
+ */
+export async function discoverTcgplayerSetSlug(
+	pokemontcgSetName: string
+): Promise<{ slug: string; tcgSetName: string; productCount: number } | null> {
+	const body = {
+		algorithm: '',
+		from: 0,
+		size: 1,
+		filters: { term: { productLineName: ['pokemon'] }, range: {}, match: {} },
+		listingSearch: {
+			context: { cart: {} },
+			filters: { term: {}, range: {}, exclude: {} }
+		},
+		context: { cart: {}, shippingCountry: 'US' },
+		settings: { useFuzzySearch: false, didYouMean: {} },
+		sort: {}
+	};
+
+	const res = await fetch(ENDPOINT, {
+		method: 'POST',
+		headers: HEADERS,
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) return null;
+
+	const data = (await res.json()) as {
+		results?: Array<{
+			aggregations?: { setName?: Array<{ urlValue: string; value: string; count: number }> };
+		}>;
+	};
+	const sets = data.results?.[0]?.aggregations?.setName ?? [];
+	if (sets.length === 0) return null;
+
+	const needle = normalise(pokemontcgSetName);
+
+	// Prefer exact-name match, then name-ends-with (handles "ME02: Phantasmal
+	// Flames" matching "Phantasmal Flames"), then contains either way.
+	let best: { slug: string; tcgSetName: string; productCount: number; score: number } | null =
+		null;
+	for (const s of sets) {
+		const tcgName = normalise(s.value);
+		let score = 0;
+		if (tcgName === needle) score = 100;
+		else if (tcgName.endsWith(needle) || needle.endsWith(tcgName)) score = 80;
+		else if (tcgName.includes(needle) || needle.includes(tcgName)) score = 60;
+		else {
+			// Word-overlap fallback — handles small wording differences.
+			const tcgWords = new Set(tcgName.split(' ').filter((w) => w.length > 2));
+			const needleWords = needle.split(' ').filter((w) => w.length > 2);
+			const overlap = needleWords.filter((w) => tcgWords.has(w)).length;
+			if (overlap > 0) {
+				score = Math.min(50, overlap * 15);
+			}
+		}
+		if (score > (best?.score ?? 0)) {
+			best = {
+				slug: s.urlValue,
+				tcgSetName: s.value,
+				productCount: s.count,
+				score
+			};
+		}
+	}
+
+	// Require at least a contains-match. Word-overlap alone isn't enough —
+	// "Celebrations Classic Collection" and "Classic Collection" would
+	// false-positive against each other.
+	if (!best || best.score < 60) return null;
+	return {
+		slug: best.slug,
+		tcgSetName: best.tcgSetName,
+		productCount: best.productCount
+	};
+}
+
+function normalise(s: string): string {
+	return s
+		.toLowerCase()
+		.replace(/[^a-z0-9 ]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+/**
  * Reduce multiple TCGPlayer products that share the same card number
  * (normal + holo + reverse holo variants of the same card) to a single
  * "headline" price — the highest market price among printings. Mirrors
