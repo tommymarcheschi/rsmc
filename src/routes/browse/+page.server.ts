@@ -194,6 +194,10 @@ function buildHuntPills(
 	if (rawGt) pills.push({ label: `Raw ≥ $${rawGt}`, removeHref: dropParam(url, 'raw_gt') });
 	const rawLt = p.get('raw_lt');
 	if (rawLt) pills.push({ label: `Raw ≤ $${rawLt}`, removeHref: dropParam(url, 'raw_lt') });
+	const rarityLike = p.get('rarity_like');
+	if (rarityLike) {
+		pills.push({ label: `Rarity ~ "${rarityLike}"`, removeHref: dropParam(url, 'rarity_like') });
+	}
 	const variants = (p.get('variants') ?? '').split(',').filter(Boolean);
 	for (const v of variants) {
 		pills.push({
@@ -223,6 +227,7 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 	const variants = url.searchParams.get('variants') ?? '';
 	const rawLt = url.searchParams.get('raw_lt');
 	const rawGt = url.searchParams.get('raw_gt');
+	const rarityLike = url.searchParams.get('rarity_like') ?? '';
 	const requirePsa10 = url.searchParams.get('require_psa10') === '1';
 	const page = parseInt(url.searchParams.get('page') ?? '1');
 
@@ -266,6 +271,9 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 	}
 	if (requirePsa10) {
 		query = query.not('psa10_price', 'is', null);
+	}
+	if (rarityLike) {
+		query = query.ilike('rarity', `%${rarityLike}%`);
 	}
 
 	// Apply sort

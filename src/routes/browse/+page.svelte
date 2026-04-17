@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CardThumbnail } from '$components';
 	import { getSortOptionsForMode } from '$services/sort';
+	import { parseHuntDSL } from '$services/hunt-dsl';
 	import type { PokemonCard } from '$types';
 
 	interface FilterPill { label: string; removeHref: string; }
@@ -8,6 +9,18 @@
 	let { data } = $props();
 
 	let activeFilters = $derived(((data as Record<string, unknown>).activeFilters ?? []) as FilterPill[]);
+	let dslInput = $state('');
+	let dslErrors = $state<string[]>([]);
+
+	function applyDsl(e: Event) {
+		e.preventDefault();
+		const text = dslInput.trim();
+		if (!text) return;
+		const { params, errors } = parseHuntDSL(text);
+		dslErrors = errors;
+		const search = new URLSearchParams({ mode: 'hunt', ...params });
+		window.location.href = `/browse?${search.toString()}`;
+	}
 
 	let isHuntMode = $derived(data.mode === 'hunt');
 	let sortOptions = $derived(getSortOptionsForMode(data.mode ?? 'default'));
@@ -186,6 +199,37 @@
 	{#if isHuntMode}
 		<!-- ─── Hunt Mode Filter Form ──────────────────────────────────── -->
 		{@const f = data.filters as Record<string, string>}
+
+		<!--
+			DSL search bar: power-user single-line query. With JS, parsing is
+			client-side and the page navigates immediately. Without JS, the
+			text submits as a plain name search (q=...), so the feature
+			degrades to a simple search box instead of breaking.
+		-->
+		<form method="GET" action="/browse" class="space-y-1" onsubmit={applyDsl}>
+			<input type="hidden" name="mode" value="hunt" />
+			<div class="flex gap-2">
+				<input
+					type="text"
+					name="q"
+					bind:value={dslInput}
+					placeholder={'pop:<100 year:2010-2016 rarity:holo price:10-50 psa10'}
+					aria-label="Query language search"
+					class="flex-1 rounded-xl border border-vault-purple/40 bg-vault-surface px-4 py-2.5 text-sm text-vault-text placeholder-vault-text-muted transition-all focus:border-vault-purple focus:outline-none focus:ring-1 focus:ring-vault-purple/50"
+				/>
+				<button type="submit" class="btn-press rounded-xl bg-vault-purple px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-purple/80">
+					Go
+				</button>
+			</div>
+			<p class="text-[11px] text-vault-text-muted">
+				Fields: <code>pop:</code> <code>year:</code> <code>price:</code> <code>raw:</code> <code>rarity:</code> <code>set:</code> · operators <code>&lt;N</code> <code>&gt;N</code> <code>A-B</code> · flags <code>psa10</code> <code>holo</code> <code>reverse</code>. Without JavaScript, the text becomes a name search.
+			</p>
+			{#if dslErrors.length > 0}
+				<p class="text-[11px] text-vault-red">
+					Didn't understand: <code>{dslErrors.join(' ')}</code> — went with what I could parse.
+				</p>
+			{/if}
+		</form>
 
 		<!-- Preset buttons -->
 		<div class="flex flex-wrap gap-2">
