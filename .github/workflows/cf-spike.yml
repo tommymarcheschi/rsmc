@@ -1,0 +1,30 @@
+name: cf-datacenter-spike
+
+# Manual, free, decisive: does Cloudflare let our scrapers through from a
+# datacenter IP (GitHub Actions = Azure, same class as Fly/Railway)?
+# Gates the engine cloud-move decision. No secrets, no deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pc_attempts:
+        description: PriceCharting probe attempts
+        default: '20'
+      gr_attempts:
+        description: GemRate probe attempts
+        default: '12'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run Cloudflare datacenter probe
+        env:
+          PC_ATTEMPTS: ${{ github.event.inputs.pc_attempts }}
+          GR_ATTEMPTS: ${{ github.event.inputs.gr_attempts }}
+        run: node scripts/spikes/cf-datacenter-probe.mjs
