@@ -243,6 +243,85 @@ async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 	};
 }
 
+// Stored metadata we need to re-scrape PriceCharting for a card WITHOUT
+// re-fetching it from pokemontcg.io. The catalog is complete and these
+// fields are effectively immutable, so the per-card TCG GET in the stale
+// path was ~7k redundant external calls/day against the rate-limited
+// pokemontcg.io quota. The stale path's only job is graded-gap fill via
+// PriceCharting; it has no business re-pulling immutable metadata.
+interface StoredCardMeta {
+	card_id: string;
+	name: string;
+	set_id: string;
+	set_name: string;
+	set_release_date: string;
+	card_number: string | null;
+	tcg_headline_market: number | null;
+	has_normal: boolean;
+	has_holofoil: boolean;
+	has_reverse_holofoil: boolean;
+	has_first_edition: boolean;
+}
+
+// Build the PriceCharting-derived upsert subset from stored metadata + a
+// fresh scrape. Mirrors the PriceCharting fields of enrichOneCard exactly
+// (honesty doctrine: only real scraped values; null beats fabricated; a
+// transient miss never clobbers a good stored value because we only set a
+// field when the scrape actually returned it). Crucially this writes ONLY
+// price/pop fields — it never touches immutable metadata, so there is no
+// metadata-clobber risk from not having a fresh TCG payload.
+function stalePriceRow(
+	meta: StoredCardMeta,
+	pc: Awaited<ReturnType<typeof fetchPriceCharting>>,
+	errors: Record<string, string | null>
+): Record<string, unknown> {
+	const now = new Date().toISOString();
+	const rawFromPc = pc?.ungraded ?? null;
+	// Fallback stays the stored tcgplayer headline — we did not re-fetch it,
+	// so we do not pretend it is fresher than it is (raw_source records which).
+	const rawPrice = rawFromPc ?? meta.tcg_headline_market ?? null;
+	const rawSource = rawFromPc != null ? 'pricecharting' : 'tcgplayer';
+	const psaPop = pc?.psaPop ?? null;
+	const cgcPop = pc?.cgcPop ?? null;
+
+	const row: Record<string, unknown> = {
+		card_id: meta.card_id,
+		// Immutable metadata echoed back from the stored row (NOT re-fetched):
+		// PostgREST upsert is INSERT ... ON CONFLICT, so the INSERT arm must
+		// satisfy these NOT NULL columns even though it always conflict-updates
+		// an existing row. Writing the same stored values back is a no-op for
+		// metadata (zero clobber) while keeping zero pokemontcg.io calls.
+		name: meta.name,
+		set_id: meta.set_id,
+		set_name: meta.set_name,
+		set_release_date: meta.set_release_date,
+		has_normal: meta.has_normal,
+		has_holofoil: meta.has_holofoil,
+		has_reverse_holofoil: meta.has_reverse_holofoil,
+		has_first_edition: meta.has_first_edition,
+		raw_nm_price: rawPrice,
+		raw_source: rawSource,
+		raw_fetched_at: now,
+		psa10_price: pc?.psa10 ?? null,
+		psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
+		tag10_price: pc?.tag10 ?? null,
+		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
+		graded_prices_fetched_at: pc ? now : null,
+		psa10_last_sold_at: pc?.psa10LastSold ?? null,
+		psa_pop_total: psaPop?.total ?? null,
+		psa_pop_10: psaPop?.grade10 ?? null,
+		psa_gem_rate: psaPop?.gemRate ?? null,
+		psa_fetched_at: psaPop ? now : null,
+		tag_pop_total: cgcPop?.total ?? null,
+		tag_pop_10: cgcPop?.grade10 ?? null,
+		tag_fetched_at: cgcPop ? now : null,
+		last_enriched_at: now,
+		enrich_version: 2,
+		enrich_errors: errors
+	};
+	return row;
+}
+
 // ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
@@ -344,10 +423,12 @@ async function indexStale(
 		n: number,
 		gapsOnly: boolean,
 		coveredOnly: boolean
-	): Promise<Array<{ card_id: string }>> {
+	): Promise<StoredCardMeta[]> {
 		let q = supabase
 			.from('card_index')
-			.select('card_id')
+			.select(
+				'card_id, name, set_id, set_name, set_release_date, card_number, tcg_headline_market, has_normal, has_holofoil, has_reverse_holofoil, has_first_edition'
+			)
 			.lt('last_enriched_at', staleThreshold);
 		// "Gap" = missing the graded data the coverage KPI tracks. Filling
 		// these first makes the coverage % climb fastest (memory: worker
@@ -362,10 +443,10 @@ async function indexStale(
 			console.error(`Stale selection FAILED: ${error.message}`);
 			process.exit(1);
 		}
-		return (data ?? []) as Array<{ card_id: string }>;
+		return (data ?? []) as StoredCardMeta[];
 	}
 
-	let staleRows: Array<{ card_id: string }>;
+	let staleRows: StoredCardMeta[];
 	if (prioritiseGaps) {
 		// Tier 1: stale cards still missing graded data (the coverage gap).
 		const gap = await selectStale(limit, true, false);
@@ -401,15 +482,32 @@ async function indexStale(
 
 	await parallelMap(staleRows, concurrency, async (stale, i) => {
 		try {
-			const cardId = (stale as Record<string, unknown>).card_id as string;
-			const tcgRes = await fetch(`${TCG_BASE}/cards/${cardId}`, { headers: tcgHeaders() });
-			if (!tcgRes.ok) { errors++; return; }
-			const card = (await tcgRes.json()).data as TcgCard;
-			const { row, psa10Sales } = await enrichOneCard(card);
+			const cardId = stale.card_id;
+			// No pokemontcg.io GET here: the stale path's only job is graded-gap
+			// fill via PriceCharting, and catalog metadata is immutable + already
+			// stored. Re-pulling it per card per cycle was ~7k redundant calls/day
+			// against the rate-limited TCG quota for zero added freshness.
+			const errs: Record<string, string | null> = { pricecharting: null };
+			let pc: Awaited<ReturnType<typeof fetchPriceCharting>> = null;
+			try {
+				pc = await fetchPriceCharting({
+					name: stale.name,
+					setName: stale.set_name,
+					cardNumber: stale.card_number ?? undefined
+				});
+			} catch (e: unknown) {
+				errs.pricecharting = e instanceof Error ? e.message : String(e);
+			}
+			const row = stalePriceRow(stale, pc, errs);
 			const { error } = await supabase.from('card_index').upsert(row, { onConflict: 'card_id' });
-			if (error) errors++;
-			else processed++;
+			if (error) {
+				errors++;
+				// Surface, don't swallow: a silently-swallowed write error is
+				// exactly how the catalog previously rotted to 99% stale.
+				if (errors <= 5) console.error(`  [${cardId}] DB error: ${error.message}`);
+			} else processed++;
 
+			const psa10Sales = pc?.psa10Sales ?? [];
 			if (psa10Sales.length > 0) {
 				await supabase
 					.from('psa10_sales')
@@ -430,8 +528,9 @@ async function indexStale(
 			}
 
 			if (i > 0 && i % concurrency === 0) await delay(300);
-		} catch {
+		} catch (e) {
 			errors++;
+			if (errors <= 5) console.error(`  [${stale.card_id}] Exception: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	});
 
