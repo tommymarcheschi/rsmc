@@ -33,10 +33,39 @@
 		trackedWithSlug: number;
 	}
 
+	interface Coverage {
+		cards: number;
+		psa10: number;
+		psaPop: number;
+		cgcPop: number;
+		psa10Pct: number;
+		psaPopPct: number;
+		cgcPopPct: number;
+	}
+
 	let { data, form } = $props();
+
+	interface TrendPoint {
+		date: string;
+		cards: number;
+		psa10Pct: number;
+		psaPopPct: number;
+		cgcPopPct: number;
+		stalePct: number;
+	}
 
 	let sets = $derived(data.sets as SetRow[]);
 	let stats = $derived(data.stats as Stats);
+	let coverageTrend = $derived(
+		((data as Record<string, unknown>).coverageTrend ?? []) as TrendPoint[]
+	);
+	let coverage = $derived(data.coverage as Coverage);
+
+	function kpiColor(pct: number): string {
+		if (pct >= 90) return 'text-vault-green';
+		if (pct >= 50) return 'text-vault-gold';
+		return 'text-vault-red';
+	}
 
 	let filterYear = $state('');
 	let filterMode = $state<'all' | 'tracked' | 'gaps' | 'stale' | 'no-slug'>('tracked');
@@ -140,6 +169,111 @@
 				tracked sets where card_index count &lt; TCG API total
 			</p>
 		</div>
+	</div>
+
+	<!-- Graded-data coverage — the data-acquisition engine's KPI -->
+	<div class="card-panel">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="text-sm font-medium text-white">Graded-Data Coverage</h2>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					The engine's scoreboard. Catalog is complete — this is the climb toward ~95%.
+				</p>
+			</div>
+			<span class="font-mono text-[11px] text-vault-text-muted">
+				{coverage.cards.toLocaleString()} cards
+			</span>
+		</div>
+		<div class="mt-3 grid grid-cols-3 gap-3">
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">PSA 10 price</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.psa10Pct)}">{coverage.psa10Pct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.psa10.toLocaleString()} cards
+				</p>
+			</div>
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">PSA pop</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.psaPopPct)}">{coverage.psaPopPct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.psaPop.toLocaleString()} cards
+				</p>
+			</div>
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">CGC pop</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.cgcPopPct)}">{coverage.cgcPopPct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.cgcPop.toLocaleString()} cards
+				</p>
+			</div>
+		</div>
+	</div>
+
+	<!-- Coverage trend — make the 5%→95% climb visible over time. Sourced
+	     from coverage_ledger (written nightly after the acquisition crons).
+	     Honest empty-state: if the ledger cron hasn't run we say so plainly
+	     rather than drawing a flat or fabricated line. -->
+	<div class="card-panel">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="text-sm font-medium text-white">Coverage Trend</h2>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					Daily graded-data coverage from the ledger. The line that should climb.
+				</p>
+			</div>
+			{#if coverageTrend.length}
+				<span class="font-mono text-[11px] text-vault-text-muted">
+					{coverageTrend.length} day{coverageTrend.length === 1 ? '' : 's'} logged
+				</span>
+			{/if}
+		</div>
+
+		{#if coverageTrend.length === 0}
+			<p class="mt-4 rounded-xl border border-dashed border-vault-border bg-vault-bg px-4 py-6 text-center text-sm text-vault-text-muted">
+				No coverage history yet — the <code class="text-vault-text">coverage-ledger</code> cron
+				hasn't recorded a snapshot. Once it runs nightly, the climb shows here.
+			</p>
+		{:else}
+			{@const maxPsa10 = Math.max(1, ...coverageTrend.map((d) => d.psa10Pct))}
+			<div class="mt-4 flex items-end gap-1" style="height: 96px">
+				{#each coverageTrend as d}
+					<div
+						class="group relative flex-1 rounded-t bg-vault-green/70 transition-colors hover:bg-vault-green"
+						style="height: {Math.max(2, (d.psa10Pct / maxPsa10) * 100)}%"
+						title="{d.date} · PSA10 {d.psa10Pct}% · PSA pop {d.psaPopPct}% · CGC pop {d.cgcPopPct}% · stale {d.stalePct}%"
+					></div>
+				{/each}
+			</div>
+			<div class="mt-1 flex justify-between text-[10px] text-vault-text-muted">
+				<span>{coverageTrend[0].date}</span>
+				<span>PSA 10 price coverage · hover a bar for detail</span>
+				<span>{coverageTrend[coverageTrend.length - 1].date}</span>
+			</div>
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full text-left text-[11px]">
+					<thead class="text-vault-text-muted">
+						<tr>
+							<th class="py-1 pr-3 font-medium">Date</th>
+							<th class="py-1 pr-3 text-right font-medium">PSA 10</th>
+							<th class="py-1 pr-3 text-right font-medium">PSA pop</th>
+							<th class="py-1 pr-3 text-right font-medium">CGC pop</th>
+							<th class="py-1 text-right font-medium">Stale</th>
+						</tr>
+					</thead>
+					<tbody class="font-mono text-vault-text">
+						{#each [...coverageTrend].reverse().slice(0, 7) as d}
+							<tr class="border-t border-vault-border">
+								<td class="py-1 pr-3">{d.date}</td>
+								<td class="py-1 pr-3 text-right">{d.psa10Pct}%</td>
+								<td class="py-1 pr-3 text-right">{d.psaPopPct}%</td>
+								<td class="py-1 pr-3 text-right">{d.cgcPopPct}%</td>
+								<td class="py-1 text-right {d.stalePct >= 90 ? 'text-vault-red' : 'text-vault-text-muted'}">{d.stalePct}%</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Heal result banner -->

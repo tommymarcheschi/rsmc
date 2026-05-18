@@ -12,23 +12,45 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 
 	// Pull everything in parallel. tracked_sets SELECT * tolerates missing
 	// migration 013 columns — `.tcgplayer_set_name` just reads as undefined.
-	const [allSetsRes, trackedRes, indexCountsRes, pricedCountsRes, staleCountsRes] =
-		await Promise.all([
-			getSets().catch(() => []),
-			supabase.from('tracked_sets').select('*'),
-			// card_index row count per set (for coverage ratio)
-			supabase.from('card_index').select('set_id', { count: 'exact' }),
-			// priced row count per set — ask for rows with either raw or tcg price
-			supabase
-				.from('card_index')
-				.select('set_id')
-				.not('raw_nm_price', 'is', null),
-			// stale row count per set
-			supabase
-				.from('card_index')
-				.select('set_id')
-				.lt('last_enriched_at', staleThreshold)
-		]);
+	const [
+		allSetsRes,
+		trackedRes,
+		indexCountsRes,
+		pricedCountsRes,
+		staleCountsRes,
+		psa10Res,
+		psaPopRes,
+		cgcPopRes
+	] = await Promise.all([
+		getSets().catch(() => []),
+		supabase.from('tracked_sets').select('*'),
+		// card_index row count per set (for coverage ratio)
+		supabase.from('card_index').select('set_id', { count: 'exact' }),
+		// priced row count per set — ask for rows with either raw or tcg price
+		supabase
+			.from('card_index')
+			.select('set_id')
+			.not('raw_nm_price', 'is', null),
+		// stale row count per set
+		supabase
+			.from('card_index')
+			.select('set_id')
+			.lt('last_enriched_at', staleThreshold),
+		// Graded-data coverage — the data-engine KPI. Cheap HEAD counts so
+		// this works before migration 014 / the coverage-ledger cron exist.
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('psa10_price', 'is', null),
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('psa_pop_total', 'is', null),
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('cgc_pop_total', 'is', null)
+	]);
 
 	const allSets = allSetsRes;
 	const trackedMap = new Map<string, Record<string, unknown>>();
@@ -94,6 +116,72 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	const trackedWithGap = trackedSets.filter((s) => s.indexed < s.totalCards).length;
 	const trackedWithSlug = trackedSets.filter((s) => s.tcgplayerSlug).length;
 
+	// Coverage trend — the 5%→95% climb made visible. One row per
+	// (snapshot_date, set_id) in coverage_ledger; aggregate to daily totals
+	// in JS (PostgREST has no GROUP BY). Fault-isolated: pre-migration-014 or
+	// an RLS-blocked anon read just yields an empty trend, never a 500.
+	interface LedgerRow {
+		snapshot_date: string;
+		indexed: number;
+		psa10_priced: number;
+		psa_pop: number;
+		cgc_pop: number;
+		stale: number;
+	}
+	let coverageTrend: Array<{
+		date: string;
+		cards: number;
+		psa10Pct: number;
+		psaPopPct: number;
+		cgcPopPct: number;
+		stalePct: number;
+	}> = [];
+	try {
+		const { data: ledgerData } = await supabase
+			.from('coverage_ledger')
+			.select('snapshot_date, indexed, psa10_priced, psa_pop, cgc_pop, stale')
+			.order('snapshot_date', { ascending: false })
+			.limit(6000);
+		const byDate = new Map<string, LedgerRow>();
+		for (const r of (ledgerData ?? []) as LedgerRow[]) {
+			const agg = byDate.get(r.snapshot_date) ?? {
+				snapshot_date: r.snapshot_date,
+				indexed: 0,
+				psa10_priced: 0,
+				psa_pop: 0,
+				cgc_pop: 0,
+				stale: 0
+			};
+			agg.indexed += r.indexed ?? 0;
+			agg.psa10_priced += r.psa10_priced ?? 0;
+			agg.psa_pop += r.psa_pop ?? 0;
+			agg.cgc_pop += r.cgc_pop ?? 0;
+			agg.stale += r.stale ?? 0;
+			byDate.set(r.snapshot_date, agg);
+		}
+		const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+		coverageTrend = Array.from(byDate.values())
+			.sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+			.slice(0, 21)
+			.map((d) => ({
+				date: d.snapshot_date,
+				cards: d.indexed,
+				psa10Pct: pct(d.psa10_priced, d.indexed),
+				psaPopPct: pct(d.psa_pop, d.indexed),
+				cgcPopPct: pct(d.cgc_pop, d.indexed),
+				stalePct: pct(d.stale, d.indexed)
+			}))
+			.reverse();
+	} catch {
+		// migration 014 not applied / ledger unreadable — panel hides itself
+	}
+
+	const psa10Count = psa10Res.count ?? 0;
+	const psaPopCount = psaPopRes.count ?? 0;
+	const cgcPopCount = cgcPopRes.count ?? 0;
+	const indexTotal = indexCountsRes.count ?? totalIndexed;
+	const cov = (n: number) => (indexTotal > 0 ? Math.round((n / indexTotal) * 1000) / 10 : 0);
+
 	return {
 		sets,
 		stats: {
@@ -105,7 +193,17 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			stalePct: totalIndexed > 0 ? Math.round((totalStale / totalIndexed) * 100) : 0,
 			trackedWithGap,
 			trackedWithSlug
-		}
+		},
+		coverage: {
+			cards: indexTotal,
+			psa10: psa10Count,
+			psaPop: psaPopCount,
+			cgcPop: cgcPopCount,
+			psa10Pct: cov(psa10Count),
+			psaPopPct: cov(psaPopCount),
+			cgcPopPct: cov(cgcPopCount)
+		},
+		coverageTrend
 	};
 };
 
