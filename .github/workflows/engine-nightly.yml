@@ -1,0 +1,56 @@
+name: engine-nightly
+
+# Replaces the Mac launchd nightly chain. Sequential, dependency-ordered,
+# each step continue-on-error so one failure can't block the rest (mirrors
+# the resilient per-job launchd design). rank-cards no-ops cleanly until
+# migration 017 is applied. Times are UTC; ordering is what matters.
+
+on:
+  schedule:
+    - cron: '15 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: engine-nightly
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      TROVE_INGEST_SETS: base1,base2,base3,base4,base5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: detect-new-sets
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/detect-new-sets.ts
+
+      - name: auto-heal-sets
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/auto-heal-sets.ts
+
+      - name: ingest-condition-prices
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/ingest-condition-prices.ts --set "$TROVE_INGEST_SETS"
+
+      - name: snapshot-card-index
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/snapshot-card-index.ts
+
+      - name: coverage-ledger
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/coverage-ledger.ts
+
+      - name: rank-cards
+        continue-on-error: true
+        run: node_modules/.bin/tsx scripts/rank-cards.ts

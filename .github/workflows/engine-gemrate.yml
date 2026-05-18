@@ -1,0 +1,33 @@
+name: engine-gemrate
+
+# Track A — GemRate pop crawl. Separate from engine-nightly because it's
+# long and heavily paced (per-set, Cloudflare-polite). No-ops cleanly until
+# migration 016 is applied (gemrate-pop.ts isolates + skips per set).
+# The spike showed GemRate 0%-blocked from a datacenter IP.
+
+on:
+  schedule:
+    - cron: '5 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: engine-gemrate
+  cancel-in-progress: false
+
+jobs:
+  gemrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: GemRate population crawl
+        run: node_modules/.bin/tsx scripts/gemrate-pop.ts --all

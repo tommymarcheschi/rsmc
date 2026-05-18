@@ -1,0 +1,43 @@
+name: engine-enrich
+
+# Replaces the Mac launchd enrich-worker + dev-proxy. The Cloudflare spike
+# proved direct curl scraping passes 0%-blocked from a datacenter IP, so we
+# DON'T set DEV_SERVER_URL — refresh-index.ts falls back to the direct
+# PriceCharting scraper (curl path). Conservative batch, no overlap.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      stale:
+        description: rows to refresh this run
+        default: '150'
+      concurrency:
+        description: parallel scrapes
+        default: '6'
+
+concurrency:
+  group: engine-enrich
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Refresh stale card_index rows
+        run: |
+          node_modules/.bin/tsx scripts/refresh-index.ts \
+            --stale "${{ github.event.inputs.stale || '150' }}" \
+            --concurrency "${{ github.event.inputs.concurrency || '6' }}"
