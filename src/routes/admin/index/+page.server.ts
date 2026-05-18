@@ -12,23 +12,45 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 
 	// Pull everything in parallel. tracked_sets SELECT * tolerates missing
 	// migration 013 columns — `.tcgplayer_set_name` just reads as undefined.
-	const [allSetsRes, trackedRes, indexCountsRes, pricedCountsRes, staleCountsRes] =
-		await Promise.all([
-			getSets().catch(() => []),
-			supabase.from('tracked_sets').select('*'),
-			// card_index row count per set (for coverage ratio)
-			supabase.from('card_index').select('set_id', { count: 'exact' }),
-			// priced row count per set — ask for rows with either raw or tcg price
-			supabase
-				.from('card_index')
-				.select('set_id')
-				.not('raw_nm_price', 'is', null),
-			// stale row count per set
-			supabase
-				.from('card_index')
-				.select('set_id')
-				.lt('last_enriched_at', staleThreshold)
-		]);
+	const [
+		allSetsRes,
+		trackedRes,
+		indexCountsRes,
+		pricedCountsRes,
+		staleCountsRes,
+		psa10Res,
+		psaPopRes,
+		cgcPopRes
+	] = await Promise.all([
+		getSets().catch(() => []),
+		supabase.from('tracked_sets').select('*'),
+		// card_index row count per set (for coverage ratio)
+		supabase.from('card_index').select('set_id', { count: 'exact' }),
+		// priced row count per set — ask for rows with either raw or tcg price
+		supabase
+			.from('card_index')
+			.select('set_id')
+			.not('raw_nm_price', 'is', null),
+		// stale row count per set
+		supabase
+			.from('card_index')
+			.select('set_id')
+			.lt('last_enriched_at', staleThreshold),
+		// Graded-data coverage — the data-engine KPI. Cheap HEAD counts so
+		// this works before migration 014 / the coverage-ledger cron exist.
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('psa10_price', 'is', null),
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('psa_pop_total', 'is', null),
+		supabase
+			.from('card_index')
+			.select('*', { count: 'exact', head: true })
+			.not('cgc_pop_total', 'is', null)
+	]);
 
 	const allSets = allSetsRes;
 	const trackedMap = new Map<string, Record<string, unknown>>();
@@ -94,6 +116,12 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	const trackedWithGap = trackedSets.filter((s) => s.indexed < s.totalCards).length;
 	const trackedWithSlug = trackedSets.filter((s) => s.tcgplayerSlug).length;
 
+	const psa10Count = psa10Res.count ?? 0;
+	const psaPopCount = psaPopRes.count ?? 0;
+	const cgcPopCount = cgcPopRes.count ?? 0;
+	const indexTotal = indexCountsRes.count ?? totalIndexed;
+	const cov = (n: number) => (indexTotal > 0 ? Math.round((n / indexTotal) * 1000) / 10 : 0);
+
 	return {
 		sets,
 		stats: {
@@ -105,6 +133,15 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			stalePct: totalIndexed > 0 ? Math.round((totalStale / totalIndexed) * 100) : 0,
 			trackedWithGap,
 			trackedWithSlug
+		},
+		coverage: {
+			cards: indexTotal,
+			psa10: psa10Count,
+			psaPop: psaPopCount,
+			cgcPop: cgcPopCount,
+			psa10Pct: cov(psa10Count),
+			psaPopPct: cov(psaPopCount),
+			cgcPopPct: cov(cgcPopCount)
 		}
 	};
 };

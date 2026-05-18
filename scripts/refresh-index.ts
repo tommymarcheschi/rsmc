@@ -329,12 +329,22 @@ async function indexSet(setId: string, concurrency: number, dryRun: boolean) {
 
 async function indexStale(limit: number, concurrency: number, dryRun: boolean) {
 	const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-	const { data: staleRows } = await supabase
+	const { data: staleRows, error: staleErr } = await supabase
 		.from('card_index')
 		.select('card_id')
 		.lt('last_enriched_at', staleThreshold)
 		.order('last_enriched_at', { ascending: true })
 		.limit(limit);
+
+	// Do NOT swallow this error. A failed selection (e.g. statement
+	// timeout on the unindexed last_enriched_at ORDER BY under concurrent
+	// cron load) must surface as a hard failure — otherwise the cron
+	// exits 0 and "No stale rows found" silently masks a stalled pipeline,
+	// which is exactly how the catalog drifted to 99% stale unnoticed.
+	if (staleErr) {
+		console.error(`Stale selection FAILED: ${staleErr.message}`);
+		process.exit(1);
+	}
 
 	if (!staleRows || staleRows.length === 0) {
 		console.log('No stale rows found.');

@@ -33,10 +33,27 @@
 		trackedWithSlug: number;
 	}
 
+	interface Coverage {
+		cards: number;
+		psa10: number;
+		psaPop: number;
+		cgcPop: number;
+		psa10Pct: number;
+		psaPopPct: number;
+		cgcPopPct: number;
+	}
+
 	let { data, form } = $props();
 
 	let sets = $derived(data.sets as SetRow[]);
 	let stats = $derived(data.stats as Stats);
+	let coverage = $derived(data.coverage as Coverage);
+
+	function kpiColor(pct: number): string {
+		if (pct >= 90) return 'text-vault-green';
+		if (pct >= 50) return 'text-vault-gold';
+		return 'text-vault-red';
+	}
 
 	let filterYear = $state('');
 	let filterMode = $state<'all' | 'tracked' | 'gaps' | 'stale' | 'no-slug'>('tracked');
@@ -139,6 +156,44 @@
 			<p class="mt-0.5 text-[11px] text-vault-text-muted">
 				tracked sets where card_index count &lt; TCG API total
 			</p>
+		</div>
+	</div>
+
+	<!-- Graded-data coverage — the data-acquisition engine's KPI -->
+	<div class="card-panel">
+		<div class="flex items-center justify-between">
+			<div>
+				<h2 class="text-sm font-medium text-white">Graded-Data Coverage</h2>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					The engine's scoreboard. Catalog is complete — this is the climb toward ~95%.
+				</p>
+			</div>
+			<span class="font-mono text-[11px] text-vault-text-muted">
+				{coverage.cards.toLocaleString()} cards
+			</span>
+		</div>
+		<div class="mt-3 grid grid-cols-3 gap-3">
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">PSA 10 price</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.psa10Pct)}">{coverage.psa10Pct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.psa10.toLocaleString()} cards
+				</p>
+			</div>
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">PSA pop</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.psaPopPct)}">{coverage.psaPopPct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.psaPop.toLocaleString()} cards
+				</p>
+			</div>
+			<div>
+				<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">CGC pop</p>
+				<p class="mt-1 text-2xl font-bold {kpiColor(coverage.cgcPopPct)}">{coverage.cgcPopPct}%</p>
+				<p class="mt-0.5 text-[11px] text-vault-text-muted">
+					{coverage.cgcPop.toLocaleString()} cards
+				</p>
+			</div>
 		</div>
 	</div>
 
