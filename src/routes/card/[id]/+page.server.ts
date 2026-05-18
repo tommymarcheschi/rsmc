@@ -6,6 +6,7 @@ import { cacheTcgPlayerPrices, getPriceHistoryFromCache } from '$services/price-
 import { supabase } from '$services/supabase';
 import { getCardSignal, getSimilarCards } from '$services/insights';
 import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
+import { buildGradeLadders, type CohortRow } from '$services/grade-estimate';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { GradingService } from '$types';
@@ -185,10 +186,78 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		// migration 019 not applied yet — TAG ladder hidden, page is fine
 	}
 
+	// Real per-grade ladder (migration 020). Isolated + best-effort like
+	// tagExtra above so the page renders normally before 020 is applied
+	// (the per-grade ladder simply stays absent until the column +
+	// re-scrape exist). Honesty doctrine: real cells only.
+	let gradeLadder: Record<string, Record<string, number>> | null = null;
+	let gradeLadderFetchedAt: string | null = null;
+	try {
+		const { data, error } = await supabase
+			.from('card_index')
+			.select('grade_ladder, grade_ladder_fetched_at')
+			.eq('card_id', params.id)
+			.maybeSingle();
+		if (!error && data) {
+			const d = data as { grade_ladder?: unknown; grade_ladder_fetched_at?: string | null };
+			gradeLadder =
+				(d.grade_ladder as Record<string, Record<string, number>> | null) ?? null;
+			gradeLadderFetchedAt = d.grade_ladder_fetched_at ?? null;
+		}
+	} catch {
+		// migration 020 not applied yet — per-grade ladder hidden, page fine
+	}
+
+	// Calibration cohort for the grade estimator: catalog rows that carry
+	// a real PSA 10 + real raw, so the cross-grader 10 ratio (CGC10/PSA10,
+	// TAG10/PSA10) and the raw→PSA10 multiple are learned from real pairs,
+	// never a free constant. Only stable columns (pre-020 safe), tiny
+	// projection, capped, fault-isolated — failure just means no estimates
+	// (page unaffected). rarity/era bucket the curve shape.
+	let estimatorCohort: CohortRow[] | null = null;
+	try {
+		const { data, error: cohortErr } = await supabase
+			.from('card_index')
+			.select('rarity, set_release_date, raw_nm_price, psa10_price, cgc10_price, tag10_price')
+			.not('psa10_price', 'is', null)
+			.not('raw_nm_price', 'is', null)
+			.limit(6000);
+		if (!cohortErr && data) estimatorCohort = data as unknown as CohortRow[];
+	} catch {
+		// best-effort — without the cohort the estimator only emits cells
+		// it can anchor on this card's own real prices; page unaffected.
+	}
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
 	const conditionPrices = collapseLatestPerCondition(conditionPriceRows.data ?? []);
+
+	// Per-grade ladders (real cells + honest, real-anchored estimates).
+	// Pure + fault-isolated — any failure just omits the section.
+	const ir = indexRow as unknown as {
+		rarity: string | null;
+		set_release_date: string | null;
+		raw_nm_price: number | null;
+		psa10_price: number | null;
+		cgc10_price: number | null;
+		tag10_price: number | null;
+	} | null;
+	let gradeLadders: ReturnType<typeof buildGradeLadders> = [];
+	try {
+		gradeLadders = buildGradeLadders({
+			rarity: ir?.rarity ?? null,
+			setReleaseDate: ir?.set_release_date ?? null,
+			rawNm: ir?.raw_nm_price ?? null,
+			psa10: ir?.psa10_price ?? null,
+			cgc10: ir?.cgc10_price ?? null,
+			tag10: ir?.tag10_price ?? null,
+			gradeLadder,
+			cohort: estimatorCohort
+		});
+	} catch {
+		gradeLadders = [];
+	}
 
 	return {
 		card,
@@ -202,6 +271,8 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		conditionPrices,
 		indexRow,
 		tagExtra,
+		gradeLadders,
+		gradeLadderFetchedAt,
 		cardSignal,
 		gradingROI,
 		similarCards,
@@ -342,6 +413,7 @@ export const actions: Actions = {
 			cgcPop: { total: number; grade10: number; gemRate: number } | null;
 			psa10LastSold: string | null;
 			psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+			gradeLadder?: Record<string, Record<string, number>> | null;
 		} | null = null;
 		try {
 			const res = await fetch(`/api/pricecharting?${qs}`);
@@ -393,6 +465,13 @@ export const actions: Actions = {
 			upd.cgc_pop_10 = pc.cgcPop.grade10;
 			upd.cgc_gem_rate = pc.cgcPop.gemRate;
 			upd.cgc_fetched_at = now;
+		}
+		// Real per-grade ladder (migration 020). Only written when the
+		// scrape actually returned graded cells — a transient miss never
+		// clobbers a previously-good ladder with null/empty.
+		if (pc.gradeLadder && Object.keys(pc.gradeLadder).length > 0) {
+			upd.grade_ladder = pc.gradeLadder;
+			upd.grade_ladder_fetched_at = now;
 		}
 		if (pc.psa10LastSold != null) upd.psa10_last_sold_at = pc.psa10LastSold;
 

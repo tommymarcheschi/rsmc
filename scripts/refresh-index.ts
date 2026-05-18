@@ -229,6 +229,10 @@ async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 			tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
 			cgc10_price: pc?.cgc10 ?? null,
 			cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
+			// Real per-grade ladder (migration 020). Real cells only —
+			// PriceCharting blank `-` rows are already dropped upstream.
+			grade_ladder: pc?.gradeLadder ?? null,
+			grade_ladder_fetched_at: pc ? now : null,
 			graded_prices_fetched_at: pc ? now : null,
 			psa10_last_sold_at: pc?.psa10LastSold ?? null,
 			psa_pop_total: psaPop?.total ?? null,
@@ -315,6 +319,10 @@ function stalePriceRow(
 		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
 		cgc10_price: pc?.cgc10 ?? null,
 		cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
+		// Real per-grade ladder (migration 020). Real cells only —
+		// PriceCharting blank `-` rows are already dropped upstream.
+		grade_ladder: pc?.gradeLadder ?? null,
+		grade_ladder_fetched_at: pc ? now : null,
 		graded_prices_fetched_at: pc ? now : null,
 		psa10_last_sold_at: pc?.psa10LastSold ?? null,
 		psa_pop_total: psaPop?.total ?? null,
