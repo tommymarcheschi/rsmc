@@ -46,9 +46,29 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const STALE_DAYS = 7;
 const UPSERT_BATCH = 200;
 
+// A card is "gradeable" if a PSA/CGC graded market plausibly exists for it,
+// so it CAN contribute to graded coverage. Mirrors the engine's
+// gradeability-first gap queue (refresh-index.ts): not a bulk
+// Common/Uncommon, or worth grading by raw value. Thousands of catalog
+// commons (and McDonald's-promo-style sets) structurally have no graded
+// market anywhere — counting them in the denominator makes the KPI look
+// permanently broken and hides real progress. The honest KPI is coverage
+// among gradeable cards; all-cards is kept as the secondary headline.
+const GRADEABLE_VALUE_FLOOR =
+	Number(process.env.TROVE_GRADEABLE_VALUE_FLOOR) > 0
+		? Number(process.env.TROVE_GRADEABLE_VALUE_FLOOR)
+		: 5;
+
+function isGradeable(r: { rarity: string | null; raw_nm_price: number | null }): boolean {
+	if (r.raw_nm_price != null && r.raw_nm_price >= GRADEABLE_VALUE_FLOOR) return true;
+	const rr = r.rarity;
+	return rr != null && rr !== 'Common' && rr !== 'Uncommon';
+}
+
 interface CardRow {
 	set_id: string;
 	set_name: string | null;
+	rarity: string | null;
 	raw_nm_price: number | null;
 	psa10_price: number | null;
 	psa_pop_total: number | null;
@@ -65,6 +85,11 @@ interface Tally {
 	psa_pop: number;
 	cgc_pop: number;
 	stale: number;
+	// Gradeable-only sub-counts (the honest KPI). Not persisted to
+	// coverage_ledger (that needs a hand-applied migration) — display only.
+	g_indexed: number;
+	g_psa10: number;
+	g_psa_pop: number;
 }
 
 async function loadAllCards(): Promise<CardRow[]> {
@@ -76,7 +101,7 @@ async function loadAllCards(): Promise<CardRow[]> {
 		const { data, error } = await supabase
 			.from('card_index')
 			.select(
-				'set_id, set_name, raw_nm_price, psa10_price, psa_pop_total, cgc_pop_total, last_enriched_at'
+				'set_id, set_name, rarity, raw_nm_price, psa10_price, psa_pop_total, cgc_pop_total, last_enriched_at'
 			)
 			.order('card_id', { ascending: true })
 			.range(from, from + pageSize - 1);
@@ -104,7 +129,10 @@ function tally(rows: CardRow[], staleThreshold: string): Tally[] {
 				psa10_priced: 0,
 				psa_pop: 0,
 				cgc_pop: 0,
-				stale: 0
+				stale: 0,
+				g_indexed: 0,
+				g_psa10: 0,
+				g_psa_pop: 0
 			};
 			bySet.set(r.set_id, t);
 		}
@@ -114,6 +142,21 @@ function tally(rows: CardRow[], staleThreshold: string): Tally[] {
 		if (r.psa_pop_total != null) t.psa_pop += 1;
 		if (r.cgc_pop_total != null) t.cgc_pop += 1;
 		if (!r.last_enriched_at || r.last_enriched_at < staleThreshold) t.stale += 1;
+		// Honest + monotonic denominator: a card is gradeable if the
+		// heuristic says so OR it demonstrably already HAS graded data
+		// (proven gradeable). Without the latter clause, acquiring data
+		// for a sub-floor vintage common would paradoxically lower the
+		// gradeable %, and the KPI would understate the real opportunity.
+		if (
+			isGradeable(r) ||
+			r.psa10_price != null ||
+			r.psa_pop_total != null ||
+			r.cgc_pop_total != null
+		) {
+			t.g_indexed += 1;
+			if (r.psa10_price != null) t.g_psa10 += 1;
+			if (r.psa_pop_total != null) t.g_psa_pop += 1;
+		}
 	}
 	return Array.from(bySet.values()).sort((a, b) => a.set_id.localeCompare(b.set_id));
 }
@@ -147,9 +190,12 @@ async function main() {
 			psa10: a.psa10 + t.psa10_priced,
 			psaPop: a.psaPop + t.psa_pop,
 			cgcPop: a.cgcPop + t.cgc_pop,
-			stale: a.stale + t.stale
+			stale: a.stale + t.stale,
+				gIndexed: a.gIndexed + t.g_indexed,
+				gPsa10: a.gPsa10 + t.g_psa10,
+				gPsaPop: a.gPsaPop + t.g_psa_pop
 		}),
-		{ indexed: 0, raw: 0, psa10: 0, psaPop: 0, cgcPop: 0, stale: 0 }
+		{ indexed: 0, raw: 0, psa10: 0, psaPop: 0, cgcPop: 0, stale: 0, gIndexed: 0, gPsa10: 0, gPsaPop: 0 }
 	);
 
 	console.log(
@@ -161,15 +207,28 @@ async function main() {
 			`  stale (>${STALE_DAYS}d): ${tot.stale} (${pct(tot.stale, tot.indexed)})`
 	);
 
+	// The honest KPI: graded coverage among cards that CAN have graded
+	// data. The all-cards % above is dragged down by ~half the catalog
+	// being bulk commons / promo sets with no graded market anywhere.
+	console.log(
+		`Gradeable: ${tot.gIndexed} cards (${pct(tot.gIndexed, tot.indexed)} of catalog) — honest KPI denominator\n` +
+			`  PSA10 (gradeable):   ${tot.gPsa10} (${pct(tot.gPsa10, tot.gIndexed)})\n` +
+			`  PSA pop (gradeable): ${tot.gPsaPop} (${pct(tot.gPsaPop, tot.gIndexed)})`
+	);
+
 	if (dryRun) {
-		console.log('\nWorst 10 sets by PSA10 coverage:');
+		// Rank by gradeable-PSA10 coverage with a meaningful gradeable
+		// population, so structurally-ungradeable sets (McDonald's promos
+		// etc.) don't fill the worklist with noise — these are the real
+		// engine gap-fill targets.
+		console.log('\nWorst 10 sets by gradeable-PSA10 coverage (>=10 gradeable cards):');
 		[...tallies]
-			.filter((t) => t.indexed >= 10)
-			.sort((a, b) => a.psa10_priced / a.indexed - b.psa10_priced / b.indexed)
+			.filter((t) => t.g_indexed >= 10)
+			.sort((a, b) => a.g_psa10 / a.g_indexed - b.g_psa10 / b.g_indexed)
 			.slice(0, 10)
 			.forEach((t) =>
 				console.log(
-					`  ${t.set_id.padEnd(12)} ${pct(t.psa10_priced, t.indexed).padStart(6)} PSA10  (${t.indexed} cards)`
+					`  ${t.set_id.padEnd(12)} ${pct(t.g_psa10, t.g_indexed).padStart(6)} PSA10  (${t.g_indexed}/${t.indexed} gradeable)`
 				)
 			);
 		return;
