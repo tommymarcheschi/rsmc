@@ -27,6 +27,14 @@
 		cgc_pop_total: number | null;
 		cgc_pop_10: number | null;
 		cgc_gem_rate: number | null;
+		tag_pop_total: number | null;
+		tag_pop_10: number | null;
+		bgs_pop_total: number | null;
+		bgs_pop_10: number | null;
+		bgs_gem_rate: number | null;
+		sgc_pop_total: number | null;
+		sgc_pop_10: number | null;
+		sgc_gem_rate: number | null;
 		graded_prices_fetched_at: string | null;
 		last_enriched_at: string | null;
 	}
@@ -55,6 +63,16 @@
 	let conditionPricesAsOf = $derived(conditionPrices[0]?.snapshot_date ?? null);
 
 	let indexRow = $derived(data.indexRow as IndexRow | null);
+	// Migration-019 columns arrive via their own isolated query so the page
+	// renders pre-migration. Null until 019 is applied + the TAG crawl runs.
+	let tagExtra = $derived(
+		(data.tagExtra ?? null) as {
+			tag_grades: Record<string, number> | null;
+			tag_gem_rate: number | null;
+			tag_set_name: string | null;
+			tag_synced_at: string | null;
+		} | null
+	);
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
@@ -153,6 +171,35 @@
 	 *  grading-roi.ts::GEM_RATE_MIN_SAMPLE so the visible confidence bar
 	 *  here lines up with the ROI calculator's `confident` flag. */
 	const GEM_RATE_MIN_SAMPLE = 20;
+
+	// Every grader we hold real population for. A block renders only when
+	// that grader actually has data — no fabricated zeros, honest absence.
+	let popGraders = $derived(
+		(
+			[
+				{ label: 'PSA', color: 'text-vault-gold', total: indexRow?.psa_pop_total ?? null, ten: indexRow?.psa_pop_10 ?? null, gem: indexRow?.psa_gem_rate ?? null },
+				{ label: 'CGC', color: 'text-blue-400', total: indexRow?.cgc_pop_total ?? null, ten: indexRow?.cgc_pop_10 ?? null, gem: indexRow?.cgc_gem_rate ?? null },
+				{ label: 'TAG', color: 'text-purple-300', total: indexRow?.tag_pop_total ?? null, ten: indexRow?.tag_pop_10 ?? null, gem: tagExtra?.tag_gem_rate ?? null },
+				{ label: 'BGS', color: 'text-amber-400', total: indexRow?.bgs_pop_total ?? null, ten: indexRow?.bgs_pop_10 ?? null, gem: indexRow?.bgs_gem_rate ?? null },
+				{ label: 'SGC', color: 'text-teal-300', total: indexRow?.sgc_pop_total ?? null, ten: indexRow?.sgc_pop_10 ?? null, gem: indexRow?.sgc_gem_rate ?? null }
+			] as const
+		).filter((g) => g.total != null)
+	);
+
+	// TAG publishes the full 1–10 ladder WITH half grades + VA (Verified
+	// Authentic). Order numerically; VA last. Real counts only.
+	let tagGradeRows = $derived(
+		(() => {
+			const g = tagExtra?.tag_grades;
+			if (!g) return [] as Array<{ label: string; count: number }>;
+			const rows = Object.entries(g).map(([label, count]) => ({ label, count: Number(count) || 0 }));
+			return rows.sort((a, b) => {
+				const av = a.label === 'VA' ? Infinity : parseFloat(a.label);
+				const bv = b.label === 'VA' ? Infinity : parseFloat(b.label);
+				return av - bv;
+			});
+		})()
+	);
 
 	function rawSourceLabel(src: string | null | undefined): string | null {
 		if (!src) return null;
@@ -570,45 +617,50 @@
 						</div>
 					</div>
 
-					<!-- Pop reports -->
-					{#if indexRow.psa_pop_total != null || indexRow.cgc_pop_total != null}
+					<!-- Pop reports — every grader we hold real data for -->
+					{#if popGraders.length > 0}
 						<div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
-							{#if indexRow.psa_pop_total != null}
-								{@const thin = (indexRow.psa_pop_total ?? 0) < GEM_RATE_MIN_SAMPLE}
+							{#each popGraders as g (g.label)}
+								{@const thin = (g.total ?? 0) < GEM_RATE_MIN_SAMPLE}
 								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
-									<p class="text-[11px] font-medium text-vault-gold">PSA Population</p>
+									<p class="text-[11px] font-medium {g.color}">{g.label} Population</p>
 									<div class="mt-1 flex items-baseline justify-between">
-										<p class="text-base font-bold text-white">{fmtInt(indexRow.psa_pop_total)} total</p>
-										<p class="text-sm text-vault-text-muted">{fmtInt(indexRow.psa_pop_10)} at 10</p>
+										<p class="text-base font-bold text-white">{fmtInt(g.total)} total</p>
+										<p class="text-sm text-vault-text-muted">{fmtInt(g.ten)} at 10</p>
 									</div>
-									{#if indexRow.psa_gem_rate != null}
+									{#if g.gem != null}
 										<p class="mt-0.5 text-xs text-vault-text-muted">
-											Gem rate <span class="text-vault-green">{indexRow.psa_gem_rate.toFixed(1)}%</span>
+											Gem rate <span class="text-vault-green">{g.gem.toFixed(1)}%</span>
 											{#if thin}
-												<span class="ml-1 rounded bg-vault-red/15 px-1.5 py-0.5 text-[10px] font-medium text-vault-red" title="Under {GEM_RATE_MIN_SAMPLE} PSA-graded copies — gem rate is noisy and shouldn't anchor a grading decision on its own.">low sample (n={indexRow.psa_pop_total})</span>
+												<span class="ml-1 rounded bg-vault-red/15 px-1.5 py-0.5 text-[10px] font-medium text-vault-red" title="Under {GEM_RATE_MIN_SAMPLE} {g.label}-graded copies — gem rate is noisy and shouldn't anchor a grading decision on its own.">low sample (n={g.total})</span>
 											{/if}
 										</p>
 									{/if}
 								</div>
-							{/if}
-							{#if indexRow.cgc_pop_total != null}
-								{@const thin = (indexRow.cgc_pop_total ?? 0) < GEM_RATE_MIN_SAMPLE}
-								<div class="rounded-xl border border-vault-border bg-vault-bg p-3">
-									<p class="text-[11px] font-medium text-blue-400">CGC Population</p>
-									<div class="mt-1 flex items-baseline justify-between">
-										<p class="text-base font-bold text-white">{fmtInt(indexRow.cgc_pop_total)} total</p>
-										<p class="text-sm text-vault-text-muted">{fmtInt(indexRow.cgc_pop_10)} at 10</p>
+							{/each}
+						</div>
+					{/if}
+
+					<!-- TAG full grade ladder (1–10 incl. half grades + VA) -->
+					{#if tagGradeRows.length > 0}
+						<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-3">
+							<div class="flex items-baseline justify-between">
+								<p class="text-[11px] font-medium text-purple-300">TAG full grade distribution</p>
+								{#if tagExtra?.tag_synced_at}
+									<p class="text-[10px] text-vault-text-muted" title="Direct from TAG's population report (taggrading.com){tagExtra?.tag_set_name ? ` — set: ${tagExtra?.tag_set_name}` : ''}.">
+										TAG · {daysSince(tagExtra?.tag_synced_at) ?? 0}d
+									</p>
+								{/if}
+							</div>
+							<div class="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+								{#each tagGradeRows as r (r.label)}
+									<div class="rounded-lg border border-vault-border/60 px-2 py-1 text-center">
+										<p class="text-[10px] text-vault-text-muted">{r.label === 'VA' ? 'VA' : `TAG ${r.label}`}</p>
+										<p class="text-sm font-bold text-white">{fmtInt(r.count)}</p>
 									</div>
-									{#if indexRow.cgc_gem_rate != null}
-										<p class="mt-0.5 text-xs text-vault-text-muted">
-											Gem rate <span class="text-vault-green">{indexRow.cgc_gem_rate.toFixed(1)}%</span>
-											{#if thin}
-												<span class="ml-1 rounded bg-vault-red/15 px-1.5 py-0.5 text-[10px] font-medium text-vault-red" title="Under {GEM_RATE_MIN_SAMPLE} CGC-graded copies — gem rate is noisy.">low sample (n={indexRow.cgc_pop_total})</span>
-											{/if}
-										</p>
-									{/if}
-								</div>
-							{/if}
+								{/each}
+							</div>
+							<p class="mt-2 text-[10px] text-vault-text-muted">VA = Verified Authentic (ungraded). Real counts from TAG; grades with no copies are omitted.</p>
 						</div>
 					{/if}
 

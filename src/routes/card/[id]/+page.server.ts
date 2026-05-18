@@ -62,6 +62,8 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 				'rarity, set_release_date, raw_nm_price, raw_source, psa10_price, cgc10_price, tag10_price, ' +
 					'psa10_delta, psa10_multiple, psa10_last_sold_at, psa_pop_total, psa_pop_10, psa_gem_rate, ' +
 					'cgc_pop_total, cgc_pop_10, cgc_gem_rate, ' +
+					'tag_pop_total, tag_pop_10, ' +
+					'bgs_pop_total, bgs_pop_10, bgs_gem_rate, sgc_pop_total, sgc_pop_10, sgc_gem_rate, ' +
 					'graded_prices_fetched_at, last_enriched_at'
 			)
 			.eq('card_id', params.id)
@@ -163,6 +165,26 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		// migration 017 not applied yet — panel stays hidden, page is fine
 	}
 
+	// TAG full-distribution columns land in migration 019. Best-effort and
+	// isolated so the card page renders normally before it's applied (the
+	// TAG ladder simply stays hidden until the column + crawl exist).
+	let tagExtra: {
+		tag_grades: Record<string, number> | null;
+		tag_gem_rate: number | null;
+		tag_set_name: string | null;
+		tag_synced_at: string | null;
+	} | null = null;
+	try {
+		const { data, error } = await supabase
+			.from('card_index')
+			.select('tag_grades, tag_gem_rate, tag_set_name, tag_synced_at')
+			.eq('card_id', params.id)
+			.maybeSingle();
+		if (!error) tagExtra = (data as typeof tagExtra) ?? null;
+	} catch {
+		// migration 019 not applied yet — TAG ladder hidden, page is fine
+	}
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
@@ -179,6 +201,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		psaPop: null,
 		conditionPrices,
 		indexRow,
+		tagExtra,
 		cardSignal,
 		gradingROI,
 		similarCards,
