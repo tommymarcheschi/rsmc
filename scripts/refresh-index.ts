@@ -414,15 +414,33 @@ async function indexStale(
 ) {
 	const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-	// Both tiers order by last_enriched_at asc — that column is indexed
-	// (migration 015), so the ORDER BY + LIMIT stays an index scan and
+	// Raw-NM floor (USD) above which a card is worth grading even if its
+	// rarity is Common/Uncommon (e.g. a chase promo or a sought common).
+	// Below it, an ungraded common has no PSA10/pop market — PriceCharting
+	// structurally has no graded data, so chasing it is wasted scrape
+	// budget. Empirically the gap queue was ~62% Common/Uncommon/Promo and
+	// yielded ~8% graded; gradeability-first targets the slice that has
+	// data to acquire. Tunable via TROVE_GRADEABLE_VALUE_FLOOR.
+	const GRADEABLE_VALUE_FLOOR =
+		Number(process.env.TROVE_GRADEABLE_VALUE_FLOOR) > 0
+			? Number(process.env.TROVE_GRADEABLE_VALUE_FLOOR)
+			: 5;
+
+	// Every selection orders by last_enriched_at asc — that column is
+	// indexed (migration 015), so ORDER BY + LIMIT stays an index scan and
 	// can't reintroduce the seq-scan/timeout that masked the stalled
-	// pipeline. Errors are surfaced on EVERY query for the same reason:
-	// a swallowed selection error is exactly how the catalog hit 99% stale.
+	// pipeline. The extra equality/range filters below are selective and
+	// don't change that the driver is still the indexed ORDER BY + LIMIT.
+	// Errors are surfaced on EVERY query for the same reason: a swallowed
+	// selection error is exactly how the catalog hit 99% stale.
 	async function selectStale(
 		n: number,
-		gapsOnly: boolean,
-		coveredOnly: boolean
+		opts: {
+			gap?: boolean;
+			covered?: boolean;
+			gradeableRarity?: boolean;
+			minValue?: number;
+		}
 	): Promise<StoredCardMeta[]> {
 		let q = supabase
 			.from('card_index')
@@ -430,12 +448,18 @@ async function indexStale(
 				'card_id, name, set_id, set_name, set_release_date, card_number, tcg_headline_market, has_normal, has_holofoil, has_reverse_holofoil, has_first_edition'
 			)
 			.lt('last_enriched_at', staleThreshold);
-		// "Gap" = missing the graded data the coverage KPI tracks. Filling
-		// these first makes the coverage % climb fastest (memory: worker
-		// prioritisation should be coverage-driven, not pure FIFO).
-		if (gapsOnly) q = q.or('psa10_price.is.null,psa_pop_total.is.null');
-		else if (coveredOnly)
+		// "Gap" = missing the graded data the coverage KPI tracks.
+		if (opts.gap) q = q.or('psa10_price.is.null,psa_pop_total.is.null');
+		else if (opts.covered)
 			q = q.not('psa10_price', 'is', null).not('psa_pop_total', 'is', null);
+		// Gradeable rarity = NOT a bulk common/uncommon (and rarity known).
+		// An exclusion list is used deliberately: new sets keep inventing
+		// rarity names (Illustration Rare, Special, Radiant, ACE SPEC, …),
+		// so "everything except Common/Uncommon" stays correct as the
+		// catalog grows, where an inclusion list would silently rot.
+		if (opts.gradeableRarity)
+			q = q.not('rarity', 'in', '(Common,Uncommon)').not('rarity', 'is', null);
+		if (opts.minValue != null) q = q.gte('raw_nm_price', opts.minValue);
 		const { data, error } = await q
 			.order('last_enriched_at', { ascending: true })
 			.limit(n);
@@ -448,23 +472,41 @@ async function indexStale(
 
 	let staleRows: StoredCardMeta[];
 	if (prioritiseGaps) {
-		// Tier 1: stale cards still missing graded data (the coverage gap).
-		const gap = await selectStale(limit, true, false);
-		// Tier 2: if budget remains, the oldest fully-covered stale cards
-		// so freshness of already-good rows is never starved.
-		if (gap.length < limit) {
-			const covered = await selectStale(limit - gap.length, false, true);
-			const seen = new Set(gap.map((r) => r.card_id));
-			staleRows = gap.concat(covered.filter((r) => !seen.has(r.card_id)));
-		} else {
-			staleRows = gap;
-		}
+		// Gradeability-first gap fill. The gap predicate alone sent ~62% of
+		// budget at Common/Uncommon/Promo cards that structurally have no
+		// graded market (nobody grades a $0.10 common), so coverage barely
+		// moved. Spend the budget where graded data actually EXISTS to be
+		// acquired, in descending likelihood:
+		const picked = new Map<string, StoredCardMeta>();
+		const take = (rows: StoredCardMeta[]) => {
+			for (const r of rows) {
+				if (picked.size >= limit) break;
+				if (!picked.has(r.card_id)) picked.set(r.card_id, r);
+			}
+		};
+		// A: gap + gradeable rarity (Rare/holo/ultra/secret/special) —
+		//    the slice PriceCharting most reliably has PSA10/pop for.
+		take(await selectStale(limit, { gap: true, gradeableRarity: true }));
+		// B: gap + worth-grading by raw value — catches the valuable
+		//    common/uncommon/promo/unknown-rarity cards that DO get graded.
+		if (picked.size < limit)
+			take(await selectStale(limit - picked.size, { gap: true, minValue: GRADEABLE_VALUE_FLOOR }));
+		// C: remaining gap (cheap commons) — deprioritised but never fully
+		//    starved (some do have pop; honest coverage still wants them).
+		if (picked.size < limit)
+			take(await selectStale(limit - picked.size, { gap: true }));
+		const gapCount = picked.size;
+		// Freshness tier: oldest fully-covered rows so good data is kept
+		// current and never starved by gap fill.
+		if (picked.size < limit)
+			take(await selectStale(limit - picked.size, { covered: true }));
+		staleRows = [...picked.values()];
 		console.log(
-			`Found ${staleRows.length} stale rows (gap-prioritised: ${gap.length} gap-fill` +
-				`${staleRows.length - gap.length > 0 ? `, ${staleRows.length - gap.length} freshness` : ''})`
+			`Found ${staleRows.length} stale rows (gradeability-prioritised: ${gapCount} gap-fill` +
+				`${staleRows.length - gapCount > 0 ? `, ${staleRows.length - gapCount} freshness` : ''})`
 		);
 	} else {
-		staleRows = await selectStale(limit, false, false);
+		staleRows = await selectStale(limit, {});
 		console.log(`Found ${staleRows.length} stale rows`);
 	}
 
