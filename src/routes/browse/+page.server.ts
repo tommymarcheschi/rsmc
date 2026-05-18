@@ -2,7 +2,8 @@ import { getSets, searchCards } from '$services/tcg-api';
 import { applyClientSort, applyEnrichedSort, resolveSortOption, resolveSortOrderBy } from '$services/sort';
 import { enrichCardsWithPriceCharting } from '$services/enrich';
 import { supabase } from '$services/supabase';
-import { fail } from '@sveltejs/kit';
+import { resolveSearchConcept } from '$services/search-concepts';
+import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { PokemonCard } from '$types';
 import type { EnrichedCard } from '$services/sort';
@@ -40,6 +41,17 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const isClientSort = sortOption.kind === 'client';
 	const isEnrichedSort = sortOption.kind === 'enriched';
 	const isHuntMode = mode === 'hunt';
+
+	// ─── Collector-concept shortcut ──────────────────────────────────
+	// A plain "gold star" / "vstar" search is a rarity, not a name —
+	// route it to the data-rich hunt query so the user sees every
+	// matching card with prices/pop/sales (the whole point of the
+	// search). Only fires on a clean whole-query concept match, and
+	// never when already in hunt mode (hunt handles rarity itself).
+	if (!isHuntMode && search) {
+		const conceptParams = resolveSearchConcept(search);
+		if (conceptParams) throw redirect(307, `/browse?${conceptParams}`);
+	}
 
 	// ─── Hunt Mode: query card_index in Supabase ─────────────────────
 	if (isHuntMode) {

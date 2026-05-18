@@ -1,6 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { supabase } from '$services/supabase';
+import { resolveSearchConcept } from '$services/search-concepts';
 import type { RequestHandler } from './$types';
+
+const SELECT =
+	'card_id, name, set_name, card_number, rarity, image_small_url, raw_nm_price, psa10_price';
 
 /**
  * Lightweight card lookup for the ⌘K command palette. Reads straight
@@ -13,18 +17,25 @@ export const GET: RequestHandler = async ({ url }) => {
 	const q = url.searchParams.get('q')?.trim() ?? '';
 	if (q.length < 2) return json({ results: [] });
 
+	// Collector-concept shortcut: "gold star" / "vstar" / "prism star"
+	// are rarities, not names — query by rarity so the palette surfaces
+	// the actual cards instead of nothing.
+	const concept = resolveSearchConcept(q);
+	const conceptRarity = concept
+		? new URLSearchParams(concept).get('rarity_like')
+		: null;
+
 	const safe = q.replace(/[%_]/g, (c) => `\\${c}`);
-	const { data, error } = await supabase
-		.from('card_index')
-		.select(
-			'card_id, name, set_name, card_number, rarity, image_small_url, raw_nm_price, psa10_price'
-		)
-		// Rank cards whose NAME matches higher than cards whose set matches.
-		// Postgres OR isn't sortable by branch directly — two queries would
-		// be cleaner but this is cheap enough to do in one pass and sort
-		// client-side.
-		.or(`name.ilike.%${safe}%,set_name.ilike.%${safe}%`)
-		.limit(25);
+	const base = supabase.from('card_index').select(SELECT);
+	const { data, error } = conceptRarity
+		? await base.ilike('rarity', `%${conceptRarity}%`).limit(25)
+		: await base
+				// Rank cards whose NAME matches higher than cards whose set
+				// matches. Postgres OR isn't sortable by branch directly —
+				// two queries would be cleaner but this is cheap enough to
+				// do in one pass and sort client-side.
+				.or(`name.ilike.%${safe}%,set_name.ilike.%${safe}%`)
+				.limit(25);
 
 	if (error) return json({ results: [], error: error.message });
 
