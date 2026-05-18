@@ -85,6 +85,31 @@
 		return Math.max(0, Math.floor((Date.now() - then) / (24 * 60 * 60 * 1000)));
 	}
 
+	/** Coarse "x ago" from an ISO timestamp — pillar #7 freshness label. */
+	function relTime(iso: string | null | undefined): string | null {
+		if (!iso) return null;
+		const t = new Date(iso).getTime();
+		if (Number.isNaN(t)) return null;
+		const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+		if (s < 90) return 'just now';
+		const m = Math.floor(s / 60);
+		if (m < 60) return `${m} min ago`;
+		const h = Math.floor(m / 60);
+		if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+		const d = Math.floor(h / 24);
+		return `${d} day${d === 1 ? '' : 's'} ago`;
+	}
+
+	// "Refresh now" pending state — set by use:enhance, cleared on result.
+	let refreshing = $state(false);
+	let refreshMsg = $derived(
+		form && (form as Record<string, unknown>).action === 'refresh'
+			? form.success
+				? 'Updated with the latest live data.'
+				: (form as Record<string, unknown>).message
+			: null
+	);
+
 	const STALE_DAYS = 90;
 	/** Minimum PSA-graded sample size for a trustworthy gem rate — mirrors
 	 *  grading-roi.ts::GEM_RATE_MIN_SAMPLE so the visible confidence bar
@@ -429,14 +454,47 @@
 			<!-- Market Signals — all data we have on this card from card_index -->
 			{#if hasMarketSignals && indexRow}
 				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
-					<div class="flex items-center justify-between">
+					<div class="flex items-start justify-between gap-3">
 						<h2 class="text-lg font-semibold text-white">Market Signals</h2>
-						{#if indexRow.last_enriched_at}
-							<span class="text-[10px] text-vault-text-muted">
-								enriched {new Date(indexRow.last_enriched_at).toLocaleDateString()}
-							</span>
-						{/if}
+						<div class="flex flex-col items-end gap-1">
+							{#if relTime(indexRow.graded_prices_fetched_at ?? indexRow.last_enriched_at)}
+								<span class="text-[10px] text-vault-text-muted">
+									Updated {relTime(indexRow.graded_prices_fetched_at ?? indexRow.last_enriched_at)}
+								</span>
+							{:else}
+								<span class="text-[10px] text-vault-text-muted">No live data cached yet</span>
+							{/if}
+							<form
+								method="POST"
+								action="?/refreshNow"
+								use:enhance={() => {
+									refreshing = true;
+									return async ({ update }) => {
+										await update();
+										refreshing = false;
+									};
+								}}
+							>
+								<button
+									type="submit"
+									disabled={refreshing}
+									class="rounded-chip border border-vault-border bg-vault-bg px-2.5 py-1 text-[11px] font-medium text-vault-text transition-colors hover:bg-vault-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+									title="Spend one live PriceCharting pull for this card"
+								>
+									{refreshing ? 'Refreshing…' : 'Refresh now'}
+								</button>
+							</form>
+						</div>
 					</div>
+					{#if refreshMsg}
+						<p
+							class="mt-2 text-[11px] {form && form.success
+								? 'text-vault-green'
+								: 'text-vault-red'}"
+						>
+							{refreshMsg}
+						</p>
+					{/if}
 
 					<!-- Price ladder (raw + each grader's 10) -->
 					<div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">

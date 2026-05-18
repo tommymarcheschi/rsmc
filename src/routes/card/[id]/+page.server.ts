@@ -247,6 +247,129 @@ export const actions: Actions = {
 		return { action: 'pcOverride', success: true, cleared: value == null };
 	},
 
+	// Pillar #7 — "Refresh now". A user-triggered live pull: the page
+	// shows cached data + its age, and this spends one on-demand scrape
+	// when the user asks. Routes through the canonical /api/pricecharting
+	// endpoint (it owns the scrape + Cloudflare handling + cache) so there
+	// is zero scrape-logic duplication here. Honesty doctrine: only real
+	// scraped values are written, a transient miss never clobbers good
+	// cached data with null, and timestamps move only on a real success.
+	refreshNow: async ({ params, fetch }) => {
+		const cardId = params.id;
+		if (!cardId) return fail(400, { action: 'refresh', message: 'Missing card id' });
+
+		const { data: idRow } = await supabase
+			.from('card_index')
+			.select('name, set_name, card_number')
+			.eq('card_id', cardId)
+			.maybeSingle();
+		const idc = idRow as { name?: string; set_name?: string; card_number?: string } | null;
+
+		let name = idc?.name ?? '';
+		let setName = idc?.set_name ?? '';
+		let cardNumber = idc?.card_number ?? '';
+		if (!name) {
+			const card = await getCard(cardId).catch(() => null);
+			if (!card) return fail(404, { action: 'refresh', message: 'Card not found' });
+			name = card.name;
+			setName = card.set?.name ?? '';
+			cardNumber = card.number ?? '';
+		}
+
+		const qs = new URLSearchParams({ name });
+		if (setName) qs.set('set', setName);
+		if (cardNumber) qs.set('number', cardNumber);
+
+		let pc: {
+			ungraded: number | null;
+			psa10: number | null;
+			cgc10: number | null;
+			tag10: number | null;
+			psaPop: { total: number; grade10: number; gemRate: number } | null;
+			cgcPop: { total: number; grade10: number; gemRate: number } | null;
+			psa10LastSold: string | null;
+			psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+		} | null = null;
+		try {
+			const res = await fetch(`/api/pricecharting?${qs}`);
+			if (res.ok) pc = await res.json();
+		} catch {
+			pc = null;
+		}
+
+		if (!pc) {
+			return fail(502, {
+				action: 'refresh',
+				message: 'Live data source is unavailable right now — still showing cached data.'
+			});
+		}
+
+		const now = new Date().toISOString();
+		// Build the update from real values only. A field absent from this
+		// scrape is left as-is so a transient PriceCharting miss can't erase
+		// a previously-good value. Timestamps only advance on success.
+		const upd: Record<string, unknown> = {
+			graded_prices_fetched_at: now,
+			last_enriched_at: now
+		};
+		if (pc.ungraded != null) {
+			upd.raw_nm_price = pc.ungraded;
+			upd.raw_source = 'pricecharting';
+			upd.raw_fetched_at = now;
+		}
+		if (pc.psa10 != null) {
+			upd.psa10_price = pc.psa10;
+			upd.psa10_source = 'pricecharting';
+		}
+		if (pc.cgc10 != null) {
+			upd.cgc10_price = pc.cgc10;
+			upd.cgc10_source = 'pricecharting';
+		}
+		if (pc.tag10 != null) {
+			upd.tag10_price = pc.tag10;
+			upd.tag10_source = 'pricecharting';
+		}
+		if (pc.psaPop) {
+			upd.psa_pop_total = pc.psaPop.total;
+			upd.psa_pop_10 = pc.psaPop.grade10;
+			upd.psa_gem_rate = pc.psaPop.gemRate;
+			upd.psa_fetched_at = now;
+		}
+		if (pc.cgcPop) {
+			upd.cgc_pop_total = pc.cgcPop.total;
+			upd.cgc_pop_10 = pc.cgcPop.grade10;
+			upd.cgc_gem_rate = pc.cgcPop.gemRate;
+			upd.cgc_fetched_at = now;
+		}
+		if (pc.psa10LastSold != null) upd.psa10_last_sold_at = pc.psa10LastSold;
+
+		const { error: err } = await supabase
+			.from('card_index')
+			.update(upd)
+			.eq('card_id', cardId);
+		if (err) return fail(500, { action: 'refresh', message: err.message });
+
+		if (pc.psa10Sales?.length) {
+			await supabase
+				.from('psa10_sales')
+				.upsert(
+					pc.psa10Sales.map((s) => ({
+						card_id: cardId,
+						sold_at: s.sold_at,
+						price_cents: Math.round(s.price * 100),
+						marketplace: s.marketplace
+					})),
+					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+				)
+				.then(
+					() => {},
+					() => {}
+				);
+		}
+
+		return { action: 'refresh', success: true, refreshedAt: now };
+	},
+
 	addToWatchlist: async ({ params }) => {
 		const cardId = params.id;
 		if (!cardId) return fail(400, { action: 'watchlist', message: 'Missing card id' });
