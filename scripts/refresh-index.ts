@@ -327,31 +327,70 @@ async function indexSet(setId: string, concurrency: number, dryRun: boolean) {
 	return { processed, errors };
 }
 
-async function indexStale(limit: number, concurrency: number, dryRun: boolean) {
+async function indexStale(
+	limit: number,
+	concurrency: number,
+	dryRun: boolean,
+	prioritiseGaps: boolean
+) {
 	const staleThreshold = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-	const { data: staleRows, error: staleErr } = await supabase
-		.from('card_index')
-		.select('card_id')
-		.lt('last_enriched_at', staleThreshold)
-		.order('last_enriched_at', { ascending: true })
-		.limit(limit);
 
-	// Do NOT swallow this error. A failed selection (e.g. statement
-	// timeout on the unindexed last_enriched_at ORDER BY under concurrent
-	// cron load) must surface as a hard failure — otherwise the cron
-	// exits 0 and "No stale rows found" silently masks a stalled pipeline,
-	// which is exactly how the catalog drifted to 99% stale unnoticed.
-	if (staleErr) {
-		console.error(`Stale selection FAILED: ${staleErr.message}`);
-		process.exit(1);
+	// Both tiers order by last_enriched_at asc — that column is indexed
+	// (migration 015), so the ORDER BY + LIMIT stays an index scan and
+	// can't reintroduce the seq-scan/timeout that masked the stalled
+	// pipeline. Errors are surfaced on EVERY query for the same reason:
+	// a swallowed selection error is exactly how the catalog hit 99% stale.
+	async function selectStale(
+		n: number,
+		gapsOnly: boolean,
+		coveredOnly: boolean
+	): Promise<Array<{ card_id: string }>> {
+		let q = supabase
+			.from('card_index')
+			.select('card_id')
+			.lt('last_enriched_at', staleThreshold);
+		// "Gap" = missing the graded data the coverage KPI tracks. Filling
+		// these first makes the coverage % climb fastest (memory: worker
+		// prioritisation should be coverage-driven, not pure FIFO).
+		if (gapsOnly) q = q.or('psa10_price.is.null,psa_pop_total.is.null');
+		else if (coveredOnly)
+			q = q.not('psa10_price', 'is', null).not('psa_pop_total', 'is', null);
+		const { data, error } = await q
+			.order('last_enriched_at', { ascending: true })
+			.limit(n);
+		if (error) {
+			console.error(`Stale selection FAILED: ${error.message}`);
+			process.exit(1);
+		}
+		return (data ?? []) as Array<{ card_id: string }>;
 	}
 
-	if (!staleRows || staleRows.length === 0) {
+	let staleRows: Array<{ card_id: string }>;
+	if (prioritiseGaps) {
+		// Tier 1: stale cards still missing graded data (the coverage gap).
+		const gap = await selectStale(limit, true, false);
+		// Tier 2: if budget remains, the oldest fully-covered stale cards
+		// so freshness of already-good rows is never starved.
+		if (gap.length < limit) {
+			const covered = await selectStale(limit - gap.length, false, true);
+			const seen = new Set(gap.map((r) => r.card_id));
+			staleRows = gap.concat(covered.filter((r) => !seen.has(r.card_id)));
+		} else {
+			staleRows = gap;
+		}
+		console.log(
+			`Found ${staleRows.length} stale rows (gap-prioritised: ${gap.length} gap-fill` +
+				`${staleRows.length - gap.length > 0 ? `, ${staleRows.length - gap.length} freshness` : ''})`
+		);
+	} else {
+		staleRows = await selectStale(limit, false, false);
+		console.log(`Found ${staleRows.length} stale rows`);
+	}
+
+	if (staleRows.length === 0) {
 		console.log('No stale rows found.');
 		return;
 	}
-
-	console.log(`Found ${staleRows.length} stale rows`);
 	if (dryRun) {
 		console.log('DRY RUN — would re-enrich these cards');
 		return;
@@ -443,7 +482,12 @@ async function main() {
 			'seed-all': { type: 'boolean', default: false },
 			'dry-run': { type: 'boolean', default: false },
 			concurrency: { type: 'string', default: '6' },
-			force: { type: 'boolean', default: false }
+			force: { type: 'boolean', default: false },
+			// Stale-mode prioritisation. Default: gap-prioritised (fill the
+			// coverage gap first). `--fifo` forces the legacy pure-oldest
+			// order; env TROVE_STALE_PRIORITISE_GAPS=0 does the same.
+			'prioritise-gaps': { type: 'boolean' },
+			fifo: { type: 'boolean', default: false }
 		},
 		strict: false
 	});
@@ -491,7 +535,15 @@ async function main() {
 	}
 
 	if (values.stale) {
-		await indexStale(parseInt(values.stale as string) || 500, concurrency, dryRun);
+		// Gap-prioritised unless explicitly disabled (--fifo / --prioritise-gaps
+		// / env). Default on: it makes the coverage KPI climb fastest.
+		const prioritiseGaps =
+			values['prioritise-gaps'] === true
+				? true
+				: values.fifo === true || process.env.TROVE_STALE_PRIORITISE_GAPS === '0'
+					? false
+					: true;
+		await indexStale(parseInt(values.stale as string) || 500, concurrency, dryRun, prioritiseGaps);
 		return;
 	}
 

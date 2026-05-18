@@ -32,6 +32,9 @@
  *   TROVE_WORKER_STATUS      heartbeat file path
  *                            (default ~/Library/Logs/Trove/enrich-worker-status.json)
  *   TROVE_WORKER_FAIL_ALERT  consecutive bad cycles before alert (default 5)
+ *   TROVE_STALE_PRIORITISE_GAPS  inherited by the spawned refresh-index:
+ *                            '1'/unset = fill coverage gaps first (default,
+ *                            climbs the KPI fastest), '0' = legacy FIFO
  */
 
 import { config } from 'dotenv';
