@@ -35,6 +35,31 @@ export interface PopDistribution {
 	gemRate: number;
 }
 
+/**
+ * Real per-grade price ladder, normalized by grader, exactly as
+ * PriceCharting publishes it on the `#full-prices` table. Only cells
+ * PriceCharting actually lists a price for are present — a blank `-`
+ * cell is absent here, never zero-filled (honesty doctrine: no
+ * fabricated numbers, an absent grade renders nothing downstream).
+ *
+ * `psa` carries PriceCharting's generic "Grade N" columns: by
+ * PriceCharting's own methodology these reflect PSA-graded sales (PSA
+ * is their default grader), plus the explicitly-named "PSA 10". The
+ * other graders only ever get their separately-named 10 (and 9.5 /
+ * pristine / black-label where listed) — PriceCharting publishes no
+ * sub-10 CGC/BGS/TAG/SGC price columns.
+ *
+ * Keys: integer/half grade as a string ("1".."9", "9.5", "10"); plus
+ * "10P" = CGC 10 Pristine, "10BL" = BGS 10 Black Label.
+ */
+export interface GradeLadder {
+	psa?: Record<string, number>;
+	cgc?: Record<string, number>;
+	bgs?: Record<string, number>;
+	tag?: Record<string, number>;
+	sgc?: Record<string, number>;
+}
+
 export interface PriceChartingData {
 	/** PriceCharting "Ungraded" tier — the canonical raw price */
 	ungraded: number | null;
@@ -48,6 +73,9 @@ export interface PriceChartingData {
 	tag10: number | null;
 	/** All parsed tiers as key→price map for future use */
 	allTiers: Record<string, number>;
+	/** Real per-grade ladder normalized by grader (see GradeLadder).
+	 *  This is the long-discarded sub-10 data — kept now, real only. */
+	gradeLadder: GradeLadder;
 	/** PSA population distribution (from pop_data JS variable) */
 	psaPop: PopDistribution | null;
 	/** CGC population distribution */
@@ -418,6 +446,50 @@ function mapTiers(tiers: Record<string, number>): Pick<PriceChartingData, 'ungra
 	};
 }
 
+/**
+ * Normalize the raw tier map into a per-grader real price ladder.
+ *
+ * PriceCharting's `#full-prices` table is already fully parsed by
+ * parsePriceTiers (every <td>Label</td><td>$Price</td> row); mapTiers
+ * only kept the five 10-slots and dropped the rest. This keeps the
+ * real sub-10 ladder.
+ *
+ * Mapping (PriceCharting's own labeling):
+ *  - "Grade N" / "PSA N"      → psa[N]   (their generic Grade = PSA sales)
+ *  - "CGC 10 Pristine"        → cgc["10P"]
+ *  - "CGC N"                  → cgc[N]
+ *  - "BGS 10 Black Label"     → bgs["10BL"]
+ *  - "BGS N"                  → bgs[N]
+ *  - "TAG N"                  → tag[N]
+ *  - "SGC N"                  → sgc[N]
+ * Anything else (Ungraded, Box only, New, Complete, generic Graded) is
+ * intentionally ignored — it is not a per-grade graded comp.
+ */
+function normalizeGradeLadder(tiers: Record<string, number>): GradeLadder {
+	const ladder: GradeLadder = {};
+	const put = (g: keyof GradeLadder, key: string, val: number) => {
+		if (!Number.isFinite(val) || val <= 0) return;
+		(ladder[g] ??= {})[key] = val;
+	};
+
+	for (const [rawKey, val] of Object.entries(tiers)) {
+		const k = rawKey.toLowerCase().replace(/\s+/g, ' ').trim();
+
+		// CGC / BGS specials first (before the generic "<grader> N" rule).
+		if (k === 'cgc 10 pristine') { put('cgc', '10P', val); continue; }
+		if (k === 'bgs 10 black label' || k === 'bgs 10 black') { put('bgs', '10BL', val); continue; }
+
+		// PriceCharting's generic graded column = PSA-equivalent sales.
+		let m = k.match(/^grade (\d+(?:\.\d)?)$/);
+		if (m) { put('psa', m[1], val); continue; }
+
+		m = k.match(/^(psa|cgc|bgs|tag|sgc) (\d+(?:\.\d)?)$/);
+		if (m) { put(m[1] as keyof GradeLadder, m[2], val); continue; }
+	}
+
+	return ladder;
+}
+
 // ---------------------------------------------------------------------------
 // Main public function
 // ---------------------------------------------------------------------------
@@ -441,6 +513,7 @@ async function parseProductPage(url: string, matchedName: string): Promise<Price
 	return {
 		...mapped,
 		allTiers: tiers,
+		gradeLadder: normalizeGradeLadder(tiers),
 		psaPop: popData.psa,
 		cgcPop: popData.cgc,
 		psa10LastSold,

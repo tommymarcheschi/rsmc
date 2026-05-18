@@ -201,6 +201,39 @@
 		})()
 	);
 
+	// Per-grade ladders: real cells (bold white) + honest, real-anchored
+	// estimates (darker blue + est. chip + tooltip). Built server-side by
+	// grade-estimate.ts; empty array = nothing to show (page unaffected).
+	interface GradeCell {
+		grade: string;
+		value: number;
+		real: boolean;
+		confidence?: number;
+		tier?: 'high' | 'medium' | 'low';
+		basis?: string;
+	}
+	interface GraderLadder {
+		grader: 'PSA' | 'CGC' | 'BGS' | 'TAG';
+		cells: GradeCell[];
+	}
+	let gradeLadders = $derived(
+		((data as Record<string, unknown>).gradeLadders ?? []) as GraderLadder[]
+	);
+	let gradeLadderFetchedAt = $derived(
+		((data as Record<string, unknown>).gradeLadderFetchedAt ?? null) as string | null
+	);
+	const GRADER_COLOR: Record<string, string> = {
+		PSA: 'text-vault-gold',
+		CGC: 'text-blue-400',
+		BGS: 'text-amber-400',
+		TAG: 'text-purple-300'
+	};
+	function gradeLabel(g: string): string {
+		if (g === '10P') return '10 Pristine';
+		if (g === '10BL') return '10 Black';
+		return g;
+	}
+
 	function rawSourceLabel(src: string | null | undefined): string | null {
 		if (!src) return null;
 		if (src === 'pricecharting') return 'PriceCharting Ungraded';
@@ -661,6 +694,72 @@
 								{/each}
 							</div>
 							<p class="mt-2 text-[10px] text-vault-text-muted">VA = Verified Authentic (ungraded). Real counts from TAG; grades with no copies are omitted.</p>
+						</div>
+					{/if}
+
+					<!-- Full per-grade ladder: real (white) + estimates (blue) -->
+					{#if gradeLadders.length > 0}
+						<div class="mt-4 rounded-xl border border-vault-border bg-vault-bg p-3 sm:p-4">
+							<div class="flex items-baseline justify-between gap-3">
+								<p class="text-sm font-semibold text-vault-text">Per-grade ladder</p>
+								{#if gradeLadderFetchedAt && relTime(gradeLadderFetchedAt)}
+									<p class="text-[10px] text-vault-text-muted">
+										real prices · {relTime(gradeLadderFetchedAt)}
+									</p>
+								{/if}
+							</div>
+							<p class="mt-1 text-[11px] text-vault-text-muted">
+								<span class="font-bold text-white">White</span> = real market price.
+								<span class="font-medium text-vault-estimate">Blue</span> = estimate
+								(no real sale for that grade) — hover for how it was derived.
+							</p>
+
+							{#each gradeLadders as ladder (ladder.grader)}
+								<div class="mt-3">
+									<p class="text-[11px] font-medium {GRADER_COLOR[ladder.grader] ?? 'text-vault-text'}">
+										{ladder.grader}
+										{#if ladder.grader === 'TAG'}
+											<span class="text-[10px] font-normal text-vault-text-muted"
+												>· prices estimated; real TAG counts are in the distribution above</span
+											>
+										{/if}
+									</p>
+									<div class="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+										{#each ladder.cells as c (c.grade)}
+											{#if c.real}
+												<div class="rounded-lg border border-vault-border/60 px-2 py-1 text-center">
+													<p class="text-[10px] text-vault-text-muted">{ladder.grader} {gradeLabel(c.grade)}</p>
+													<p class="text-sm font-bold text-white">{fmtMoney(c.value)}</p>
+												</div>
+											{:else}
+												<div
+													class="rounded-lg border border-dashed border-vault-estimate/40 bg-vault-estimate/[0.04] px-2 py-1 text-center {c.tier === 'low' ? 'opacity-70' : ''}"
+													title={c.basis}
+												>
+													<p class="text-[10px] text-vault-text-muted">{ladder.grader} {gradeLabel(c.grade)}</p>
+													<p class="text-sm font-medium italic text-vault-estimate">
+														{fmtMoney(c.value)}
+													</p>
+													<p class="text-[9px] font-medium text-vault-estimate/80">
+														{c.tier === 'low' ? 'est.?' : 'est.'}
+													</p>
+												</div>
+											{/if}
+										{/each}
+									</div>
+								</div>
+							{/each}
+
+							<p class="mt-3 text-[10px] leading-relaxed text-vault-text-muted">
+								Real prices from PriceCharting's per-grade table — its generic
+								“Grade N” reflects PSA-graded sales. CGC / BGS / TAG sub-10
+								grades are estimated from this card's real PSA price at that
+								grade × that grader's 10-to-PSA-10 ratio (this card's own real
+								pair when available, else a ratio calibrated from real
+								catalog cards in the same era and rarity). Grades with no
+								real anchor and low-confidence estimates are omitted — a blank
+								beats a bad number.
+							</p>
 						</div>
 					{/if}
 

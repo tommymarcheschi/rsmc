@@ -28,6 +28,9 @@
 	--color-vault-green: #34d399;
 	--color-vault-red: #f87171;
 	--color-vault-cyan: #22d3ee;
+	/* Estimated (non-real) per-grade values render in this darker blue so
+	   they are unmistakable next to bold-white real market prices. */
+	--color-vault-estimate: #3b82f6;
 
 	/* Pokemon type colors — unchanged so type badges keep their identity. */
 	--color-type-fire: #f97316;
