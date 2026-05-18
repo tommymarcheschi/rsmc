@@ -51,6 +51,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // endpoint when a dev server URL is available (it uses SvelteKit's fetch which
 // passes Cloudflare). Set DEV_SERVER_URL=http://localhost:5178 in .env.local.
 import { fetchPriceCharting as fetchPriceChartingDirect } from '../src/lib/services/pricecharting-scraper.js';
+import { getTagCardPop, tagPopScalars, TagGradingError } from '../src/lib/services/tag-grading.js';
 
 const DEV_SERVER_URL = process.env.DEV_SERVER_URL ?? '';
 
@@ -226,15 +227,21 @@ async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 			psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
 			tag10_price: pc?.tag10 ?? null,
 			tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
+			cgc10_price: pc?.cgc10 ?? null,
+			cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
 			graded_prices_fetched_at: pc ? now : null,
 			psa10_last_sold_at: pc?.psa10LastSold ?? null,
 			psa_pop_total: psaPop?.total ?? null,
 			psa_pop_10: psaPop?.grade10 ?? null,
 			psa_gem_rate: psaPop?.gemRate ?? null,
 			psa_fetched_at: psaPop ? now : null,
-			tag_pop_total: cgcPop?.total ?? null,  // Using tag_pop columns for CGC until TAG scraper exists
-			tag_pop_10: cgcPop?.grade10 ?? null,
-			tag_fetched_at: cgcPop ? now : null,
+			// Real CGC pop into its own columns (migration 007). tag_pop_*
+			// is left untouched — PriceCharting has no TAG pop; writing CGC
+			// there fabricated TAG. Omitted from the upsert = never clobbered.
+			cgc_pop_total: cgcPop?.total ?? null,
+			cgc_pop_10: cgcPop?.grade10 ?? null,
+			cgc_gem_rate: cgcPop?.gemRate ?? null,
+			cgc_fetched_at: cgcPop ? now : null,
 			last_enriched_at: now,
 			enrich_version: 2,
 			enrich_errors: errors
@@ -306,15 +313,21 @@ function stalePriceRow(
 		psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
 		tag10_price: pc?.tag10 ?? null,
 		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
+		cgc10_price: pc?.cgc10 ?? null,
+		cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
 		graded_prices_fetched_at: pc ? now : null,
 		psa10_last_sold_at: pc?.psa10LastSold ?? null,
 		psa_pop_total: psaPop?.total ?? null,
 		psa_pop_10: psaPop?.grade10 ?? null,
 		psa_gem_rate: psaPop?.gemRate ?? null,
 		psa_fetched_at: psaPop ? now : null,
-		tag_pop_total: cgcPop?.total ?? null,
-		tag_pop_10: cgcPop?.grade10 ?? null,
-		tag_fetched_at: cgcPop ? now : null,
+		// Real CGC pop into its own columns (migration 007). tag_pop_* is
+		// left untouched — PriceCharting has no TAG pop; writing CGC there
+		// fabricated TAG. Omitted from the upsert = never clobbered.
+		cgc_pop_total: cgcPop?.total ?? null,
+		cgc_pop_10: cgcPop?.grade10 ?? null,
+		cgc_gem_rate: cgcPop?.gemRate ?? null,
+		cgc_fetched_at: cgcPop ? now : null,
 		last_enriched_at: now,
 		enrich_version: 2,
 		enrich_errors: errors
@@ -693,6 +706,43 @@ async function main() {
 		if (!tcgRes.ok) { console.error(`TCG API ${tcgRes.status}`); return; }
 		const card = (await tcgRes.json()).data as TcgCard;
 		const { row, psa10Sales } = await enrichOneCard(card);
+
+		// On-query TAG re-verify (single card only — bounded, user-driven).
+		// First-time TAG discovery + the alias honesty gate live in the
+		// nightly tag-pop crawler; here we only refresh a card whose TAG set
+		// is already known. Failure leaves the stored value untouched.
+		try {
+			const { data: prov } = await supabase
+				.from('card_index')
+				.select('card_number, tag_set_name, tag_brand_name, tag_year')
+				.eq('card_id', cardId)
+				.maybeSingle();
+			if (prov?.tag_set_name && prov?.tag_brand_name && prov?.tag_year && prov?.card_number) {
+				const grades = await getTagCardPop({
+					category: process.env.TROVE_TAG_CATEGORY || 'Pokémon',
+					year: prov.tag_year as number,
+					brandName: prov.tag_brand_name as string,
+					setName: prov.tag_set_name as string,
+					cardNumber: prov.card_number as string
+				});
+				if (grades) {
+					const sc = tagPopScalars(grades);
+					const nowIso = new Date().toISOString();
+					Object.assign(row, {
+						tag_pop_total: sc.total,
+						tag_pop_10: sc.grade10,
+						tag_gem_rate: sc.gemRate,
+						tag_grades: grades,
+						tag_fetched_at: nowIso,
+						tag_synced_at: nowIso
+					});
+				}
+			}
+		} catch (e) {
+			const m = e instanceof TagGradingError ? e.message : (e as Error).message;
+			console.warn(`TAG re-verify skipped: ${m}`);
+		}
+
 		if (dryRun) {
 			console.log('DRY RUN result:');
 			console.log(JSON.stringify({ row, psa10Sales }, null, 2));

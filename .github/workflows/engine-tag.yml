@@ -1,0 +1,34 @@
+name: engine-tag
+
+# Track A — TAG Grading pop crawl. TAG publishes its own authoritative pop
+# report (api.taggrading.com); reverse-engineered client in
+# src/lib/services/tag-grading.ts. Not Cloudflare-walled, lightly paced.
+# No-ops cleanly until migration 019 is applied (tag-pop.ts isolates per set
+# and the write simply errors-per-set until tag_grades exists).
+
+on:
+  schedule:
+    - cron: '20 8 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: engine-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: TAG population crawl
+        run: node_modules/.bin/tsx scripts/tag-pop.ts --all

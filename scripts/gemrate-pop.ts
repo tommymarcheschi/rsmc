@@ -72,10 +72,18 @@ const num = (v: string | undefined, d: number) => {
 	return Number.isFinite(n) && n >= 0 ? n : d;
 };
 
-// PSA-only by default: GemRate's item-details-advanced serves rowdata for PSA
-// only — cgc/bgs/sgc return empty rowdata for every set, and each empty grader
-// still burns the exponential CF backoff, starving the whole crawl. Override
-// via TROVE_GEMRATE_GRADERS if a working CGC/BGS/SGC endpoint is found.
+// PSA-only by default: GemRate's item-details-advanced serves real rowdata
+// for PSA ONLY. Verified live 2026-05-18 against base1 "Pokemon Game" 1999:
+//   psa -> 878KB, real RowData (gem rates, totals)
+//   cgc -> 77KB,  RowData '[]'  (empty — validate() rejects)
+//   bgs -> 77KB,  RowData '[]'  (empty — validate() rejects)
+//   sgc -> Cloudflare "Just a moment" challenge (fetch returns null)
+//   tag -> 878KB, RowData BYTE-IDENTICAL to PSA (param ignored, PSA echoed)
+// The `tag` echo is the dangerous one: it passes the card-number overlap
+// gate (same set), so an unguarded TROVE_GEMRATE_GRADERS=psa,tag would
+// write PSA's population onto TAG columns — fabrication. assertNotPsaEcho()
+// below hard-blocks that. Override TROVE_GEMRATE_GRADERS only if a source
+// genuinely serving distinct CGC/BGS/SGC/TAG rowdata is found.
 const GRADERS = (process.env.TROVE_GEMRATE_GRADERS ?? 'psa')
 	.split(',')
 	.map((s) => s.trim().toLowerCase())
@@ -244,6 +252,20 @@ function pickCanonical(rows: GemrateCard[]): GemrateCard | null {
 	);
 }
 
+/**
+ * Structural fingerprint of a fetched grader payload (card_number + totals +
+ * gem rate). GemRate ignores an unrecognised `grader` and serves the PSA page
+ * verbatim, which passes the card-number overlap gate. Comparing this
+ * signature to the PSA fetch for the SAME set catches the echo before any
+ * write — the honesty gate against persisting PSA pop as TAG/other.
+ */
+function rowSignature(rows: GemrateCard[]): string {
+	return rows
+		.map((r) => `${normNum(r.card_number)}:${r.card_total_grades ?? ''}:${r.card_gem_rate ?? ''}`)
+		.sort()
+		.join('|');
+}
+
 // --------------------------------------------------------------------------
 // Map GemRate -> card_index columns for one grader
 // --------------------------------------------------------------------------
@@ -381,6 +403,7 @@ async function processSet(
 	const graders = opts.only ? [opts.only] : GRADERS;
 	let resolved: GemrateTarget | null = null;
 	let totalWrote = 0;
+	let psaSig: string | null = null;
 	const wroteGraders: string[] = [];
 
 	for (const grader of graders) {
@@ -433,6 +456,28 @@ async function processSet(
 		const v = validate(rows, idx);
 		if (!v.ok) {
 			log(`  [${set.set_id}] ${grader}: validation failed post-fetch — ${v.reason}, skip`);
+			continue;
+		}
+
+		// Honesty gate: GemRate echoes the PSA page for unrecognised graders
+		// (verified: grader=tag). That echo passes validate() (same set), so
+		// catch it structurally before any write.
+		const sig = rowSignature(rows);
+		if (grader === 'psa') {
+			psaSig = sig;
+		} else if (psaSig !== null && sig === psaSig) {
+			log(
+				`  [${set.set_id}] ${grader}: PSA-echo detected (GemRate ignored grader) — ` +
+					`refusing to write fabricated ${grader} pop`
+			);
+			continue;
+		} else if (grader === 'tag') {
+			// No PSA fetch this run to diff against. GemRate provably serves
+			// no distinct TAG rowdata, so refuse rather than risk an echo.
+			log(
+				`  [${set.set_id}] tag: GemRate serves no real TAG pop (echoes PSA) — ` +
+					`skipping (honesty gate)`
+			);
 			continue;
 		}
 
