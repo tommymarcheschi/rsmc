@@ -72,7 +72,11 @@ const num = (v: string | undefined, d: number) => {
 	return Number.isFinite(n) && n >= 0 ? n : d;
 };
 
-const GRADERS = (process.env.TROVE_GEMRATE_GRADERS ?? 'psa,cgc,bgs,sgc')
+// PSA-only by default: GemRate's item-details-advanced serves rowdata for PSA
+// only — cgc/bgs/sgc return empty rowdata for every set, and each empty grader
+// still burns the exponential CF backoff, starving the whole crawl. Override
+// via TROVE_GEMRATE_GRADERS if a working CGC/BGS/SGC endpoint is found.
+const GRADERS = (process.env.TROVE_GEMRATE_GRADERS ?? 'psa')
 	.split(',')
 	.map((s) => s.trim().toLowerCase())
 	.filter(Boolean);
