@@ -426,6 +426,24 @@ async function indexStale(
 			? Number(process.env.TROVE_GRADEABLE_VALUE_FLOOR)
 			: 5;
 
+	// Chronic-miss backoff. `graded_prices_fetched_at` is set ONLY when
+	// PriceCharting was actually reached (stalePriceRow/enrichOneCard write
+	// `pc ? now : null`), so a CF/transient failure leaves it null and the
+	// card stays top-priority. A card that WAS reached but still has no
+	// psa10/pop is structurally absent on PriceCharting — re-scraping it
+	// every 7-day stale cycle burns budget that gradeable cards with data
+	// could use. So: prefer never-checked cards, and only re-verify a
+	// confirmed miss every GRADED_RECHECK_DAYS (newly-graded cards do
+	// appear over time — never permanently abandon, honesty doctrine).
+	// Tunable via TROVE_GRADED_RECHECK_DAYS.
+	const GRADED_RECHECK_DAYS =
+		Number(process.env.TROVE_GRADED_RECHECK_DAYS) > 0
+			? Number(process.env.TROVE_GRADED_RECHECK_DAYS)
+			: 30;
+	const gradedRecheckThreshold = new Date(
+		Date.now() - GRADED_RECHECK_DAYS * 24 * 60 * 60 * 1000
+	).toISOString();
+
 	// Every selection orders by last_enriched_at asc — that column is
 	// indexed (migration 015), so ORDER BY + LIMIT stays an index scan and
 	// can't reintroduce the seq-scan/timeout that masked the stalled
@@ -440,6 +458,7 @@ async function indexStale(
 			covered?: boolean;
 			gradeableRarity?: boolean;
 			minValue?: number;
+			gradedCheck?: 'fresh' | 'recheck';
 		}
 	): Promise<StoredCardMeta[]> {
 		let q = supabase
@@ -460,6 +479,15 @@ async function indexStale(
 		if (opts.gradeableRarity)
 			q = q.not('rarity', 'in', '(Common,Uncommon)').not('rarity', 'is', null);
 		if (opts.minValue != null) q = q.gte('raw_nm_price', opts.minValue);
+		// Backoff dimension: 'fresh' = never reached PriceCharting (highest
+		// priority, unknown yield); 'recheck' = reached >RECHECK_DAYS ago,
+		// worth another look for newly-graded data. Omitting it (covered /
+		// non-prioritised paths) keeps prior behaviour. Cards reached WITHIN
+		// the window and still missing are simply never selected here — that
+		// is the backoff.
+		if (opts.gradedCheck === 'fresh') q = q.is('graded_prices_fetched_at', null);
+		else if (opts.gradedCheck === 'recheck')
+			q = q.lt('graded_prices_fetched_at', gradedRecheckThreshold);
 		const { data, error } = await q
 			.order('last_enriched_at', { ascending: true })
 			.limit(n);
@@ -484,22 +512,34 @@ async function indexStale(
 				if (!picked.has(r.card_id)) picked.set(r.card_id, r);
 			}
 		};
-		// A: gap + gradeable rarity (Rare/holo/ultra/secret/special) —
-		//    the slice PriceCharting most reliably has PSA10/pop for.
-		take(await selectStale(limit, { gap: true, gradeableRarity: true }));
-		// B: gap + worth-grading by raw value — catches the valuable
-		//    common/uncommon/promo/unknown-rarity cards that DO get graded.
-		if (picked.size < limit)
-			take(await selectStale(limit - picked.size, { gap: true, minValue: GRADEABLE_VALUE_FLOOR }));
-		// C: remaining gap (cheap commons) — deprioritised but never fully
-		//    starved (some do have pop; honest coverage still wants them).
-		if (picked.size < limit)
-			take(await selectStale(limit - picked.size, { gap: true }));
+		const need = () => limit - picked.size;
+		// Tier order = descending expected yield, with chronic-miss backoff
+		// applied via the fresh/recheck dimension. Never-reached cards come
+		// first (unknown, likely productive); confirmed misses are only
+		// re-verified on the long recheck cadence; cards reached & missing
+		// within the window are intentionally skipped (the backoff) so the
+		// budget goes to cards that can actually yield graded data.
+		// A1: gradeable rarity, never PriceCharting-checked — best bet.
+		take(await selectStale(limit, { gap: true, gradeableRarity: true, gradedCheck: 'fresh' }));
+		// B1: worth-grading by value, never-checked.
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, minValue: GRADEABLE_VALUE_FLOOR, gradedCheck: 'fresh' }));
+		// A2/B2: gradeable but checked long ago — re-verify for newly-graded
+		//        data (cards get graded over time; honesty: never abandon).
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, gradeableRarity: true, gradedCheck: 'recheck' }));
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, minValue: GRADEABLE_VALUE_FLOOR, gradedCheck: 'recheck' }));
+		// C1/C2: remaining gap (cheap commons) — never-checked first, then
+		//        long-ago-checked. Deprioritised but never fully starved.
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, gradedCheck: 'fresh' }));
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, gradedCheck: 'recheck' }));
 		const gapCount = picked.size;
 		// Freshness tier: oldest fully-covered rows so good data is kept
 		// current and never starved by gap fill.
-		if (picked.size < limit)
-			take(await selectStale(limit - picked.size, { covered: true }));
+		if (need() > 0) take(await selectStale(need(), { covered: true }));
 		staleRows = [...picked.values()];
 		console.log(
 			`Found ${staleRows.length} stale rows (gradeability-prioritised: ${gapCount} gap-fill` +
