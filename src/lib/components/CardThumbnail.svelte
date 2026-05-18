@@ -7,6 +7,7 @@
 		psa10_price?: number | null;
 		psa10_delta?: number | null;
 		psa10_multiple?: number | null;
+		psa10_last_sold_at?: string | null;
 		psa_pop_total?: number | null;
 		cgc_pop_total?: number | null;
 		combined_pop_total?: number | null;
@@ -31,6 +32,22 @@
 	function fmtPrice(n: number): string {
 		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
 	}
+
+	// Turn a last-sold date into a coarse recency so a PSA 10 price reads
+	// as a real comp ("sold 3w ago") not an abstract number. Honesty: if
+	// the comp is old we say so rather than implying it's fresh.
+	function soldAgo(iso: string | null | undefined): string | null {
+		if (!iso) return null;
+		const then = new Date(`${iso}T00:00:00Z`).getTime();
+		if (Number.isNaN(then)) return null;
+		const d = Math.max(0, Math.floor((Date.now() - then) / 86400000));
+		if (d <= 1) return 'sold today';
+		if (d < 7) return `sold ${d}d ago`;
+		if (d < 31) return `sold ${Math.floor(d / 7)}w ago`;
+		if (d < 365) return `sold ${Math.floor(d / 30)}mo ago`;
+		return `sold ${Math.floor(d / 365)}y ago`;
+	}
+	let lastSold = $derived(soldAgo(enrichment?.psa10_last_sold_at));
 
 	// Resolve a single headline price for the badge. Prefer TCG API's
 	// tcgplayer.prices when populated, otherwise fall back to our own
@@ -105,6 +122,9 @@
 				<span class="font-medium text-vault-gold">{fmtPrice(enrichment.psa10_price)}</span>
 				{#if enrichment.psa10_multiple != null}
 					<span class="text-vault-text-muted">({enrichment.psa10_multiple}×)</span>
+				{/if}
+				{#if lastSold}
+					<span class="text-vault-text-muted" title="Most recent real PSA 10 sold comp on PriceCharting">· {lastSold}</span>
 				{/if}
 			</div>
 		{/if}
