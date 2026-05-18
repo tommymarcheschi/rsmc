@@ -9,6 +9,9 @@
 		line_value: number | null;
 		is_estimate: boolean;
 		discount: number;
+		value_source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+		sample_count: number | null;
+		as_of: string | null;
 	}
 
 	let { data, form } = $props();
@@ -196,8 +199,16 @@
 								{/if}
 								{#if valuationByEntry[entry.id]?.unit_value != null}
 									{@const val = valuationByEntry[entry.id]}
-									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-green" title={val.is_estimate ? `NM ${fmtMoney(val.nm_price)} × ${Math.round(val.discount * 100)}% ${entry.condition} discount` : `PriceCharting Ungraded NM`}>
-										{fmtMoney(val.unit_value)} ea · value{val.is_estimate ? ' (est.)' : ''}
+									{@const valTitle =
+										val.value_source === 'real_comp'
+											? `Real ${entry.condition} median · TCGPlayer active comps (n=${val.sample_count ?? 0}, as of ${val.as_of})`
+											: val.value_source === 'raw_nm'
+												? 'PriceCharting Ungraded NM (canonical raw price)'
+												: val.value_source === 'estimate'
+													? `Estimated: NM ${fmtMoney(val.nm_price)} × ${Math.round(val.discount * 100)}% ${entry.condition} discount — no real ${entry.condition} comp available`
+													: 'No price data'}
+									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-green" title={valTitle}>
+										{fmtMoney(val.unit_value)} ea · value{val.is_estimate ? ' (est.)' : ''}{#if val.value_source === 'real_comp' && (val.sample_count ?? 0) < 10}<span class="ml-1 italic text-amber-400">low n</span>{/if}
 									</span>
 									{#if entry.purchase_price != null}
 										{@const delta = (val.unit_value ?? 0) - entry.purchase_price}

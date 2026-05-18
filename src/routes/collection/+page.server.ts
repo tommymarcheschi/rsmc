@@ -74,11 +74,43 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		selectedCard = await getCard(selectedCardId).catch(() => null);
 	}
 
-	// Per-entry current valuation. NM is the canonical headline price; other
-	// conditions apply standard TCGPlayer discount multipliers (est., not
-	// real per-condition comps — we don't have those at the free-tier data
-	// sources). The UI surfaces that with an `est.` badge so users don't
-	// pattern-match the number as a true market comp.
+	// Real per-condition medians (TCGPlayer active-listing comps, Phase 1).
+	// This is the honest-valuation differentiator: when we have a true
+	// per-condition median for a card we value the entry off THAT, not a
+	// fabricated discount of NM. Only fall back to the multiplier when no
+	// real comp exists. Batched, collapsed to latest snapshot per
+	// (card_id, condition).
+	const realByCardCond: Record<string, { median: number; sample: number; as_of: string }> = {};
+	if (uniqueCardIds.length > 0) {
+		const { data: snapRows } = await supabase
+			.from('condition_price_snapshots')
+			.select('card_id, condition, median_cents, sample_count, snapshot_date')
+			.in('card_id', uniqueCardIds)
+			.order('snapshot_date', { ascending: false });
+		for (const r of (snapRows ?? []) as Array<{
+			card_id: string;
+			condition: string;
+			median_cents: number;
+			sample_count: number;
+			snapshot_date: string;
+		}>) {
+			const key = `${r.card_id}|${r.condition}`;
+			// rows are newest-first, so the first one we see per key wins
+			if (!realByCardCond[key] && r.median_cents != null) {
+				realByCardCond[key] = {
+					median: Math.round(r.median_cents) / 100,
+					sample: r.sample_count,
+					as_of: r.snapshot_date
+				};
+			}
+		}
+	}
+
+	// Per-entry current valuation. Priority: (1) real per-condition median
+	// comp, (2) raw NM (canonical, condition NM only), (3) NM × standard
+	// TCGPlayer discount multiplier — flagged `est.` so the number is never
+	// mistaken for a true comp. Honesty doctrine: prefer a real number over
+	// a fabricated one; never silently dress an estimate up as a comp.
 	const CONDITION_DISCOUNT: Record<string, number> = {
 		NM: 1.0,
 		LP: 0.85,
@@ -93,6 +125,9 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		line_value: number | null;
 		is_estimate: boolean;
 		discount: number;
+		value_source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+		sample_count: number | null;
+		as_of: string | null;
 	}
 	const valuationByEntry: Record<string, ValuationRow> = {};
 	for (const entry of entries) {
@@ -109,15 +144,41 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 				}
 			}
 		}
+
 		const discount = CONDITION_DISCOUNT[entry.condition] ?? 1.0;
-		const unitValue = nm != null ? Math.round(nm * discount * 100) / 100 : null;
+		const real = realByCardCond[`${entry.card_id}|${entry.condition}`];
+
+		let unitValue: number | null;
+		let isEstimate: boolean;
+		let source: ValuationRow['value_source'];
+		if (real) {
+			unitValue = real.median;
+			isEstimate = false;
+			source = 'real_comp';
+		} else if (entry.condition === 'NM' && nm != null) {
+			unitValue = Math.round(nm * 100) / 100;
+			isEstimate = false;
+			source = 'raw_nm';
+		} else if (nm != null) {
+			unitValue = Math.round(nm * discount * 100) / 100;
+			isEstimate = discount < 1.0;
+			source = discount < 1.0 ? 'estimate' : 'raw_nm';
+		} else {
+			unitValue = null;
+			isEstimate = false;
+			source = 'none';
+		}
+
 		const lineValue = unitValue != null ? Math.round(unitValue * entry.quantity * 100) / 100 : null;
 		valuationByEntry[entry.id] = {
 			nm_price: nm,
 			unit_value: unitValue,
 			line_value: lineValue,
-			is_estimate: discount < 1.0,
-			discount
+			is_estimate: isEstimate,
+			discount,
+			value_source: source,
+			sample_count: real ? real.sample : null,
+			as_of: real ? real.as_of : null
 		};
 	}
 
