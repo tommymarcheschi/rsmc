@@ -170,7 +170,7 @@
 				<div class="text-center">
 					<p class="text-lg">Your watchlist is empty</p>
 					<p class="mt-1 text-sm">Add cards from the browser to track their prices!</p>
-					<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
+					<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 						Browse Cards
 					</a>
 				</div>

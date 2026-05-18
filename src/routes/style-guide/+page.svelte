@@ -16,19 +16,19 @@
 	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 		<button
 			onclick={() => (activeTab = 'colors')}
-			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'colors' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'colors' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Colors
 		</button>
 		<button
 			onclick={() => (activeTab = 'components')}
-			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'components' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'components' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Components
 		</button>
 		<button
 			onclick={() => (activeTab = 'typography')}
-			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'typography' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all {activeTab === 'typography' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Typography
 		</button>
@@ -166,10 +166,10 @@
 			<div class="rounded-2xl border border-vault-border bg-vault-surface p-6">
 				<h2 class="text-lg font-semibold text-white">Buttons</h2>
 				<div class="mt-4 flex flex-wrap items-center gap-3">
-					<button class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
+					<button class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-5 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 						Primary Action
 					</button>
-					<button class="btn-press rounded-xl bg-vault-purple px-5 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-purple/20 transition-all hover:bg-vault-purple-hover hover:shadow-vault-purple/40">
+					<button class="btn-press rounded-xl bg-vault-purple px-5 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-purple/20 transition-all hover:bg-vault-purple-hover hover:shadow-vault-purple/40">
 						Secondary
 					</button>
 					<button class="btn-press rounded-xl border border-vault-border px-5 py-2.5 text-sm font-medium text-vault-text transition-all hover:border-vault-purple/50 hover:bg-vault-surface-hover">

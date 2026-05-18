@@ -130,19 +130,19 @@
 	<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 		<button
 			onclick={() => (activeTab = 'scanner')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'scanner' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'scanner' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Value Scanner
 		</button>
 		<button
 			onclick={() => (activeTab = 'compare')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'compare' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'compare' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Card Compare
 		</button>
 		<button
 			onclick={() => (activeTab = 'comps')}
-			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'comps' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+			class="flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:text-sm {activeTab === 'comps' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 		>
 			Comp Analysis
 		</button>
@@ -244,7 +244,7 @@
 					<button
 						type="submit"
 						disabled={searchLoading}
-						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-xl disabled:opacity-50"
+						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-xl disabled:opacity-50"
 					>
 						{searchLoading ? 'Searching...' : 'Search'}
 					</button>
@@ -366,7 +366,7 @@
 					/>
 					<button
 						type="submit"
-						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-xl"
+						class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-xl"
 					>
 						Analyze
 					</button>

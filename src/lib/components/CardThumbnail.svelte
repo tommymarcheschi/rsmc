@@ -69,7 +69,7 @@
 
 	<!-- Delta badge (top left) — shows when enrichment data is present -->
 	{#if hasDelta}
-		<div class="absolute left-2 top-2 rounded-full bg-vault-purple/90 px-2 py-0.5 text-xs font-bold text-white shadow-lg backdrop-blur-sm" title="Raw → PSA 10 delta">
+		<div class="absolute left-2 top-2 rounded-full bg-vault-gold/90 px-2 py-0.5 text-xs font-bold text-vault-bg shadow-lg backdrop-blur-sm" title="Raw → PSA 10 delta">
 			+{fmtPrice(enrichment!.psa10_delta!)}
 		</div>
 	{/if}
@@ -102,7 +102,7 @@
 		{#if hasDelta && enrichment?.psa10_price != null}
 			<div class="mt-1 flex items-center gap-1.5 text-[10px]">
 				<span class="text-vault-text-muted">PSA 10</span>
-				<span class="font-medium text-vault-purple">{fmtPrice(enrichment.psa10_price)}</span>
+				<span class="font-medium text-vault-gold">{fmtPrice(enrichment.psa10_price)}</span>
 				{#if enrichment.psa10_multiple != null}
 					<span class="text-vault-text-muted">({enrichment.psa10_multiple}×)</span>
 				{/if}

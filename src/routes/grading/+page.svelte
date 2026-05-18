@@ -237,7 +237,7 @@
 		</div>
 		<a
 			href="/grading/candidates"
-			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 		>
 			Browse all grading candidates →
 		</a>
@@ -398,7 +398,7 @@
 							</div>
 							<div>
 								<p class="text-vault-text-muted">PSA 10</p>
-								<p class="mt-0.5 font-bold text-vault-purple">{fmt(indexRow.psa10_price)}</p>
+								<p class="mt-0.5 font-bold text-vault-gold">{fmt(indexRow.psa10_price)}</p>
 							</div>
 							<div>
 								<p class="text-vault-text-muted">{roiService} cost</p>
@@ -459,7 +459,7 @@
 				<h2 class="text-lg font-semibold text-white">Submission Tracker</h2>
 				<button
 					onclick={() => (showSubmitModal = true)}
-					class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+					class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-3 py-1.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 				>
 					+ New Submission
 				</button>
@@ -629,7 +629,7 @@
 				<button
 					onclick={addSubmission}
 					disabled={!subSelectedCard || submitting}
-					class="btn-press w-full rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50"
+					class="btn-press w-full rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-50"
 				>
 					{submitting ? 'Submitting...' : 'Add Submission'}
 				</button>

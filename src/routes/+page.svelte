@@ -41,7 +41,7 @@
 					</div>
 				</div>
 				<div class="flex gap-2">
-					<a href="/analytics" class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20">
+					<a href="/analytics" class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20">
 						View Analytics
 					</a>
 				</div>

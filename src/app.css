@@ -1,30 +1,35 @@
 @import 'tailwindcss';
 
-/* Trove Custom Theme — Warm, fun, Pokemon-inspired */
+/* Trove Theme — Monochrome with functional color accents */
 @theme {
-	/* Core palette — warm darks with purple undertones */
-	--color-vault-bg: #12111a;
-	--color-vault-surface: #1c1b27;
-	--color-vault-surface-hover: #2a2940;
-	--color-vault-border: #2e2d42;
-	--color-vault-text: #eee8f5;
-	--color-vault-text-muted: #9b93b0;
+	/* Core palette — neutral greyscale */
+	--color-vault-bg: #0a0a0a;
+	--color-vault-surface: #151515;
+	--color-vault-surface-hover: #1f1f1f;
+	--color-vault-border: #262626;
+	--color-vault-text: #fafafa;
+	--color-vault-text-muted: #a1a1a1;
 
-	/* Primary accent — Pokeball red energy */
-	--color-vault-accent: #ff5757;
-	--color-vault-accent-hover: #ff3838;
+	/* Primary accent — near-white. Used as solid button / chip backgrounds;
+	 * anything that renders TEXT on these surfaces should use
+	 * `text-vault-bg` for contrast (not `text-white`). */
+	--color-vault-accent: #fafafa;
+	--color-vault-accent-hover: #e5e5e5;
 
-	/* Secondary accent — fun purple */
-	--color-vault-purple: #a78bfa;
-	--color-vault-purple-hover: #8b5cf6;
+	/* Secondary accent — slightly-off-white. Used for active/selected
+	 * states (chips, toggles). Same contrast rule as the primary accent. */
+	--color-vault-purple: #ededed;
+	--color-vault-purple-hover: #d4d4d4;
 
-	/* Functional */
+	/* Functional — the touches of color that carry meaning. Gain = green,
+	 * loss = red, featured/premium = gold, info = cyan. Kept vivid
+	 * against the neutral base so the user's eye lands on them. */
 	--color-vault-gold: #fbbf24;
 	--color-vault-green: #34d399;
 	--color-vault-red: #f87171;
 	--color-vault-cyan: #22d3ee;
 
-	/* Pokemon type colors */
+	/* Pokemon type colors — unchanged so type badges keep their identity. */
 	--color-type-fire: #f97316;
 	--color-type-water: #38bdf8;
 	--color-type-grass: #4ade80;
@@ -40,26 +45,21 @@
 	--font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-	/* Brand gradient — the Trove signature. Swap this to restyle every
-	 * primary button / logo chip / headline accent in one place. */
+	/* "Brand gradient" is now a subtle white → off-white gradient on
+	 * primary CTAs. Kept as a variable so we can reintroduce color later
+	 * in one place if we change direction. */
 	--brand-gradient: linear-gradient(135deg, var(--color-vault-accent), var(--color-vault-purple));
 	--brand-gradient-hover: linear-gradient(135deg, var(--color-vault-accent-hover), var(--color-vault-purple-hover));
 
-	/* Elevation — subtle for resting cards, stronger on hover.
-	 * These are tied to the palette so re-branding the accent colors
-	 * doesn't desync the glow underneath. */
-	--shadow-card: 0 4px 12px rgba(0, 0, 0, 0.25);
-	--shadow-card-lift: 0 8px 25px rgba(0, 0, 0, 0.3);
-	--shadow-accent-glow: 0 0 20px rgba(255, 87, 87, 0.12), 0 0 40px rgba(167, 139, 250, 0.06);
+	--shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+	--shadow-card-lift: 0 8px 25px rgba(0, 0, 0, 0.5);
+	--shadow-accent-glow: 0 0 20px rgba(255, 255, 255, 0.06);
 
-	/* Radii — the app currently picks between "small chip", "button/card",
-	 * and "hero card". Tokens keep the ramp consistent as we restyle. */
-	--radius-chip: 0.5rem;   /* rounded-lg */
-	--radius-card: 0.75rem;  /* rounded-xl */
-	--radius-hero: 1rem;     /* rounded-2xl */
+	--radius-chip: 0.5rem;
+	--radius-card: 0.75rem;
+	--radius-hero: 1rem;
 }
 
-/* Base styles */
 html {
 	color-scheme: dark;
 }
@@ -72,38 +72,34 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
 	width: 6px;
 }
-
 ::-webkit-scrollbar-track {
 	background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
 	background: var(--color-vault-border);
 	border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--color-vault-text-muted);
 }
 
-/* Warm card glow on hover */
+/* Neutral hover lift — replaces the old warm purple/red glow. */
 .card-glow:hover {
-	box-shadow: 0 0 20px rgba(255, 87, 87, 0.12), 0 0 40px rgba(167, 139, 250, 0.06);
+	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Gradient text helper */
+/* text-gradient — kept as a class so existing headings still work, but
+ * now it's a subtle neutral gradient instead of the purple/red one. */
 .text-gradient {
-	background: linear-gradient(135deg, var(--color-vault-accent), var(--color-vault-purple));
+	background: linear-gradient(135deg, #ffffff, #cfcfcf);
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	background-clip: text;
 }
 
-/* Subtle shimmer animation for special elements */
 @keyframes shimmer {
 	0% { background-position: -200% center; }
 	100% { background-position: 200% center; }
@@ -113,64 +109,53 @@ body {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(167, 139, 250, 0.08) 50%,
+		rgba(255, 255, 255, 0.08) 50%,
 		transparent 100%
 	);
 	background-size: 200% 100%;
 	animation: shimmer 3s ease-in-out infinite;
 }
 
-/* Active nav indicator */
+/* Active nav indicator — solid white left-rail marker on a subtle
+ * tinted background. No more gradient. */
 .nav-active {
-	background: linear-gradient(135deg, rgba(255, 87, 87, 0.15), rgba(167, 139, 250, 0.1));
-	border-left: 3px solid var(--color-vault-accent);
+	background: rgba(255, 255, 255, 0.06);
+	border-left: 3px solid var(--color-vault-text);
 	color: white;
 }
 
-/* Stat card hover lift */
 .stat-card {
 	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .stat-card:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
 }
 
-/* Button press effect */
 .btn-press:active {
 	transform: scale(0.97);
 }
 
-/* Price tag styles */
-.price-up {
-	color: var(--color-vault-green);
-}
-
-.price-down {
-	color: var(--color-vault-red);
-}
+.price-up { color: var(--color-vault-green); }
+.price-down { color: var(--color-vault-red); }
 
 /* ============================================================
  * Brand utilities
  *
- * These exist so the ~100+ spots that repeat the same surface
- * treatments (card shell, primary gradient button, etc.) can be
- * re-skinned from one place when new branding lands. Migrate
- * existing inline classes opportunistically — both forms render
- * identically so the codebase can coexist during the transition.
+ * Card surfaces and primary buttons. With the monochrome palette,
+ * the brand-gradient is near-white — so we FORCE dark text on any
+ * element wearing the primary-surface classes. That way the ~40
+ * templates that still say `text-white` render correctly without
+ * a mass rename (Tailwind's `text-white` loses to a later rule of
+ * equal specificity).
  * ============================================================ */
 
-/* Card surface — the ubiquitous bordered panel on a dark base.
- * Add padding separately (p-4 sm:p-6 etc.) since not every card
- * needs the same inset. */
 .card-shell {
 	border-radius: var(--radius-hero);
 	border: 1px solid var(--color-vault-border);
 	background-color: var(--color-vault-surface);
 }
 
-/* Pre-padded variant for the common case (4 on mobile, 6 on desktop). */
 .card-panel {
 	border-radius: var(--radius-hero);
 	border: 1px solid var(--color-vault-border);
@@ -183,22 +168,20 @@ body {
 	}
 }
 
-/* Primary gradient backdrop — used on the big CTA buttons and brand chips. */
 .bg-brand-gradient {
 	background: var(--brand-gradient);
+	color: var(--color-vault-bg);
 }
 .bg-brand-gradient:hover,
 .hover\:bg-brand-gradient-hover:hover {
 	background: var(--brand-gradient-hover);
 }
 
-/* Brand chip — small square tile with the gradient, used for logos,
- * section icons, and the header brand mark. */
 .brand-chip {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	border-radius: var(--radius-card);
 	background: var(--brand-gradient);
-	color: #fff;
+	color: var(--color-vault-bg);
 }

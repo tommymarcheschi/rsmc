@@ -110,7 +110,7 @@
 						<button
 							type="button"
 							onclick={() => (marketSortKey = tab.id as typeof marketSortKey)}
-							class="shrink-0 rounded-lg px-3 py-1 text-xs font-medium transition {marketSortKey === tab.id ? 'bg-brand-gradient text-white' : 'text-vault-text-muted hover:text-white'}"
+							class="shrink-0 rounded-lg px-3 py-1 text-xs font-medium transition {marketSortKey === tab.id ? 'bg-brand-gradient text-vault-bg' : 'text-vault-text-muted hover:text-white'}"
 						>
 							{tab.label}
 						</button>
@@ -245,19 +245,19 @@
 		<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 			<button
 				onclick={() => (showFilter = 'all')}
-				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'all' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'all' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 			>
 				All ({selectedSet.total})
 			</button>
 			<button
 				onclick={() => (showFilter = 'owned')}
-				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'owned' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'owned' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 			>
 				Owned ({selectedSet.owned})
 			</button>
 			<button
 				onclick={() => (showFilter = 'missing')}
-				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'missing' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+				class="flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-all sm:text-sm {showFilter === 'missing' ? 'bg-gradient-to-r from-vault-accent to-vault-purple text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 			>
 				Missing ({selectedSet.total - selectedSet.owned})
 			</button>
@@ -303,7 +303,7 @@
 			<div class="text-center text-vault-text-muted">
 				<p class="text-lg">No sets tracked yet</p>
 				<p class="mt-1 text-sm">Add cards to your collection to see set progress here</p>
-				<a href="/browse" class="mt-4 inline-block rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2.5 text-sm font-medium text-white">
+				<a href="/browse" class="mt-4 inline-block rounded-xl bg-gradient-to-r from-vault-accent to-vault-purple px-4 py-2.5 text-sm font-medium text-vault-bg">
 					Browse Cards
 				</a>
 			</div>

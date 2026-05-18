@@ -181,7 +181,7 @@
 			</div>
 			<button
 				type="submit"
-				class="btn-press rounded-lg bg-brand-gradient px-4 py-1.5 text-sm font-medium text-white transition-all"
+				class="btn-press rounded-lg bg-brand-gradient px-4 py-1.5 text-sm font-medium text-vault-bg transition-all"
 			>
 				Add All Pre-Year Sets
 			</button>
@@ -209,7 +209,7 @@
 				<button
 					type="button"
 					onclick={() => (filterMode = tab.id as typeof filterMode)}
-					class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition {filterMode === tab.id ? 'bg-brand-gradient text-white' : 'text-vault-text-muted hover:text-white'}"
+					class="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition {filterMode === tab.id ? 'bg-brand-gradient text-vault-bg' : 'text-vault-text-muted hover:text-white'}"
 				>
 					{tab.label}
 				</button>
@@ -261,7 +261,7 @@
 									type="submit"
 									aria-label={s.tracked && s.enabled ? 'Untrack' : 'Track'}
 									class="flex h-5 w-5 items-center justify-center rounded border transition-colors {s.tracked && s.enabled
-										? 'border-vault-purple bg-vault-purple text-white'
+										? 'border-vault-purple bg-vault-purple text-vault-bg'
 										: 'border-vault-border bg-vault-bg text-transparent hover:border-vault-purple/50'}"
 								>
 									<Icon name="check" class="h-3 w-3" strokeWidth={3} />

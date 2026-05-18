@@ -99,7 +99,7 @@
 		<a
 			href="/collection?add=1"
 			data-testid="open-add-modal"
-			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 		>
 			+ Add Card
 		</a>
@@ -265,7 +265,7 @@
 					{:else}
 						<p class="text-lg">No cards in your collection yet</p>
 						<p class="mt-1 text-sm">Browse cards and add them to start tracking!</p>
-						<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
+						<a href="/browse" class="mt-4 inline-block btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40">
 							Browse Cards
 						</a>
 					{/if}
@@ -309,7 +309,7 @@
 						<button
 							type="submit"
 							data-testid="card-search-submit"
-							class="rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-white hover:bg-vault-accent-hover"
+							class="rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-vault-bg hover:bg-vault-accent-hover"
 						>
 							Search
 						</button>
@@ -424,7 +424,7 @@
 						<button
 							type="submit"
 							data-testid="submit-add-entry"
-							class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
+							class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-vault-bg transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
 						>
 							Add to Collection
 						</button>

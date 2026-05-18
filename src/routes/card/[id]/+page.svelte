@@ -598,7 +598,7 @@
 								class="w-full rounded-lg border border-vault-border bg-vault-surface px-3 py-1.5 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 							/>
 							<div class="flex items-center gap-2">
-								<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-white hover:bg-vault-purple/80">
+								<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-vault-bg hover:bg-vault-purple/80">
 									Save override
 								</button>
 								{#if pcUrlOverride}
@@ -980,7 +980,7 @@
 			<div class="space-y-3">
 				<div class="flex gap-3">
 					<form method="POST" action="?/addToCollection" use:enhance class="contents">
-						<button type="submit" disabled={inCollection} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-6 py-2.5 text-sm font-medium text-white shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-70">
+						<button type="submit" disabled={inCollection} class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-6 py-2.5 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40 disabled:opacity-70">
 							{inCollection ? 'In Collection' : 'Add to Collection'}
 						</button>
 					</form>

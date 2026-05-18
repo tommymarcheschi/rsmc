@@ -187,7 +187,7 @@
 		{#each INSIGHT_TABS as tab}
 			<button
 				onclick={() => (insightTab = tab.id)}
-				class="shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all sm:flex-1 sm:px-4 sm:text-sm {insightTab === tab.id ? 'bg-brand-gradient text-white shadow-sm' : 'text-vault-text-muted hover:text-white'}"
+				class="shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all sm:flex-1 sm:px-4 sm:text-sm {insightTab === tab.id ? 'bg-brand-gradient text-vault-bg shadow-sm' : 'text-vault-text-muted hover:text-white'}"
 			>
 				{tab.label}
 			</button>

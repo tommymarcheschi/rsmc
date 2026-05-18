@@ -2,10 +2,113 @@
 	import { CardThumbnail, Icon } from '$components';
 	import { getSortOptionsForMode } from '$services/sort';
 	import { parseHuntDSL } from '$services/hunt-dsl';
+	import { page } from '$app/stores';
 	import type { PokemonCard } from '$types';
 
 	interface FilterPill { label: string; removeHref: string; }
 	interface SavedSearchRow { id: string; name: string; url_search: string; }
+
+	// ─── Quick-chip filter spec ───────────────────────────────────────
+	// Each chip is a single click that sets (or clears) a group of URL
+	// params. Chips render as <a href> so they work without JS — the
+	// server re-renders the page with the new filter applied. `matchKeys`
+	// is the key set compared against the current URL to decide if the
+	// chip is active (so clicking an active chip can remove those keys).
+	interface ChipSpec {
+		label: string;
+		/** Params to set. Empty string or null → delete that key. */
+		params: Record<string, string | null>;
+		/** Which keys to compare for the active state (defaults to keys of params). */
+		matchKeys?: string[];
+	}
+
+	const ERA_CHIPS: ChipSpec[] = [
+		{ label: 'Vintage', params: { after: '', before: '2003' }, matchKeys: ['after', 'before'] },
+		{ label: 'EX era', params: { after: '2003', before: '2011' }, matchKeys: ['after', 'before'] },
+		{ label: 'Modern', params: { after: '2011', before: '2020' }, matchKeys: ['after', 'before'] },
+		{ label: 'Current', params: { after: '2020', before: '' }, matchKeys: ['after', 'before'] }
+	];
+	const PRICE_CHIPS: ChipSpec[] = [
+		{ label: '<$25', params: { raw_gt: '', raw_lt: '25' }, matchKeys: ['raw_gt', 'raw_lt'] },
+		{ label: '$25–$100', params: { raw_gt: '25', raw_lt: '100' }, matchKeys: ['raw_gt', 'raw_lt'] },
+		{ label: '$100–$500', params: { raw_gt: '100', raw_lt: '500' }, matchKeys: ['raw_gt', 'raw_lt'] },
+		{ label: '$500+', params: { raw_gt: '500', raw_lt: '' }, matchKeys: ['raw_gt', 'raw_lt'] }
+	];
+	const POP_CHIPS: ChipSpec[] = [
+		{ label: 'Pop <50', params: { pop_lt: '50' }, matchKeys: ['pop_lt'] },
+		{ label: 'Pop <100', params: { pop_lt: '100' }, matchKeys: ['pop_lt'] },
+		{ label: 'Pop <500', params: { pop_lt: '500' }, matchKeys: ['pop_lt'] },
+		{ label: 'Pop <1000', params: { pop_lt: '1000' }, matchKeys: ['pop_lt'] }
+	];
+	const RARITY_CHIPS: ChipSpec[] = [
+		{ label: 'Holo', params: { rarity_like: 'holo' } },
+		{ label: 'Ultra', params: { rarity_like: 'ultra' } },
+		{ label: 'Illustration', params: { rarity_like: 'illustration' } },
+		{ label: 'Secret', params: { rarity_like: 'secret' } },
+		{ label: 'Hyper', params: { rarity_like: 'hyper' } },
+		{ label: 'Amazing', params: { rarity_like: 'amazing rare' } }
+	];
+
+	function chipHref(chip: ChipSpec): string {
+		const next = new URLSearchParams($page.url.searchParams);
+		for (const [k, v] of Object.entries(chip.params)) {
+			if (v == null || v === '') next.delete(k);
+			else next.set(k, v);
+		}
+		next.delete('page');
+		return `/browse?${next.toString()}`;
+	}
+
+	function chipRemoveHref(chip: ChipSpec): string {
+		const next = new URLSearchParams($page.url.searchParams);
+		const keys = chip.matchKeys ?? Object.keys(chip.params);
+		for (const k of keys) next.delete(k);
+		next.delete('page');
+		return `/browse?${next.toString()}`;
+	}
+
+	function chipActive(chip: ChipSpec): boolean {
+		const sp = $page.url.searchParams;
+		for (const [k, v] of Object.entries(chip.params)) {
+			const current = sp.get(k) ?? '';
+			const expected = v ?? '';
+			if (current !== expected) return false;
+		}
+		return true;
+	}
+
+	// Variants is a comma-list URL param; chips for it toggle list membership
+	// instead of replacing the whole value (so Holo + Reverse can both be on
+	// at once, matching the old checkbox behavior).
+	function variantChipHref(variant: 'holo' | 'reverse'): string {
+		const next = new URLSearchParams($page.url.searchParams);
+		const current = (next.get('variants') ?? '').split(',').filter(Boolean);
+		const set = new Set(current);
+		if (set.has(variant)) set.delete(variant);
+		else set.add(variant);
+		if (set.size > 0) next.set('variants', [...set].join(','));
+		else next.delete('variants');
+		next.delete('page');
+		return `/browse?${next.toString()}`;
+	}
+
+	function variantChipActive(variant: 'holo' | 'reverse'): boolean {
+		return ($page.url.searchParams.get('variants') ?? '')
+			.split(',')
+			.includes(variant);
+	}
+
+	function psaChipHref(): string {
+		const next = new URLSearchParams($page.url.searchParams);
+		if (next.get('require_psa10') === '1') next.delete('require_psa10');
+		else next.set('require_psa10', '1');
+		next.delete('page');
+		return `/browse?${next.toString()}`;
+	}
+
+	function psaChipActive(): boolean {
+		return $page.url.searchParams.get('require_psa10') === '1';
+	}
 
 	let { data, form } = $props();
 
@@ -267,17 +370,6 @@
 		select.form?.submit();
 	}
 
-	// Before hunt form submits, collect variant checkboxes into a single
-	// comma-separated hidden input. Without JS the checkboxes send multiple
-	// params which the server also handles, but this keeps the URL cleaner.
-	function handleHuntSubmit(e: Event) {
-		const form = e.currentTarget as HTMLFormElement;
-		const cbs = form.querySelectorAll<HTMLInputElement>('.hunt-variant-cb:checked');
-		const variants = Array.from(cbs).map((cb) => cb.value).join(',');
-		const hidden = form.querySelector<HTMLInputElement>('#hunt-variants-hidden');
-		if (hidden) hidden.value = variants;
-	}
-
 	let hasActiveFilters = $derived(
 		!!(
 			data.filters.search ||
@@ -335,7 +427,7 @@
 			<a
 				href={isHuntMode ? '/browse' : '/browse?mode=hunt'}
 				class="btn-press rounded-xl px-4 py-2 text-sm font-medium transition-all {isHuntMode
-					? 'bg-vault-purple text-white hover:bg-vault-purple/80'
+					? 'bg-vault-purple text-vault-bg hover:bg-vault-purple/80'
 					: 'border border-vault-purple/50 text-vault-purple hover:bg-vault-purple/10'}"
 			>
 				{isHuntMode ? 'Browse Mode' : 'Hunt Mode'}
@@ -375,7 +467,7 @@
 				minlength="1"
 				maxlength="60"
 			/>
-			<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-white hover:bg-vault-purple/80">
+			<button type="submit" class="btn-press rounded-lg bg-vault-purple px-3 py-1.5 text-xs font-medium text-vault-bg hover:bg-vault-purple/80">
 				Save
 			</button>
 			<button type="button" onclick={() => (savePromptOpen = false)} class="text-xs text-vault-text-muted hover:text-white">
@@ -443,7 +535,7 @@
 								aiMode = true;
 								aiStatus = null;
 							}}
-							class="rounded-lg px-2.5 py-1 font-medium transition {aiMode ? 'bg-brand-gradient text-white' : 'text-vault-text-muted hover:text-white'}"
+							class="rounded-lg px-2.5 py-1 font-medium transition {aiMode ? 'bg-brand-gradient text-vault-bg' : 'text-vault-text-muted hover:text-white'}"
 						>
 							✨ Ask
 						</button>
@@ -475,7 +567,7 @@
 					<button
 						type="submit"
 						disabled={aiBusy}
-						class="btn-press rounded-xl {aiMode ? 'bg-brand-gradient' : 'bg-vault-purple hover:bg-vault-purple/80'} px-4 py-2 text-sm font-medium text-white transition-all disabled:opacity-60"
+						class="btn-press rounded-xl {aiMode ? 'bg-brand-gradient' : 'bg-vault-purple hover:bg-vault-purple/80'} px-4 py-2 text-sm font-medium text-vault-bg transition-all disabled:opacity-60"
 					>
 						{aiBusy ? 'Thinking…' : aiMode ? 'Ask' : 'Go'}
 					</button>
@@ -586,10 +678,62 @@
 			</a>
 		</div>
 
-		<form method="GET" action="/browse" class="space-y-3" onsubmit={handleHuntSubmit}>
+		<!--
+			Quick-chip filters — one-tap filter toggles for the most common
+			hunt-mode axes. Each chip is an anchor that mutates URL params, so
+			it works without JS. The chips map to the same URL keys the form
+			below writes (pop_lt/before/after/raw_gt/raw_lt/rarity_like), so
+			combining chip selections with a typed-in search name does the
+			intuitive thing.
+		-->
+		<div class="space-y-2 rounded-2xl border border-vault-border bg-vault-surface/60 p-3 sm:p-4">
+			{#each [{ title: 'Era', chips: ERA_CHIPS }, { title: 'Price', chips: PRICE_CHIPS }, { title: 'Pop ceiling', chips: POP_CHIPS }, { title: 'Rarity', chips: RARITY_CHIPS }] as group}
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="w-20 shrink-0 text-[11px] uppercase tracking-wide text-vault-text-muted">{group.title}</span>
+					{#each group.chips as chip}
+						{@const active = chipActive(chip)}
+						<a
+							href={active ? chipRemoveHref(chip) : chipHref(chip)}
+							aria-current={active ? 'true' : undefined}
+							class="rounded-full border px-2.5 py-1 text-xs font-medium transition-all {active ? 'border-vault-purple bg-vault-purple text-vault-bg' : 'border-vault-border bg-vault-bg text-vault-text-muted hover:border-vault-purple/50 hover:text-white'}"
+						>
+							{chip.label}
+						</a>
+					{/each}
+				</div>
+			{/each}
+
+			<!--
+				Signals row: data-availability + variant chips. PSA 10 and Holo
+				are hand-tuned chip handlers (not uniform ChipSpec) because the
+				variants param is a comma-list, not a single value.
+			-->
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="w-20 shrink-0 text-[11px] uppercase tracking-wide text-vault-text-muted">Signals</span>
+				{#each [{ label: 'Has PSA 10 comp', href: psaChipHref(), active: psaChipActive() }, { label: 'Holo', href: variantChipHref('holo'), active: variantChipActive('holo') }, { label: 'Reverse Holo', href: variantChipHref('reverse'), active: variantChipActive('reverse') }] as signal}
+					<a
+						href={signal.href}
+						aria-current={signal.active ? 'true' : undefined}
+						class="rounded-full border px-2.5 py-1 text-xs font-medium transition-all {signal.active ? 'border-vault-purple bg-vault-purple text-vault-bg' : 'border-vault-border bg-vault-bg text-vault-text-muted hover:border-vault-purple/50 hover:text-white'}"
+					>
+						{signal.label}
+					</a>
+				{/each}
+			</div>
+		</div>
+
+		<form method="GET" action="/browse" class="space-y-3">
 			<input type="hidden" name="mode" value="hunt" />
-			<!-- Hidden input for comma-joined variants — JS populates from checkboxes -->
-			<input type="hidden" name="variants" id="hunt-variants-hidden" value={f.variants ?? ''} />
+			<!--
+				Variants + require_psa10 are driven by the chip panel above, not
+				visible form controls. The hidden inputs below preserve their
+				values across form submits (when the user changes the set or
+				sort dropdowns) so chip selections don't get dropped.
+			-->
+			<input type="hidden" name="variants" value={f.variants ?? ''} />
+			{#if (f.requirePsa10 ?? f.require_psa10) === '1'}
+				<input type="hidden" name="require_psa10" value="1" />
+			{/if}
 
 			<div class="flex flex-wrap gap-2 sm:gap-3">
 				<div class="relative flex-1" style="min-width: 200px;">
@@ -630,113 +774,96 @@
 				</select>
 			</div>
 
-			<div class="flex flex-wrap gap-2 sm:gap-3">
-				<div class="flex items-center gap-1.5">
-					<label for="pop_lt" class="text-xs text-vault-text-muted">Max Pop</label>
-					<input
-						type="number"
-						id="pop_lt"
-						name="pop_lt"
-						value={f.popLt ?? f.pop_lt ?? ''}
-						placeholder="100"
-						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-
-				<div class="flex items-center gap-1.5">
-					<label for="before" class="text-xs text-vault-text-muted">Before year</label>
-					<input
-						type="number"
-						id="before"
-						name="before"
-						value={f.before ?? ''}
-						placeholder="2017"
-						min="1999"
-						max="2026"
-						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-
-				<div class="flex items-center gap-1.5">
-					<label for="after" class="text-xs text-vault-text-muted">After year</label>
-					<input
-						type="number"
-						id="after"
-						name="after"
-						value={f.after ?? ''}
-						placeholder=""
-						min="1999"
-						max="2026"
-						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-
-				<div class="flex items-center gap-1.5">
-					<label for="raw_gt" class="text-xs text-vault-text-muted">Raw min $</label>
-					<input
-						type="number"
-						id="raw_gt"
-						name="raw_gt"
-						value={f.rawGt ?? f.raw_gt ?? ''}
-						placeholder=""
-						step="0.01"
-						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-
-				<div class="flex items-center gap-1.5">
-					<label for="raw_lt" class="text-xs text-vault-text-muted">Raw max $</label>
-					<input
-						type="number"
-						id="raw_lt"
-						name="raw_lt"
-						value={f.rawLt ?? f.raw_lt ?? ''}
-						placeholder=""
-						step="0.01"
-						class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-					/>
-				</div>
-			</div>
-
-			<div class="flex flex-wrap items-center gap-3">
-				<fieldset class="flex items-center gap-2">
-					<legend class="sr-only">Printing variants</legend>
-					<label class="flex items-center gap-1.5 text-sm text-vault-text">
+			<!--
+				Advanced numeric inputs — collapsed by default since the quick
+				chips above cover the common cases. Kept here (rather than
+				removed) so saved searches and the DSL can still set bespoke
+				ranges, and so the no-JS path has a plain numeric fallback.
+			-->
+			<details class="group rounded-xl border border-vault-border bg-vault-bg/40 px-3 py-2">
+				<summary class="cursor-pointer list-none text-xs font-medium text-vault-text-muted transition hover:text-white [&::-webkit-details-marker]:hidden">
+					<span class="inline-flex items-center gap-1.5">
+						<svg class="h-3 w-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+						</svg>
+						Advanced numeric filters
+					</span>
+				</summary>
+				<div class="mt-3 flex flex-wrap gap-2 sm:gap-3">
+					<div class="flex items-center gap-1.5">
+						<label for="pop_lt" class="text-xs text-vault-text-muted">Max Pop</label>
 						<input
-							type="checkbox"
-							class="hunt-variant-cb rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
-							value="holo"
-							checked={(f.variants ?? '').includes('holo')}
+							type="number"
+							id="pop_lt"
+							name="pop_lt"
+							value={f.popLt ?? f.pop_lt ?? ''}
+							placeholder="100"
+							class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						/>
-						Holo
-					</label>
-					<label class="flex items-center gap-1.5 text-sm text-vault-text">
+					</div>
+
+					<div class="flex items-center gap-1.5">
+						<label for="before" class="text-xs text-vault-text-muted">Before year</label>
 						<input
-							type="checkbox"
-							class="hunt-variant-cb rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
-							value="reverse"
-							checked={(f.variants ?? '').includes('reverse')}
+							type="number"
+							id="before"
+							name="before"
+							value={f.before ?? ''}
+							placeholder="2017"
+							min="1999"
+							max="2026"
+							class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
 						/>
-						Reverse Holo
-					</label>
-				</fieldset>
+					</div>
 
-				<label class="flex items-center gap-1.5 text-sm text-vault-text">
-					<input
-						type="checkbox"
-						name="require_psa10"
-						value="1"
-						checked={(f.requirePsa10 ?? f.require_psa10) === '1'}
-						class="rounded border-vault-border bg-vault-surface text-vault-purple focus:ring-vault-purple/50"
-					/>
-					Has PSA 10 comp
-				</label>
+					<div class="flex items-center gap-1.5">
+						<label for="after" class="text-xs text-vault-text-muted">After year</label>
+						<input
+							type="number"
+							id="after"
+							name="after"
+							value={f.after ?? ''}
+							placeholder=""
+							min="1999"
+							max="2026"
+							class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+						/>
+					</div>
 
+					<div class="flex items-center gap-1.5">
+						<label for="raw_gt" class="text-xs text-vault-text-muted">Raw min $</label>
+						<input
+							type="number"
+							id="raw_gt"
+							name="raw_gt"
+							value={f.rawGt ?? f.raw_gt ?? ''}
+							placeholder=""
+							step="0.01"
+							class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+						/>
+					</div>
+
+					<div class="flex items-center gap-1.5">
+						<label for="raw_lt" class="text-xs text-vault-text-muted">Raw max $</label>
+						<input
+							type="number"
+							id="raw_lt"
+							name="raw_lt"
+							value={f.rawLt ?? f.raw_lt ?? ''}
+							placeholder=""
+							step="0.01"
+							class="w-20 rounded-lg border border-vault-border bg-vault-surface px-2 py-1.5 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+						/>
+					</div>
+				</div>
+			</details>
+
+			<div class="flex flex-wrap items-center justify-end gap-3">
 				<button
 					type="submit"
-					class="btn-press rounded-xl bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+					class="btn-press rounded-xl bg-vault-accent px-4 py-2 text-sm font-medium text-vault-bg transition-all hover:bg-vault-accent-hover"
 				>
-					Hunt
+					Apply
 				</button>
 			</div>
 		</form>
@@ -826,7 +953,7 @@
 
 			<button
 				type="submit"
-				class="btn-press rounded-xl bg-vault-accent px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+				class="btn-press rounded-xl bg-vault-accent px-4 py-2.5 text-sm font-medium text-vault-bg transition-all hover:bg-vault-accent-hover"
 			>
 				Apply
 			</button>
@@ -849,7 +976,7 @@
 						<div class="pointer-events-none">
 							<CardThumbnail {card} showPrice={true} />
 						</div>
-						<span class="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border-2 {isSelected ? 'border-vault-purple bg-vault-purple text-white' : 'border-white/70 bg-black/40 text-transparent'}" aria-hidden="true">
+						<span class="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border-2 {isSelected ? 'border-vault-purple bg-vault-purple text-vault-bg' : 'border-white/70 bg-black/40 text-transparent'}" aria-hidden="true">
 							<Icon name="check" class="h-4 w-4" strokeWidth={3} />
 						</span>
 					</button>
@@ -878,7 +1005,7 @@
 						type="button"
 						onclick={() => bulkAdd('collection')}
 						disabled={bulkBusy}
-						class="btn-press rounded-xl bg-brand-gradient px-3 py-1.5 text-sm font-medium text-white transition-all disabled:opacity-50"
+						class="btn-press rounded-xl bg-brand-gradient px-3 py-1.5 text-sm font-medium text-vault-bg transition-all disabled:opacity-50"
 					>
 						+ Collection
 					</button>
@@ -931,7 +1058,7 @@
 			{#if hasActiveFilters}
 				<a
 					href={isHuntMode ? '/browse?mode=hunt' : '/browse'}
-					class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+					class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-vault-bg transition-all hover:bg-vault-accent-hover"
 				>
 					Clear All Filters
 				</a>

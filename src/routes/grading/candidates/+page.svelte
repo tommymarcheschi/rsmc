@@ -280,7 +280,7 @@
 
 			<button
 				type="submit"
-				class="btn-press rounded-xl bg-vault-accent px-4 py-2 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover"
+				class="btn-press rounded-xl bg-vault-accent px-4 py-2 text-sm font-medium text-vault-bg transition-all hover:bg-vault-accent-hover"
 			>
 				Apply
 			</button>
@@ -361,7 +361,7 @@
 			<p class="text-lg font-medium">No candidates match your filters</p>
 			<p class="mt-1 text-sm">Try lowering Min Pop, raising Max Raw, or clearing filters.</p>
 			{#if hasActiveFilters}
-				<a href="/grading/candidates" class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-vault-accent-hover">
+				<a href="/grading/candidates" class="btn-press mt-4 rounded-xl bg-vault-accent px-5 py-2.5 text-sm font-medium text-vault-bg transition-all hover:bg-vault-accent-hover">
 					Clear filters
 				</a>
 			{/if}
@@ -401,7 +401,7 @@
 									<span class="font-semibold text-white">{fmtPct(row.psa_gem_rate)}</span>
 									<span class="text-vault-text-muted">({(row.psa_pop_total ?? 0).toLocaleString()} graded)</span>
 								</span>
-								<span>PSA 10 <span class="font-semibold text-vault-purple">{fmt(row.psa10_price)}</span></span>
+								<span>PSA 10 <span class="font-semibold text-vault-gold">{fmt(row.psa10_price)}</span></span>
 								<span>Cost <span class="font-semibold text-white">${roi.gradingCost.toFixed(0)}</span></span>
 								{#if roi.breakEvenGemRate != null}
 									<span>Break-even <span class="font-semibold text-vault-gold">{fmtPct(roi.breakEvenGemRate)}</span></span>
