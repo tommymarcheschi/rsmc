@@ -134,6 +134,35 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		// migration 012 not applied yet
 	}
 
+	// Pillar #9 discovery scores. Separate, fault-isolated read so a
+	// pre-migration-017 environment (columns absent) doesn't take down the
+	// whole Market Signals block — exactly like the pcUrlOverride read above.
+	// Honesty doctrine: a NULL axis stays NULL (rendered "—"), never a
+	// fabricated neutral 50. ranking_confidence flags thin-data cards.
+	let rankingScores: {
+		score_value: number | null;
+		score_scarcity: number | null;
+		score_gem_difficulty: number | null;
+		score_momentum: number | null;
+		score_grade_roi: number | null;
+		score_liquidity: number | null;
+		ranking_confidence: string | null;
+		ranked_at: string | null;
+	} | null = null;
+	try {
+		const { data } = await supabase
+			.from('card_index')
+			.select(
+				'score_value, score_scarcity, score_gem_difficulty, score_momentum, ' +
+					'score_grade_roi, score_liquidity, ranking_confidence, ranked_at'
+			)
+			.eq('card_id', params.id)
+			.maybeSingle();
+		rankingScores = (data as typeof rankingScores) ?? null;
+	} catch {
+		// migration 017 not applied yet — panel stays hidden, page is fine
+	}
+
 	// Collapse to one row per condition, keeping the most recent. Missing
 	// table (404 after a fresh deploy before migration 005 applies) returns
 	// null data — we just show nothing, per honesty doctrine.
@@ -155,6 +184,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		similarCards,
 		psa10Sales,
 		pcUrlOverride,
+		rankingScores,
 		inCollection,
 		onWatchlist
 	};

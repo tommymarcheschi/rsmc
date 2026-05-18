@@ -116,6 +116,66 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	const trackedWithGap = trackedSets.filter((s) => s.indexed < s.totalCards).length;
 	const trackedWithSlug = trackedSets.filter((s) => s.tcgplayerSlug).length;
 
+	// Coverage trend — the 5%→95% climb made visible. One row per
+	// (snapshot_date, set_id) in coverage_ledger; aggregate to daily totals
+	// in JS (PostgREST has no GROUP BY). Fault-isolated: pre-migration-014 or
+	// an RLS-blocked anon read just yields an empty trend, never a 500.
+	interface LedgerRow {
+		snapshot_date: string;
+		indexed: number;
+		psa10_priced: number;
+		psa_pop: number;
+		cgc_pop: number;
+		stale: number;
+	}
+	let coverageTrend: Array<{
+		date: string;
+		cards: number;
+		psa10Pct: number;
+		psaPopPct: number;
+		cgcPopPct: number;
+		stalePct: number;
+	}> = [];
+	try {
+		const { data: ledgerData } = await supabase
+			.from('coverage_ledger')
+			.select('snapshot_date, indexed, psa10_priced, psa_pop, cgc_pop, stale')
+			.order('snapshot_date', { ascending: false })
+			.limit(6000);
+		const byDate = new Map<string, LedgerRow>();
+		for (const r of (ledgerData ?? []) as LedgerRow[]) {
+			const agg = byDate.get(r.snapshot_date) ?? {
+				snapshot_date: r.snapshot_date,
+				indexed: 0,
+				psa10_priced: 0,
+				psa_pop: 0,
+				cgc_pop: 0,
+				stale: 0
+			};
+			agg.indexed += r.indexed ?? 0;
+			agg.psa10_priced += r.psa10_priced ?? 0;
+			agg.psa_pop += r.psa_pop ?? 0;
+			agg.cgc_pop += r.cgc_pop ?? 0;
+			agg.stale += r.stale ?? 0;
+			byDate.set(r.snapshot_date, agg);
+		}
+		const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+		coverageTrend = Array.from(byDate.values())
+			.sort((a, b) => b.snapshot_date.localeCompare(a.snapshot_date))
+			.slice(0, 21)
+			.map((d) => ({
+				date: d.snapshot_date,
+				cards: d.indexed,
+				psa10Pct: pct(d.psa10_priced, d.indexed),
+				psaPopPct: pct(d.psa_pop, d.indexed),
+				cgcPopPct: pct(d.cgc_pop, d.indexed),
+				stalePct: pct(d.stale, d.indexed)
+			}))
+			.reverse();
+	} catch {
+		// migration 014 not applied / ledger unreadable — panel hides itself
+	}
+
 	const psa10Count = psa10Res.count ?? 0;
 	const psaPopCount = psaPopRes.count ?? 0;
 	const cgcPopCount = cgcPopRes.count ?? 0;
@@ -142,7 +202,8 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			psa10Pct: cov(psa10Count),
 			psaPopPct: cov(psaPopCount),
 			cgcPopPct: cov(cgcPopCount)
-		}
+		},
+		coverageTrend
 	};
 };
 

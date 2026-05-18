@@ -61,6 +61,44 @@
 	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
 	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
 	let pcUrlOverride = $derived(((data as Record<string, unknown>).pcUrlOverride ?? null) as string | null);
+
+	// Pillar #9 — discovery scores (0–100 per axis) + confidence.
+	interface RankingScores {
+		score_value: number | null;
+		score_scarcity: number | null;
+		score_gem_difficulty: number | null;
+		score_momentum: number | null;
+		score_grade_roi: number | null;
+		score_liquidity: number | null;
+		ranking_confidence: string | null;
+		ranked_at: string | null;
+	}
+	let rankingScores = $derived(
+		((data as Record<string, unknown>).rankingScores ?? null) as RankingScores | null
+	);
+	const AXES: Array<{ key: keyof RankingScores; label: string; hint: string }> = [
+		{ key: 'score_value', label: 'Value', hint: 'PSA 10 price percentile across the catalog' },
+		{ key: 'score_scarcity', label: 'Scarcity', hint: 'Inverse graded population — rarer ranks higher' },
+		{ key: 'score_gem_difficulty', label: 'Gem difficulty', hint: '1 − gem rate — harder to pull a 10 ranks higher' },
+		{ key: 'score_momentum', label: 'Momentum', hint: 'Recent price + population velocity' },
+		{ key: 'score_grade_roi', label: 'Grade ROI', hint: 'Raw → PSA 10 spread net of grading cost' },
+		{ key: 'score_liquidity', label: 'Liquidity', hint: 'How readily it trades — sales cadence + sample depth' }
+	];
+	let hasRankingScores = $derived(
+		rankingScores != null &&
+			AXES.some((a) => typeof rankingScores![a.key] === 'number' && rankingScores![a.key] != null)
+	);
+	function scoreColor(n: number): string {
+		if (n >= 75) return 'bg-vault-green';
+		if (n >= 50) return 'bg-vault-gold';
+		if (n >= 25) return 'bg-vault-accent';
+		return 'bg-vault-red';
+	}
+	const CONFIDENCE_BADGE: Record<string, string> = {
+		high: 'bg-vault-green/15 text-vault-green',
+		medium: 'bg-vault-gold/15 text-vault-gold',
+		low: 'bg-vault-red/15 text-vault-red'
+	};
 	let hasMarketSignals = $derived(
 		indexRow != null &&
 			(indexRow.raw_nm_price != null ||
@@ -674,6 +712,52 @@
 							{/if}
 						</form>
 					</details>
+				</div>
+			{/if}
+
+			<!-- Discovery Scores (pillar #9) — 6 axes + confidence. Rendered as
+			     its own card (not nested in Market Signals) so thin, low-pop
+			     cards still surface their scores: the whole point of the lens
+			     system is discovering cards you didn't know were notable.
+			     Honesty doctrine: a NULL axis renders "—", never a fake 50. -->
+			{#if hasRankingScores && rankingScores}
+				<div class="rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
+					<div class="flex items-start justify-between gap-3">
+						<div>
+							<h2 class="text-lg font-semibold text-white">Discovery Scores</h2>
+							<p class="mt-0.5 text-xs text-vault-text-muted">
+								Percentile-ranked 0–100 across the whole catalog. <a href="/rankings" class="underline hover:text-vault-purple">See all rankings →</a>
+							</p>
+						</div>
+						{#if rankingScores.ranking_confidence}
+							<span
+								class="rounded-chip px-2 py-0.5 text-[11px] font-medium {CONFIDENCE_BADGE[rankingScores.ranking_confidence] ?? 'bg-vault-bg text-vault-text-muted'}"
+								title="Confidence reflects how much real data backs these scores. Thin-data cards are still ranked, but flagged low so a sparse card can't masquerade as a sure thing."
+							>
+								{rankingScores.ranking_confidence} confidence
+							</span>
+						{/if}
+					</div>
+					<div class="mt-4 space-y-2.5">
+						{#each AXES as axis}
+							{@const raw = rankingScores[axis.key]}
+							{@const v = typeof raw === 'number' ? raw : null}
+							<div class="flex items-center gap-3" title={axis.hint}>
+								<span class="w-28 shrink-0 text-xs text-vault-text-muted">{axis.label}</span>
+								<div class="relative h-2 flex-1 overflow-hidden rounded-full bg-vault-bg">
+									{#if v != null}
+										<div class="absolute inset-y-0 left-0 rounded-full {scoreColor(v)}" style="width: {v}%"></div>
+									{/if}
+								</div>
+								<span class="w-8 shrink-0 text-right text-xs font-bold {v != null ? 'text-white' : 'text-vault-text-muted'}">
+									{v != null ? v : '—'}
+								</span>
+							</div>
+						{/each}
+					</div>
+					{#if rankingScores.ranked_at && relTime(rankingScores.ranked_at)}
+						<p class="mt-3 text-[10px] text-vault-text-muted">Scored {relTime(rankingScores.ranked_at)}</p>
+					{/if}
 				</div>
 			{/if}
 
