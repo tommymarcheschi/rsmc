@@ -113,14 +113,27 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 
 	// PSA 10 historical sales for the time-series list on card detail.
 	// Newest first, capped at 30 — matches what PriceCharting surfaces.
-	interface Psa10SaleRow { sold_at: string; price_cents: number; marketplace: string | null; }
-	const psa10SalesRes = await supabase
-		.from('psa10_sales')
-		.select('sold_at, price_cents, marketplace')
-		.eq('card_id', params.id)
-		.order('sold_at', { ascending: false })
-		.limit(30);
-	const psa10Sales: Psa10SaleRow[] = (psa10SalesRes.data ?? []) as Psa10SaleRow[];
+	interface Psa10SaleRow {
+		sold_at: string;
+		price_cents: number;
+		marketplace: string | null;
+		source_url?: string | null;
+	}
+	// source_url needs migration 022. Degrade gracefully if it's not yet
+	// applied (column-missing → retry without it) so the sales list never
+	// disappears just because the migration is pending.
+	const selSales = (cols: string) =>
+		supabase
+			.from('psa10_sales')
+			.select(cols)
+			.eq('card_id', params.id)
+			.order('sold_at', { ascending: false })
+			.limit(30);
+	let psa10SalesRes = await selSales('sold_at, price_cents, marketplace, source_url');
+	if (psa10SalesRes.error) {
+		psa10SalesRes = await selSales('sold_at, price_cents, marketplace');
+	}
+	const psa10Sales: Psa10SaleRow[] = (psa10SalesRes.data ?? []) as unknown as Psa10SaleRow[];
 
 	// Separate read for the PriceCharting override URL so pre-migration-012
 	// environments don't kill the whole market-signals block. Any error
@@ -450,7 +463,12 @@ export const actions: Actions = {
 			psaPop: { total: number; grade10: number; gemRate: number } | null;
 			cgcPop: { total: number; grade10: number; gemRate: number } | null;
 			psa10LastSold: string | null;
-			psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+			psa10Sales: Array<{
+				sold_at: string;
+				price: number;
+				marketplace: string | null;
+				url: string | null;
+			}>;
 			gradeLadder?: Record<string, Record<string, number>> | null;
 		} | null = null;
 		try {
@@ -548,9 +566,12 @@ export const actions: Actions = {
 						card_id: cardId,
 						sold_at: s.sold_at,
 						price_cents: Math.round(s.price * 100),
-						marketplace: s.marketplace
+						marketplace: s.marketplace,
+						source_url: s.url
 					})),
-					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					// DO UPDATE so "Refresh now" backfills source_url onto
+					// sales already stored for this card.
+					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: false }
 				)
 				.then(
 					() => {},

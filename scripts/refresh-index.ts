@@ -165,7 +165,12 @@ function getHeadline(card: TcgCard): { market: number | null; low: number | null
 
 interface EnrichedCardOutput {
 	row: Record<string, unknown>;
-	psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+	psa10Sales: Array<{
+		sold_at: string;
+		price: number;
+		marketplace: string | null;
+		url: string | null;
+	}>;
 }
 
 async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
@@ -347,9 +352,12 @@ async function indexSet(setId: string, concurrency: number, dryRun: boolean) {
 							card_id: card.id,
 							sold_at: s.sold_at,
 							price_cents: Math.round(s.price * 100),
-							marketplace: s.marketplace
+							marketplace: s.marketplace,
+							source_url: s.url
 						})),
-						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+						// DO UPDATE (not DO NOTHING) so an already-stored sale
+						// backfills source_url/marketplace on re-scrape.
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: false }
 					)
 					.then(() => {}, () => {});
 			}
@@ -627,9 +635,11 @@ async function indexStale(
 							card_id: cardId,
 							sold_at: s.sold_at,
 							price_cents: Math.round(s.price * 100),
-							marketplace: s.marketplace
+							marketplace: s.marketplace,
+							source_url: s.url
 						})),
-						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+						// DO UPDATE so a stored sale backfills source_url.
+						{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: false }
 					)
 					.then(() => {}, () => {});
 			}
@@ -842,9 +852,10 @@ async function main() {
 						card_id: cardId,
 						sold_at: s.sold_at,
 						price_cents: Math.round(s.price * 100),
-						marketplace: s.marketplace
+						marketplace: s.marketplace,
+						source_url: s.url
 					})),
-					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: true }
+					{ onConflict: 'card_id,sold_at,price_cents', ignoreDuplicates: false }
 				);
 			}
 			console.log(JSON.stringify(row, null, 2));

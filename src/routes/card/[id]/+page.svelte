@@ -76,7 +76,7 @@
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
-	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
+	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; source_url?: string | null; }
 	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
 	let pcUrlOverride = $derived(((data as Record<string, unknown>).pcUrlOverride ?? null) as string | null);
 
@@ -1179,15 +1179,35 @@
 					{/if}
 					<div class="mt-3 divide-y divide-vault-border rounded-xl border border-vault-border">
 						{#each psa10Sales.slice(0, 10) as sale}
-							<div class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-								<div class="text-vault-text-muted">
-									{sale.sold_at}
-									{#if sale.marketplace}
-										<span class="ml-2 rounded bg-vault-bg px-1.5 py-0.5 text-[10px] text-vault-text-muted">{sale.marketplace}</span>
-									{/if}
+							{#if sale.source_url}
+								<a
+									href={sale.source_url}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex items-center justify-between gap-3 px-3 py-2 text-sm transition-colors hover:bg-vault-bg"
+									title="Open the source auction listing to confirm this sale"
+								>
+									<div class="text-vault-text-muted">
+										{sale.sold_at}
+										{#if sale.marketplace}
+											<span class="ml-2 rounded bg-vault-bg px-1.5 py-0.5 text-[10px] text-vault-purple">{sale.marketplace} ↗</span>
+										{:else}
+											<span class="ml-2 text-[10px] text-vault-purple">view ↗</span>
+										{/if}
+									</div>
+									<div class="font-medium text-white">{fmtMoney(sale.price_cents / 100)}</div>
+								</a>
+							{:else}
+								<div class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+									<div class="text-vault-text-muted">
+										{sale.sold_at}
+										{#if sale.marketplace}
+											<span class="ml-2 rounded bg-vault-bg px-1.5 py-0.5 text-[10px] text-vault-text-muted">{sale.marketplace}</span>
+										{/if}
+									</div>
+									<div class="font-medium text-white">{fmtMoney(sale.price_cents / 100)}</div>
 								</div>
-								<div class="font-medium text-white">{fmtMoney(sale.price_cents / 100)}</div>
-							</div>
+							{/if}
 						{/each}
 					</div>
 					{#if psa10Sales.length > 10}
