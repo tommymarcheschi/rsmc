@@ -1,6 +1,24 @@
 import { supabase } from '$services/supabase';
 import { AXES, LENSES, LENS_KEYS, type LensKey } from '$services/lenses';
+import { parseHuntDSL } from '$services/hunt-dsl';
 import type { PageServerLoad } from './$types';
+
+// Human-readable echo of an applied DSL filter, so the user sees how
+// their query was interpreted (and trusts the result set).
+function describeFilters(p: Record<string, string | undefined>): string[] {
+	const out: string[] = [];
+	if (p.q) out.push(`name ~ "${p.q}"`);
+	if (p.set) out.push(`set: ${p.set}`);
+	if (p.pop_lt) out.push(`graded pop < ${p.pop_lt}`);
+	if (p.after) out.push(`released ≥ ${p.after}`);
+	if (p.before) out.push(`released < ${p.before}`);
+	if (p.raw_gt) out.push(`raw > $${p.raw_gt}`);
+	if (p.raw_lt) out.push(`raw < $${p.raw_lt}`);
+	if (p.require_psa10) out.push('has PSA 10 price');
+	if (p.rarity_like) out.push(`rarity ~ "${p.rarity_like}"`);
+	if (p.variants) out.push(`variant: ${p.variants}`);
+	return out;
+}
 
 const PAGE_SIZE = 60;
 
@@ -26,6 +44,18 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 
 	const q = url.searchParams.get('q')?.trim() ?? '';
 	const setId = url.searchParams.get('set')?.trim() ?? '';
+
+	// The search box is now hunt-DSL aware (same grammar as /browse): e.g.
+	// `charizard pop:<500 year:1999-2003 rarity:holo psa10`. Barewords →
+	// name search; field:value → structured card_index filters. Unknown
+	// tokens are echoed back, not silently dropped.
+	const dsl = q ? parseHuntDSL(q) : { params: {}, errors: [] };
+	const dslParams = dsl.params;
+	const nameQ = dslParams.q ?? '';
+	// Explicit ?set= (focused link from the card-detail Discovery panel)
+	// wins; otherwise honor a `set:` token from the DSL.
+	const effectiveSetId = setId || (dslParams.set ?? '');
+	const dslFilterDesc = describeFilters({ ...dslParams, set: effectiveSetId || undefined });
 	const lensParam = (url.searchParams.get('lens') ?? 'investor') as LensKey;
 	const lens: LensKey = LENS_KEYS.includes(lensParam) ? lensParam : 'investor';
 	const confidence = url.searchParams.get('confidence') ?? 'all'; // all | high | nolow
@@ -38,8 +68,22 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		.from('card_index')
 		.select(SELECT_COLS, { count: 'exact' });
 
-	if (q) query = query.ilike('name', `%${q}%`);
-	if (setId) query = query.eq('set_id', setId);
+	if (nameQ) query = query.ilike('name', `%${nameQ}%`);
+	if (effectiveSetId) query = query.eq('set_id', effectiveSetId);
+	if (dslParams.pop_lt) query = query.lt('combined_pop_total', parseInt(dslParams.pop_lt));
+	if (dslParams.before) query = query.lt('set_release_date', `${dslParams.before}-01-01`);
+	if (dslParams.after) query = query.gte('set_release_date', `${dslParams.after}-01-01`);
+	if (dslParams.raw_lt) query = query.lt('raw_nm_price', parseFloat(dslParams.raw_lt));
+	if (dslParams.raw_gt) query = query.gt('raw_nm_price', parseFloat(dslParams.raw_gt));
+	if (dslParams.require_psa10) query = query.not('psa10_price', 'is', null);
+	if (dslParams.rarity_like) query = query.ilike('rarity', `%${dslParams.rarity_like}%`);
+	if (dslParams.variants) {
+		const vs = dslParams.variants.split(',');
+		if (vs.includes('holo') && vs.includes('reverse'))
+			query = query.or('has_holofoil.eq.true,has_reverse_holofoil.eq.true');
+		else if (vs.includes('holo')) query = query.eq('has_holofoil', true);
+		else if (vs.includes('reverse')) query = query.eq('has_reverse_holofoil', true);
+	}
 	if (confidence === 'high') query = query.eq('ranking_confidence', 'high');
 	else if (confidence === 'nolow') query = query.in('ranking_confidence', ['high', 'medium']);
 
@@ -85,6 +129,8 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		pageSize: PAGE_SIZE,
 		q,
 		setId,
+		dslFilters: dslFilterDesc,
+		dslErrors: dsl.errors,
 		lens,
 		sortCol,
 		confidence,
