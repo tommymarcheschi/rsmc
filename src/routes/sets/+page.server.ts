@@ -1,6 +1,12 @@
 import { getSets, getCardsBySet } from '$services/tcg-api';
 import { supabase } from '$services/supabase';
 import { getSetValueTracker } from '$services/insights';
+import {
+	gateDiscoverySignals,
+	DISCOVERY_SELECT_COLS,
+	type DiscoverySignals,
+	type RawDiscoveryRow
+} from '$services/discovery-signals';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -71,6 +77,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		owned: boolean;
 		quantity: number;
 		marketPrice: number;
+		discovery: DiscoverySignals | null;
 	}
 
 	let selectedSet: { name: string; total: number; owned: number; cards: SetCard[] } | null = null;
@@ -78,6 +85,25 @@ export const load: PageServerLoad = async ({ url }) => {
 	if (selectedSetId) {
 		try {
 			const result = await getCardsBySet(selectedSetId, 1, 250);
+
+			// Per-card discovery signals scoped to this set — same honesty
+			// gate as /collection and the grid (null ⇒ render nothing). This
+			// is what turns the set view from "do I own it / what's it worth"
+			// into "which cards in this set are the standouts".
+			const setCardIds = result.data.map((c) => c.id);
+			const discoveryByCard: Record<string, DiscoverySignals> = {};
+			if (setCardIds.length > 0) {
+				const { data: idxRows } = await supabase
+					.from('card_index')
+					.select(`card_id, ${DISCOVERY_SELECT_COLS}`)
+					.in('card_id', setCardIds);
+				for (const r of (idxRows ?? []) as Array<
+					RawDiscoveryRow & { card_id: string }
+				>) {
+					discoveryByCard[r.card_id] = gateDiscoverySignals(r);
+				}
+			}
+
 			const cards: SetCard[] = result.data.map((card) => {
 				let marketPrice = 0;
 				if (card.tcgplayer?.prices) {
@@ -94,7 +120,8 @@ export const load: PageServerLoad = async ({ url }) => {
 					imageSmall: card.images.small,
 					owned: ownedCards.has(card.id),
 					quantity: ownedCards.get(card.id) ?? 0,
-					marketPrice
+					marketPrice,
+					discovery: discoveryByCard[card.id] ?? null
 				};
 			});
 
