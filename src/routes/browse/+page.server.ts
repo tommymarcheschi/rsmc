@@ -138,7 +138,7 @@ async function attachCardIndexEnrichment(cards: PokemonCard[]): Promise<Enriched
 	const ids = cards.map((c) => c.id);
 	const { data } = await supabase
 		.from('card_index')
-		.select('card_id, raw_nm_price, raw_source, psa10_price, psa10_delta, psa10_multiple, psa_pop_total, cgc_pop_total, combined_pop_total')
+		.select('card_id, raw_nm_price, raw_source, psa10_price, psa10_delta, psa10_multiple, psa_pop_total, psa_pop_10, psa_gem_rate, cgc_pop_total, combined_pop_total')
 		.in('card_id', ids);
 	const byId = new Map<string, Record<string, unknown>>();
 	for (const row of (data ?? []) as Array<Record<string, unknown>>) {
@@ -156,6 +156,8 @@ async function attachCardIndexEnrichment(cards: PokemonCard[]): Promise<Enriched
 				psa10_delta: idx.psa10_delta as number | null,
 				psa10_multiple: idx.psa10_multiple as number | null,
 				psa_pop_total: idx.psa_pop_total as number | null,
+				psa_pop_10: idx.psa_pop_10 as number | null,
+				psa_gem_rate: idx.psa_gem_rate as number | null,
 				cgc_pop_total: idx.cgc_pop_total as number | null,
 				combined_pop_total: idx.combined_pop_total as number | null,
 				pcUrl: null
@@ -445,6 +447,8 @@ async function loadHuntMode(url: URL, _setHeaders: (headers: Record<string, stri
 			psa10_multiple: row.psa10_multiple as number | null,
 			psa10_last_sold_at: row.psa10_last_sold_at as string | null,
 			psa_pop_total: row.psa_pop_total as number | null,
+			psa_pop_10: row.psa_pop_10 as number | null,
+			psa_gem_rate: row.psa_gem_rate as number | null,
 			cgc_pop_total: row.cgc_pop_total as number | null,
 			combined_pop_total: row.combined_pop_total as number,
 			pcUrl: null

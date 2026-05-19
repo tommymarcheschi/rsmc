@@ -9,6 +9,8 @@
 		psa10_multiple?: number | null;
 		psa10_last_sold_at?: string | null;
 		psa_pop_total?: number | null;
+		psa_pop_10?: number | null;
+		psa_gem_rate?: number | null;
 		cgc_pop_total?: number | null;
 		combined_pop_total?: number | null;
 		pcUrl?: string | null;
@@ -28,6 +30,16 @@
 	let enrichment = $derived(card._enrichment);
 	let hasDelta = $derived(enrichment?.psa10_delta != null && enrichment.psa10_delta > 0);
 	let hasPop = $derived(enrichment?.combined_pop_total != null);
+	// Real PSA gem rate (psa_pop_10 / psa_pop_total, persisted as a %). Only
+	// surface it when it's genuinely backed by a scraped PSA pop — never
+	// derive or estimate it. A lower rate = harder to pull a 10, the single
+	// most decision-relevant graded signal and (until now) sortable on hunt
+	// but invisible on the grid. null ⇒ render nothing (honesty doctrine).
+	let gemRate = $derived(
+		enrichment?.psa_gem_rate != null && (enrichment?.psa_pop_total ?? 0) > 0
+			? enrichment.psa_gem_rate
+			: null
+	);
 
 	function fmtPrice(n: number): string {
 		return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${n.toFixed(2)}`;
@@ -97,7 +109,7 @@
 		{@const cgc = enrichment!.cgc_pop_total ?? 0}
 		{@const combined = enrichment!.combined_pop_total ?? 0}
 		<div class="absolute bottom-14 left-2 rounded-full bg-vault-bg/90 px-2 py-0.5 text-[10px] font-medium text-vault-text-muted shadow-lg backdrop-blur-sm"
-			title="PSA: {psa.toLocaleString()}{cgc ? ` + CGC: ${cgc.toLocaleString()}` : ''} = {combined.toLocaleString()} total graded">
+			title="PSA: {psa.toLocaleString()}{cgc ? ` + CGC: ${cgc.toLocaleString()}` : ''} = {combined.toLocaleString()} total graded{gemRate != null ? ` · PSA ${(enrichment!.psa_pop_10 ?? 0).toLocaleString()} of ${psa.toLocaleString()} are a 10 → ${gemRate}% gem rate (lower = harder pull)` : ''}">
 			{#if psa && cgc}
 				PSA {psa.toLocaleString()} + CGC {cgc.toLocaleString()}
 			{:else if psa}
@@ -106,7 +118,7 @@
 				CGC pop {cgc.toLocaleString()}
 			{:else}
 				pop {combined.toLocaleString()}
-			{/if}
+			{/if}{#if gemRate != null}<span class="ml-1 text-vault-gold">· {gemRate}% gem</span>{/if}
 		</div>
 	{/if}
 
