@@ -45,7 +45,7 @@
 		<!-- Logo -->
 		<div class="flex h-16 items-center gap-3 border-b border-vault-border px-6">
 			<div class="brand-chip h-8 w-8">
-				<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+				<svg class="h-5 w-5 text-vault-bg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 					<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
 					<line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/>
 					<circle cx="12" cy="12" r="3" fill="currentColor"/>
@@ -154,8 +154,8 @@
 		<button aria-label="Close menu" class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick={() => (mobileMenuOpen = false)}></button>
 		<div class="fixed inset-y-0 left-0 w-64 max-w-[80vw] bg-vault-surface shadow-2xl">
 			<div class="flex h-16 items-center gap-3 border-b border-vault-border px-6">
-				<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-vault-accent to-vault-purple">
-					<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+				<div class="brand-chip h-8 w-8">
+					<svg class="h-5 w-5 text-vault-bg" viewBox="0 0 24 24" fill="currentColor">
 						<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
 						<line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/>
 						<circle cx="12" cy="12" r="3" fill="currentColor"/>

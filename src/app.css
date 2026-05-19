@@ -67,6 +67,27 @@ html {
 	color-scheme: dark;
 }
 
+/* Keyboard focus ring. ~50 interactive elements use `focus:outline-none`
+ * with only a subtle border-color change (or nothing), leaving keyboard
+ * users with no reliable focus indicator. `:focus-visible` only triggers
+ * for keyboard/AT navigation — never on mouse click — so this restores
+ * accessibility app-wide without changing the pointer-driven visual
+ * design or touching every call site. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+	/* box-shadow (not outline): ~50 elements use Tailwind `focus:outline-none`
+	 * which forces a transparent outline and would clobber an outline-based
+	 * ring; box-shadow is untouched by it and hugs the element's radius. */
+	box-shadow:
+		0 0 0 2px var(--color-vault-bg),
+		0 0 0 4px var(--color-vault-cyan);
+	outline: none;
+}
+
 body {
 	background-color: var(--color-vault-bg);
 	color: var(--color-vault-text);
