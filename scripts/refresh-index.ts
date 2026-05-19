@@ -467,11 +467,31 @@ async function indexStale(
 		Date.now() - GRADED_RECHECK_DAYS * 24 * 60 * 60 * 1000
 	).toISOString();
 
-	// Every selection orders by last_enriched_at asc — that column is
-	// indexed (migration 015), so ORDER BY + LIMIT stays an index scan and
-	// can't reintroduce the seq-scan/timeout that masked the stalled
-	// pipeline. The extra equality/range filters below are selective and
-	// don't change that the driver is still the indexed ORDER BY + LIMIT.
+	// Newest-set priority window. A freshly-released set's cards qualify for
+	// the gradeable gap tier (A1) but A1 orders by last_enriched_at asc, so a
+	// new set sorts to the BACK of the ~20k aged backlog and waits a month+
+	// even though PriceCharting already has rich data for it. The N1 tier
+	// below jumps never-PriceCharting-checked gradeable cards from sets
+	// released within this window to the front, ordered by set_release_date
+	// desc. Bounded by the window AND the never-checked filter, so it drains
+	// once a new set is enriched and never starves the aged backlog.
+	// Tunable via TROVE_NEW_SET_PRIORITY_DAYS.
+	const NEW_SET_PRIORITY_DAYS =
+		Number(process.env.TROVE_NEW_SET_PRIORITY_DAYS) > 0
+			? Number(process.env.TROVE_NEW_SET_PRIORITY_DAYS)
+			: 90;
+	const newSetThreshold = new Date(
+		Date.now() - NEW_SET_PRIORITY_DAYS * 24 * 60 * 60 * 1000
+	)
+		.toISOString()
+		.slice(0, 10);
+
+	// Selections order by last_enriched_at asc (default) or set_release_date
+	// desc (N1 only) — BOTH columns are indexed (migration 015 and 003's
+	// idx_card_index_release respectively), so ORDER BY + LIMIT stays an
+	// index scan and can't reintroduce the seq-scan/timeout that masked the
+	// stalled pipeline. The extra equality/range filters below are selective
+	// and don't change that the driver is still the indexed ORDER BY + LIMIT.
 	// Errors are surfaced on EVERY query for the same reason: a swallowed
 	// selection error is exactly how the catalog hit 99% stale.
 	async function selectStale(
@@ -482,6 +502,8 @@ async function indexStale(
 			gradeableRarity?: boolean;
 			minValue?: number;
 			gradedCheck?: 'fresh' | 'recheck';
+			releasedSince?: string;
+			orderBy?: { column: 'last_enriched_at' | 'set_release_date'; ascending: boolean };
 		}
 	): Promise<StoredCardMeta[]> {
 		let q = supabase
@@ -511,8 +533,18 @@ async function indexStale(
 		if (opts.gradedCheck === 'fresh') q = q.is('graded_prices_fetched_at', null);
 		else if (opts.gradedCheck === 'recheck')
 			q = q.lt('graded_prices_fetched_at', gradedRecheckThreshold);
+		// Newest-set priority bound (N1). set_release_date is a `date` column
+		// with a dedicated btree (idx_card_index_release, migration 003), so a
+		// range predicate here plus ORDER BY set_release_date desc below is a
+		// bounded backward index scan — strictly more index-tight than the
+		// last_enriched_at tiers, not the seq-scan/timeout regression 015
+		// fixed.
+		if (opts.releasedSince != null) q = q.gte('set_release_date', opts.releasedSince);
+		// Default order is unchanged (last_enriched_at asc) so every existing
+		// caller behaves exactly as before; only N1 overrides it.
+		const order = opts.orderBy ?? { column: 'last_enriched_at' as const, ascending: true };
 		const { data, error } = await q
-			.order('last_enriched_at', { ascending: true })
+			.order(order.column, { ascending: order.ascending })
 			.limit(n);
 		if (error) {
 			console.error(`Stale selection FAILED: ${error.message}`);
@@ -542,8 +574,25 @@ async function indexStale(
 		// re-verified on the long recheck cadence; cards reached & missing
 		// within the window are intentionally skipped (the backoff) so the
 		// budget goes to cards that can actually yield graded data.
+		// N1: never-checked gradeable cards from sets released within the
+		//     priority window, newest set first. Without this a brand-new
+		//     set's cards qualify for A1 but A1's last_enriched_at-asc order
+		//     buries them behind the ~20k aged backlog for a month+ even
+		//     though PriceCharting already has rich data for them. Bounded by
+		//     the window AND gradedCheck:'fresh', so it drains as the new set
+		//     gets enriched and never starves the tiers below.
+		take(
+			await selectStale(limit, {
+				gap: true,
+				gradeableRarity: true,
+				gradedCheck: 'fresh',
+				releasedSince: newSetThreshold,
+				orderBy: { column: 'set_release_date', ascending: false }
+			})
+		);
 		// A1: gradeable rarity, never PriceCharting-checked — best bet.
-		take(await selectStale(limit, { gap: true, gradeableRarity: true, gradedCheck: 'fresh' }));
+		if (need() > 0)
+			take(await selectStale(need(), { gap: true, gradeableRarity: true, gradedCheck: 'fresh' }));
 		// B1: worth-grading by value, never-checked.
 		if (need() > 0)
 			take(await selectStale(need(), { gap: true, minValue: GRADEABLE_VALUE_FLOOR, gradedCheck: 'fresh' }));
