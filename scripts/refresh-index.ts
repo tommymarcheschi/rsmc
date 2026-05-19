@@ -54,6 +54,7 @@ import { fetchPriceCharting as fetchPriceChartingDirect } from '../src/lib/servi
 import { getTagCardPop, tagPopScalars, TagGradingError } from '../src/lib/services/tag-grading.js';
 import { getCgcCardPop, cgcPopScalars, CgcGradingError } from '../src/lib/services/cgc-grading.js';
 import { getBgsCardPop, bgsDrillKeyword, bgsPopScalars, BgsGradingError } from '../src/lib/services/bgs-grading.js';
+import { pcGradedFields } from '../src/lib/services/enrich-graded-fields.js';
 
 const DEV_SERVER_URL = process.env.DEV_SERVER_URL ?? '';
 
@@ -196,10 +197,6 @@ async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 	const holoPrices = card.tcgplayer?.prices?.['holofoil'];
 	const reversePrices = card.tcgplayer?.prices?.['reverseHolofoil'];
 
-	// Pop data from PriceCharting's embedded pop_data variable
-	const psaPop = pc?.psaPop ?? null;
-	const cgcPop = pc?.cgcPop ?? null;
-
 	return {
 		row: {
 			card_id: card.id,
@@ -225,29 +222,10 @@ async function enrichOneCard(card: TcgCard): Promise<EnrichedCardOutput> {
 			raw_nm_price: rawPrice,
 			raw_source: rawSource,
 			raw_fetched_at: now,
-			psa10_price: pc?.psa10 ?? null,
-			psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
-			tag10_price: pc?.tag10 ?? null,
-			tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
-			cgc10_price: pc?.cgc10 ?? null,
-			cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
-			// Real per-grade ladder (migration 020). Real cells only —
-			// PriceCharting blank `-` rows are already dropped upstream.
-			grade_ladder: pc?.gradeLadder ?? null,
-			grade_ladder_fetched_at: pc ? now : null,
-			graded_prices_fetched_at: pc ? now : null,
-			psa10_last_sold_at: pc?.psa10LastSold ?? null,
-			psa_pop_total: psaPop?.total ?? null,
-			psa_pop_10: psaPop?.grade10 ?? null,
-			psa_gem_rate: psaPop?.gemRate ?? null,
-			psa_fetched_at: psaPop ? now : null,
-			// Real CGC pop into its own columns (migration 007). tag_pop_*
-			// is left untouched — PriceCharting has no TAG pop; writing CGC
-			// there fabricated TAG. Omitted from the upsert = never clobbered.
-			cgc_pop_total: cgcPop?.total ?? null,
-			cgc_pop_10: cgcPop?.grade10 ?? null,
-			cgc_gem_rate: cgcPop?.gemRate ?? null,
-			cgc_fetched_at: cgcPop ? now : null,
+			// Graded/pop fields are added ONLY when the scrape returned them
+			// (see enrich-graded-fields.ts). A transient miss omits these
+			// keys so the upsert never nulls previously-good values.
+			...pcGradedFields(pc, now),
 			last_enriched_at: now,
 			enrich_version: 2,
 			enrich_errors: errors
@@ -277,12 +255,12 @@ interface StoredCardMeta {
 }
 
 // Build the PriceCharting-derived upsert subset from stored metadata + a
-// fresh scrape. Mirrors the PriceCharting fields of enrichOneCard exactly
-// (honesty doctrine: only real scraped values; null beats fabricated; a
-// transient miss never clobbers a good stored value because we only set a
-// field when the scrape actually returned it). Crucially this writes ONLY
-// price/pop fields — it never touches immutable metadata, so there is no
-// metadata-clobber risk from not having a fresh TCG payload.
+// fresh scrape. Graded/pop fields come from the shared pcGradedFields()
+// helper (enrich-graded-fields.ts) — the SAME builder enrichOneCard uses,
+// so the two paths can no longer drift. A transient miss omits the graded
+// keys entirely, so the upsert never clobbers a good stored value.
+// Crucially this writes ONLY price/pop fields — it never touches immutable
+// metadata, so there is no metadata-clobber risk from no fresh TCG payload.
 function stalePriceRow(
 	meta: StoredCardMeta,
 	pc: Awaited<ReturnType<typeof fetchPriceCharting>>,
@@ -294,8 +272,6 @@ function stalePriceRow(
 	// so we do not pretend it is fresher than it is (raw_source records which).
 	const rawPrice = rawFromPc ?? meta.tcg_headline_market ?? null;
 	const rawSource = rawFromPc != null ? 'pricecharting' : 'tcgplayer';
-	const psaPop = pc?.psaPop ?? null;
-	const cgcPop = pc?.cgcPop ?? null;
 
 	const row: Record<string, unknown> = {
 		card_id: meta.card_id,
@@ -315,29 +291,10 @@ function stalePriceRow(
 		raw_nm_price: rawPrice,
 		raw_source: rawSource,
 		raw_fetched_at: now,
-		psa10_price: pc?.psa10 ?? null,
-		psa10_source: pc?.psa10 != null ? 'pricecharting' : null,
-		tag10_price: pc?.tag10 ?? null,
-		tag10_source: pc?.tag10 != null ? 'pricecharting' : null,
-		cgc10_price: pc?.cgc10 ?? null,
-		cgc10_source: pc?.cgc10 != null ? 'pricecharting' : null,
-		// Real per-grade ladder (migration 020). Real cells only —
-		// PriceCharting blank `-` rows are already dropped upstream.
-		grade_ladder: pc?.gradeLadder ?? null,
-		grade_ladder_fetched_at: pc ? now : null,
-		graded_prices_fetched_at: pc ? now : null,
-		psa10_last_sold_at: pc?.psa10LastSold ?? null,
-		psa_pop_total: psaPop?.total ?? null,
-		psa_pop_10: psaPop?.grade10 ?? null,
-		psa_gem_rate: psaPop?.gemRate ?? null,
-		psa_fetched_at: psaPop ? now : null,
-		// Real CGC pop into its own columns (migration 007). tag_pop_* is
-		// left untouched — PriceCharting has no TAG pop; writing CGC there
-		// fabricated TAG. Omitted from the upsert = never clobbered.
-		cgc_pop_total: cgcPop?.total ?? null,
-		cgc_pop_10: cgcPop?.grade10 ?? null,
-		cgc_gem_rate: cgcPop?.gemRate ?? null,
-		cgc_fetched_at: cgcPop ? now : null,
+		// Graded/pop fields are added ONLY when the scrape returned them
+		// (see enrich-graded-fields.ts). A transient miss omits these keys
+		// so the upsert never nulls previously-good values.
+		...pcGradedFields(pc, now),
 		last_enriched_at: now,
 		enrich_version: 2,
 		enrich_errors: errors
