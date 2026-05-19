@@ -4,6 +4,7 @@ import { getCardPrices } from '$services/poketrace';
 import { getGradedPrices, getGradingFees } from '$services/price-tracker';
 import { cacheTcgPlayerPrices, getPriceHistoryFromCache } from '$services/price-cache';
 import { supabase } from '$services/supabase';
+import { supabaseAdmin } from '$lib/server/supabase-admin';
 import { getCardSignal, getSimilarCards } from '$services/insights';
 import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
 import { buildGradeLadders, type CohortRow } from '$services/grade-estimate';
@@ -384,11 +385,27 @@ export const actions: Actions = {
 			});
 		}
 
-		const { error: err } = await supabase
+		// card_index writes are service-role-only (migration 018) — see the
+		// refreshNow note. Anon UPDATE here would silently affect 0 rows
+		// and falsely report the override saved.
+		if (!supabaseAdmin) {
+			return fail(500, {
+				action: 'pcOverride',
+				message: 'Saving the override is not configured on this server (missing service-role key).'
+			});
+		}
+		const { data: updated, error: err } = await supabaseAdmin
 			.from('card_index')
 			.update({ pc_url_override: value })
-			.eq('card_id', cardId);
+			.eq('card_id', cardId)
+			.select('card_id');
 		if (err) return fail(500, { action: 'pcOverride', message: err.message });
+		if (!updated || updated.length === 0) {
+			return fail(500, {
+				action: 'pcOverride',
+				message: 'Override could not be saved (no row updated).'
+			});
+		}
 		return { action: 'pcOverride', success: true, cleared: value == null };
 	},
 
@@ -496,14 +513,35 @@ export const actions: Actions = {
 		}
 		if (pc.psa10LastSold != null) upd.psa10_last_sold_at = pc.psa10LastSold;
 
-		const { error: err } = await supabase
+		// migration 018 made card_index writes service-role-only (anon =
+		// SELECT only). The browser/SSR `supabase` client is anon, so an
+		// UPDATE through it is RLS-filtered to ZERO rows and returns NO
+		// error — the action would report success while persisting nothing
+		// (the silent "Refresh now did nothing" bug). Use the server-only
+		// privileged client and verify a row actually changed.
+		if (!supabaseAdmin) {
+			return fail(500, {
+				action: 'refresh',
+				message:
+					'Live refresh is not configured on this server (missing SUPABASE_SERVICE_ROLE_KEY) — cached data unchanged.'
+			});
+		}
+
+		const { data: updated, error: err } = await supabaseAdmin
 			.from('card_index')
 			.update(upd)
-			.eq('card_id', cardId);
+			.eq('card_id', cardId)
+			.select('card_id');
 		if (err) return fail(500, { action: 'refresh', message: err.message });
+		if (!updated || updated.length === 0) {
+			return fail(500, {
+				action: 'refresh',
+				message: 'Refresh could not be saved (no row updated) — still showing cached data.'
+			});
+		}
 
 		if (pc.psa10Sales?.length) {
-			await supabase
+			await supabaseAdmin
 				.from('psa10_sales')
 				.upsert(
 					pc.psa10Sales.map((s) => ({
