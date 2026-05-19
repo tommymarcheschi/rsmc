@@ -1,0 +1,34 @@
+name: engine-bgs
+
+# Beckett (BGS) pop crawl. Beckett publishes its own pop report
+# (beckett.com/api/grading/pop-report); reverse-engineered client in
+# src/lib/services/bgs-grading.ts. Plain JSON, no auth, no Cloudflare.
+# No-ops cleanly until migration 021 is applied (bgs-pop.ts isolates per
+# set; the write simply errors-per-set until bgs_grades exists).
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: engine-bgs
+  cancel-in-progress: false
+
+jobs:
+  bgs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: BGS population crawl
+        run: node_modules/.bin/tsx scripts/bgs-pop.ts --all
