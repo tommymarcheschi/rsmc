@@ -11,6 +11,8 @@
 		psa_pop_total?: number | null;
 		psa_pop_10?: number | null;
 		psa_gem_rate?: number | null;
+		tag_pop_total?: number | null;
+		tag_gem_rate?: number | null;
 		score_value?: number | null;
 		ranking_confidence?: string | null;
 		cgc_pop_total?: number | null;
@@ -31,7 +33,17 @@
 
 	let enrichment = $derived(card._enrichment);
 	let hasDelta = $derived(enrichment?.psa10_delta != null && enrichment.psa10_delta > 0);
-	let hasPop = $derived(enrichment?.combined_pop_total != null);
+	// Real TAG Grading pop (taggrading.com, migration 019 — ~1.9k cards in
+	// prod, broader than PSA). Deliberately NOT folded into
+	// combined_pop_total (019 keeps that PSA+CGC so the hunt pop filter
+	// doesn't silently shift), so the grid hid it entirely. Surfaced as its
+	// own segment, gated to a real positive pop. null/0 ⇒ nothing.
+	let tagPop = $derived(
+		enrichment?.tag_pop_total != null && enrichment.tag_pop_total > 0
+			? enrichment.tag_pop_total
+			: null
+	);
+	let hasPop = $derived(enrichment?.combined_pop_total != null || tagPop != null);
 	// Real PSA gem rate (psa_pop_10 / psa_pop_total, persisted as a %). Only
 	// surface it when it's genuinely backed by a scraped PSA pop — never
 	// derive or estimate it. A lower rate = harder to pull a 10, the single
@@ -131,22 +143,25 @@
 		</div>
 	{/if}
 
-	<!-- Pop badge (bottom left) — shows in hunt mode with PSA/CGC breakdown -->
+	<!-- Pop badge (bottom left) — PSA/CGC breakdown + real TAG pop (separate
+	     from the PSA+CGC "combined" so the hunt pop filter is unaffected). -->
 	{#if hasPop}
 		{@const psa = enrichment!.psa_pop_total ?? 0}
 		{@const cgc = enrichment!.cgc_pop_total ?? 0}
 		{@const combined = enrichment!.combined_pop_total ?? 0}
 		<div class="absolute bottom-14 left-2 rounded-full bg-vault-bg/90 px-2 py-0.5 text-[10px] font-medium text-vault-text-muted shadow-lg backdrop-blur-sm"
-			title="PSA: {psa.toLocaleString()}{cgc ? ` + CGC: ${cgc.toLocaleString()}` : ''} = {combined.toLocaleString()} total graded{gemRate != null ? ` · PSA ${(enrichment!.psa_pop_10 ?? 0).toLocaleString()} of ${psa.toLocaleString()} are a 10 → ${gemRate}% gem rate (lower = harder pull)` : ''}">
+			title="PSA: {psa.toLocaleString()}{cgc ? ` + CGC: ${cgc.toLocaleString()}` : ''} = {combined.toLocaleString()} PSA+CGC graded{gemRate != null ? ` · PSA ${(enrichment!.psa_pop_10 ?? 0).toLocaleString()} of ${psa.toLocaleString()} are a 10 → ${gemRate}% gem rate (lower = harder pull)` : ''}{tagPop != null ? ` · TAG: ${tagPop.toLocaleString()} graded (taggrading.com, separate from PSA+CGC)${enrichment!.tag_gem_rate != null ? ` · ${enrichment!.tag_gem_rate}% TAG gem` : ''}` : ''}">
 			{#if psa && cgc}
 				PSA {psa.toLocaleString()} + CGC {cgc.toLocaleString()}
 			{:else if psa}
 				PSA pop {psa.toLocaleString()}
 			{:else if cgc}
 				CGC pop {cgc.toLocaleString()}
-			{:else}
+			{:else if combined}
 				pop {combined.toLocaleString()}
-			{/if}{#if gemRate != null}<span class="ml-1 text-vault-gold">· {gemRate}% gem</span>{/if}
+			{:else if tagPop != null}
+				TAG pop {tagPop.toLocaleString()}
+			{/if}{#if gemRate != null}<span class="ml-1 text-vault-gold">· {gemRate}% gem</span>{/if}{#if tagPop != null && (psa || cgc || combined)}<span class="ml-1 text-vault-cyan">· TAG {tagPop.toLocaleString()}</span>{/if}
 		</div>
 	{/if}
 

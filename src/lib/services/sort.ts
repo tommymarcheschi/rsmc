@@ -225,6 +225,8 @@ export interface EnrichedCard extends PokemonCard {
 		psa_pop_total?: number | null;
 		psa_pop_10?: number | null;
 		psa_gem_rate?: number | null;
+		tag_pop_total?: number | null;
+		tag_gem_rate?: number | null;
 		score_value?: number | null;
 		ranking_confidence?: string | null;
 		pcUrl: string | null;
