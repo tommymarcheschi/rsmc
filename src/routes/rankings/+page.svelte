@@ -82,8 +82,9 @@
 				type="text"
 				name="q"
 				value={data.q}
-				placeholder="Search card name…"
-				class="rounded-xl border border-vault-border bg-vault-bg px-3 py-1.5 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
+				placeholder="charizard pop:<500 year:1999-2003 rarity:holo psa10"
+				title="Hunt-DSL: barewords search the name; field:value filters — pop:<N year:A-B price:A-B raw:>N rarity:holo set:base1 psa10"
+				class="w-80 max-w-full rounded-xl border border-vault-border bg-vault-bg px-3 py-1.5 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 			/>
 			<button class="rounded-xl bg-vault-surface px-3 py-1.5 text-sm text-vault-text hover:bg-vault-surface-hover">Search</button>
 		</form>
@@ -102,6 +103,23 @@
 			{data.count.toLocaleString()} cards · page {data.page}/{data.totalPages}
 		</span>
 	</div>
+
+	<!-- DSL interpretation echo — shows the user how their query was parsed
+	     so a filtered result set is trustworthy, and flags tokens we didn't
+	     understand instead of silently dropping them. -->
+	{#if data.dslFilters.length > 0 || data.dslErrors.length > 0}
+		<div class="mb-4 flex flex-wrap items-center gap-1.5 text-xs">
+			{#if data.dslFilters.length > 0}
+				<span class="text-vault-text-muted">Filtered by:</span>
+				{#each data.dslFilters as f}
+					<span class="rounded-chip bg-vault-purple/15 px-2 py-0.5 text-vault-purple">{f}</span>
+				{/each}
+			{/if}
+			{#each data.dslErrors as e}
+				<span class="rounded-chip bg-vault-red/15 px-2 py-0.5 text-vault-red" title="Unrecognized — ignored. Try field:value, e.g. pop:<500">didn't understand "{e}"</span>
+			{/each}
+		</div>
+	{/if}
 
 	{#if !data.rankingsReady}
 		<div class="rounded-card border border-vault-border bg-vault-surface p-8 text-center">
