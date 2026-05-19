@@ -14,12 +14,23 @@
 		as_of: string | null;
 	}
 
+	interface DiscoverySignals {
+		value_rank: number | null;
+		scarcity_rank: number | null;
+		gem_rate: number | null;
+		psa10_delta: number | null;
+		psa10_multiple: number | null;
+	}
+
 	let { data, form } = $props();
 
 	let entries = $derived(data.entries as CollectionEntry[]);
 	let cardCache = $derived(data.cardCache as Record<string, PokemonCard>);
 	let valuationByEntry = $derived(
 		((data as Record<string, unknown>).valuationByEntry ?? {}) as Record<string, ValuationRow>
+	);
+	let discoveryByCard = $derived(
+		((data as Record<string, unknown>).discoveryByCard ?? {}) as Record<string, DiscoverySignals>
 	);
 	let addMode = $derived(data.addMode);
 	let selectedCard = $derived(data.selectedCard as PokemonCard | null);
@@ -72,6 +83,134 @@
 				})
 			: entries
 	);
+
+	// Unique owned cards that carry at least one honesty-gated signal.
+	// Insight strip + sort answer "what should I act on?" instead of the
+	// page just totalling money.
+	interface OwnedSignal {
+		id: string;
+		card: PokemonCard;
+		d: DiscoverySignals;
+	}
+	let ownedSignals = $derived(
+		Array.from(new Set(entries.map((e) => e.card_id)))
+			.map((id) => ({ id, card: cardCache[id], d: discoveryByCard[id] }))
+			.filter((x): x is OwnedSignal => x.card != null && x.d != null)
+	);
+
+	function topBy(
+		metric: (d: DiscoverySignals) => number | null,
+		dir: 'desc' | 'asc'
+	): OwnedSignal | null {
+		const pool = ownedSignals.filter((x) => metric(x.d) != null);
+		if (pool.length === 0) return null;
+		return pool.reduce((best, x) =>
+			dir === 'desc'
+				? metric(x.d)! > metric(best.d)!
+					? x
+					: best
+				: metric(x.d)! < metric(best.d)!
+					? x
+					: best
+		);
+	}
+
+	interface Insight {
+		key: string;
+		label: string;
+		detail: string;
+		accent: string;
+		o: OwnedSignal;
+	}
+	let insights = $derived(
+		(
+			[
+				(() => {
+					const o = topBy((d) => d.psa10_delta, 'desc');
+					return o
+						? {
+								key: 'undervalued',
+								label: 'Most undervalued you own',
+								detail: `+${fmtMoney(o.d.psa10_delta)} raw → PSA 10${o.d.psa10_multiple != null ? ` (${o.d.psa10_multiple}×)` : ''}`,
+								accent: 'text-vault-green',
+								o
+							}
+						: null;
+				})(),
+				(() => {
+					const o = topBy((d) => d.scarcity_rank, 'desc');
+					return o
+						? {
+								key: 'scarcest',
+								label: 'Scarcest you own',
+								detail: `Scarcity rank ${o.d.scarcity_rank}/100`,
+								accent: 'text-vault-purple',
+								o
+							}
+						: null;
+				})(),
+				(() => {
+					const o = topBy((d) => d.gem_rate, 'asc');
+					return o
+						? {
+								key: 'hardest_gem',
+								label: 'Hardest to gem you own',
+								detail: `${o.d.gem_rate}% PSA gem rate (lower = harder pull)`,
+								accent: 'text-vault-gold',
+								o
+							}
+						: null;
+				})(),
+				(() => {
+					const o = topBy((d) => d.value_rank, 'desc');
+					return o
+						? {
+								key: 'top_value',
+								label: 'Top Value rank you own',
+								detail: `Value rank ${o.d.value_rank}/100`,
+								accent: 'text-vault-purple',
+								o
+							}
+						: null;
+				})()
+			] as (Insight | null)[]
+		).filter((x): x is Insight => x != null)
+	);
+
+	// Client-side sort over the (already filtered) list. Cosmetic, no data
+	// mutation — fine to skip the server round-trip. Cards lacking the
+	// chosen signal sink to the bottom (shown, never hidden — rankings
+	// doctrine), then fall back to the server's created_at order.
+	type SortMode = 'recent' | 'undervalued' | 'scarcest' | 'hardest_gem' | 'top_value';
+	let sortMode = $state<SortMode>('recent');
+	const SORT_LABELS: Record<SortMode, string> = {
+		recent: 'Recently added',
+		undervalued: 'Most undervalued',
+		scarcest: 'Scarcest',
+		hardest_gem: 'Hardest to gem',
+		top_value: 'Top Value rank'
+	};
+	function sortKey(cardId: string, mode: SortMode): number | null {
+		const d = discoveryByCard[cardId];
+		if (!d) return null;
+		if (mode === 'undervalued') return d.psa10_delta;
+		if (mode === 'scarcest') return d.scarcity_rank;
+		if (mode === 'hardest_gem') return d.gem_rate;
+		if (mode === 'top_value') return d.value_rank;
+		return null;
+	}
+	let sortedEntries = $derived.by(() => {
+		if (sortMode === 'recent') return filteredEntries;
+		const asc = sortMode === 'hardest_gem';
+		return [...filteredEntries].sort((a, b) => {
+			const ka = sortKey(a.card_id, sortMode);
+			const kb = sortKey(b.card_id, sortMode);
+			if (ka == null && kb == null) return 0;
+			if (ka == null) return 1; // nulls sink
+			if (kb == null) return -1;
+			return asc ? ka - kb : kb - ka;
+		});
+	});
 
 	const conditionLabels: Record<CardCondition, string> = {
 		NM: 'Near Mint',
@@ -147,20 +286,58 @@
 		</div>
 	</div>
 
+	<!-- Insight strip — "what should I act on?" Surfaces the discovery
+	     signals every owned card already carries. Each card shown only when
+	     its signal is real/eligible (server-gated; null ⇒ omitted entirely).
+	     Modeled ranks render purple ("rank", not money). -->
+	{#if insights.length > 0}
+		<div class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="insight-strip">
+			{#each insights as ins (ins.key)}
+				<a
+					href="/card/{ins.o.id}"
+					data-testid="insight-{ins.key}"
+					class="stat-card group flex items-center gap-3 rounded-2xl border border-vault-border bg-vault-surface p-3 transition-all hover:border-vault-purple/40"
+				>
+					<img
+						src={ins.o.card.images.small}
+						alt={ins.o.card.name}
+						loading="lazy"
+						class="h-16 w-11 flex-shrink-0 rounded-lg object-cover"
+					/>
+					<div class="min-w-0">
+						<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">{ins.label}</p>
+						<p class="truncate text-sm font-medium text-white group-hover:text-vault-purple">{ins.o.card.name}</p>
+						<p class="mt-0.5 text-xs font-semibold {ins.accent}">{ins.detail}</p>
+					</div>
+				</a>
+			{/each}
+		</div>
+	{/if}
+
 	<!-- Collection Table -->
 	<div class="rounded-2xl border border-vault-border bg-vault-surface">
-		<div class="border-b border-vault-border px-3 py-3 sm:px-6 sm:py-4">
+		<div class="flex flex-col gap-2 border-b border-vault-border px-3 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
 			<input
 				type="text"
 				bind:value={searchQuery}
 				placeholder="Search your collection..."
-				class="w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
+				class="w-full flex-1 rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
 			/>
+			<select
+				bind:value={sortMode}
+				data-testid="collection-sort"
+				aria-label="Sort collection"
+				class="rounded-lg border border-vault-border bg-vault-bg px-3 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
+			>
+				{#each Object.entries(SORT_LABELS) as [val, lbl]}
+					<option value={val}>{lbl}</option>
+				{/each}
+			</select>
 		</div>
 
 		{#if filteredEntries.length > 0}
 			<div class="divide-y divide-vault-border" data-testid="collection-list">
-				{#each filteredEntries as entry (entry.id)}
+				{#each sortedEntries as entry (entry.id)}
 					{@const card = cardCache[entry.card_id]}
 					<div class="flex items-center gap-3 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4" data-testid="collection-row" data-card-id={entry.card_id}>
 						<!-- Card thumbnail -->
@@ -221,6 +398,32 @@
 									<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-text-muted">
 										{entry.notes}
 									</span>
+								{/if}
+								<!-- Discovery signals — server-gated to real/eligible
+								     values (null ⇒ not rendered). Purple = modeled
+								     rank, gold/green = real acquired data. -->
+								{#if discoveryByCard[entry.card_id]}
+									{@const disc = discoveryByCard[entry.card_id]}
+									{#if disc.value_rank != null}
+										<span class="rounded border border-vault-purple/40 bg-vault-bg px-2 py-0.5 text-xs font-semibold text-vault-purple" title="Value rank {disc.value_rank}/100 — PSA 10 price percentile across the catalog (high/medium confidence only)">
+											Val {disc.value_rank}
+										</span>
+									{/if}
+									{#if disc.scarcity_rank != null}
+										<span class="rounded border border-vault-purple/40 bg-vault-bg px-2 py-0.5 text-xs font-semibold text-vault-purple" title="Scarcity rank {disc.scarcity_rank}/100 — inverse graded population (high/medium confidence only)">
+											Scarce {disc.scarcity_rank}
+										</span>
+									{/if}
+									{#if disc.gem_rate != null}
+										<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-gold" title="Real PSA gem rate — {disc.gem_rate}% of graded copies are a 10 (lower = harder pull)">
+											{disc.gem_rate}% gem
+										</span>
+									{/if}
+									{#if disc.psa10_delta != null}
+										<span class="rounded bg-vault-bg px-2 py-0.5 text-xs text-vault-green" title="Real raw → PSA 10 uplift on this card{disc.psa10_multiple != null ? ` (${disc.psa10_multiple}× multiple)` : ''}">
+											+{fmtMoney(disc.psa10_delta)} → PSA 10{#if disc.psa10_multiple != null}<span class="ml-1 text-vault-text-muted">({disc.psa10_multiple}×)</span>{/if}
+										</span>
+									{/if}
 								{/if}
 							</div>
 						</div>

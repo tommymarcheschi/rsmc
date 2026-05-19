@@ -6,6 +6,19 @@ import type { PokemonCard, CollectionEntry } from '$types';
 
 const ADD_SEARCH_PAGE_SIZE = 12;
 
+// Honesty-gated discovery signals for an owned card. Every field is either
+// a real/eligible value or null — null means "do not surface" (never a
+// fabricated or low-confidence placeholder). value_rank/scarcity_rank are
+// modeled 0–100 ranks (style as rank, not money); gem_rate/psa10_* are
+// real acquired data.
+interface DiscoverySignals {
+	value_rank: number | null;
+	scarcity_rank: number | null;
+	gem_rate: number | null;
+	psa10_delta: number | null;
+	psa10_multiple: number | null;
+}
+
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
 	// for the full rationale — cached HTML referencing deleted immutable JS
@@ -39,13 +52,48 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// batched query — card_index is keyed on card_id. Cards missing from
 	// card_index get fallback valuation from the TCG API's tcgplayer.prices.
 	const indexPrices: Record<string, number | null> = {};
+	// Discovery signals every owned card already has but /collection never
+	// surfaced. Gating MIRRORS CardThumbnail (the proven grid pattern):
+	// modeled scores (value/scarcity) only at high|medium confidence —
+	// never headline a low/null-confidence rank; real gem rate only when a
+	// real PSA pop backs it; raw→PSA10 delta only when it's a real positive
+	// number. null ⇒ nothing (honesty doctrine — never fabricate, never
+	// show an empty axis). score_momentum/score_liquidity are ~null in prod
+	// so they are deliberately NOT pulled.
+	const discoveryByCard: Record<string, DiscoverySignals> = {};
 	if (uniqueCardIds.length > 0) {
 		const { data: indexRows } = await supabase
 			.from('card_index')
-			.select('card_id, raw_nm_price')
+			.select(
+				'card_id, raw_nm_price, score_value, score_scarcity, psa_gem_rate, psa_pop_total, psa10_delta, psa10_multiple, ranking_confidence'
+			)
 			.in('card_id', uniqueCardIds);
-		for (const r of (indexRows ?? []) as Array<{ card_id: string; raw_nm_price: number | null }>) {
+		for (const r of (indexRows ?? []) as Array<{
+			card_id: string;
+			raw_nm_price: number | null;
+			score_value: number | null;
+			score_scarcity: number | null;
+			psa_gem_rate: number | null;
+			psa_pop_total: number | null;
+			psa10_delta: number | null;
+			psa10_multiple: number | null;
+			ranking_confidence: string | null;
+		}>) {
 			indexPrices[r.card_id] = r.raw_nm_price;
+			const confOk =
+				r.ranking_confidence === 'high' || r.ranking_confidence === 'medium';
+			const psa10Delta =
+				r.psa10_delta != null && r.psa10_delta > 0 ? r.psa10_delta : null;
+			discoveryByCard[r.card_id] = {
+				value_rank: r.score_value != null && confOk ? r.score_value : null,
+				scarcity_rank: r.score_scarcity != null && confOk ? r.score_scarcity : null,
+				gem_rate:
+					r.psa_gem_rate != null && (r.psa_pop_total ?? 0) > 0
+						? r.psa_gem_rate
+						: null,
+				psa10_delta: psa10Delta,
+				psa10_multiple: psa10Delta != null ? r.psa10_multiple : null
+			};
 		}
 	}
 
@@ -186,6 +234,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		entries,
 		cardCache,
 		valuationByEntry,
+		discoveryByCard,
 		addMode,
 		addSearch,
 		addSearchResults,
