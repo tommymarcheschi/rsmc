@@ -14,8 +14,14 @@ on:
         description: rows to refresh this run
         default: '150'
       concurrency:
-        description: parallel scrapes
-        default: '6'
+        # 3 is the empirically-validated ceiling from the GitHub Actions
+        # runner IP: at concurrency 6 PriceCharting/Cloudflare fail-fasts
+        # parallel requests from the shared datacenter IP, so fetch returns
+        # null in ~50ms/card and the engine acquired ZERO graded data for
+        # weeks while still reporting "150 processed, 0 errors". conc 1 and
+        # 3 both pull real PSA10/pop on the same IP; 6 does not.
+        description: parallel scrapes (>3 fails on the GH runner IP — see note)
+        default: '3'
 
 concurrency:
   group: engine-enrich
@@ -40,4 +46,4 @@ jobs:
         run: |
           node_modules/.bin/tsx scripts/refresh-index.ts \
             --stale "${{ github.event.inputs.stale || '150' }}" \
-            --concurrency "${{ github.event.inputs.concurrency || '6' }}"
+            --concurrency "${{ github.event.inputs.concurrency || '3' }}"

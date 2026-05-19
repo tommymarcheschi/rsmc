@@ -734,7 +734,7 @@ async function main() {
 			'seed-before': { type: 'string' },
 			'seed-all': { type: 'boolean', default: false },
 			'dry-run': { type: 'boolean', default: false },
-			concurrency: { type: 'string', default: '6' },
+			concurrency: { type: 'string', default: '3' },
 			force: { type: 'boolean', default: false },
 			// Stale-mode prioritisation. Default: gap-prioritised (fill the
 			// coverage gap first). `--fifo` forces the legacy pure-oldest
@@ -745,7 +745,7 @@ async function main() {
 		strict: false
 	});
 
-	const concurrency = parseInt(values.concurrency as string) || 6;
+	const concurrency = parseInt(values.concurrency as string) || 3;
 	const dryRun = !!values['dry-run'];
 
 	if (values['seed-all']) {
@@ -959,7 +959,7 @@ Usage:
   tsx scripts/refresh-index.ts --seed-before 2017   # seed only pre-year sets
 
 Options:
-  --concurrency N    Parallel enrichment (default: 6)
+  --concurrency N    Parallel enrichment (default: 3 — >3 fails on datacenter IPs)
   --dry-run          Show what would run, don't write
   --force            Bust cache and re-scrape
 `);
