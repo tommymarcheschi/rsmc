@@ -3,21 +3,14 @@ import { getCard, searchCards } from '$services/tcg-api';
 import { fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { PokemonCard, CollectionEntry } from '$types';
+import {
+	gateDiscoverySignals,
+	DISCOVERY_SELECT_COLS,
+	type DiscoverySignals,
+	type RawDiscoveryRow
+} from '$services/discovery-signals';
 
 const ADD_SEARCH_PAGE_SIZE = 12;
-
-// Honesty-gated discovery signals for an owned card. Every field is either
-// a real/eligible value or null — null means "do not surface" (never a
-// fabricated or low-confidence placeholder). value_rank/scarcity_rank are
-// modeled 0–100 ranks (style as rank, not money); gem_rate/psa10_* are
-// real acquired data.
-interface DiscoverySignals {
-	value_rank: number | null;
-	scarcity_rank: number | null;
-	gem_rate: number | null;
-	psa10_delta: number | null;
-	psa10_multiple: number | null;
-}
 
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
@@ -64,36 +57,13 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	if (uniqueCardIds.length > 0) {
 		const { data: indexRows } = await supabase
 			.from('card_index')
-			.select(
-				'card_id, raw_nm_price, score_value, score_scarcity, psa_gem_rate, psa_pop_total, psa10_delta, psa10_multiple, ranking_confidence'
-			)
+			.select(`card_id, raw_nm_price, ${DISCOVERY_SELECT_COLS}`)
 			.in('card_id', uniqueCardIds);
-		for (const r of (indexRows ?? []) as Array<{
-			card_id: string;
-			raw_nm_price: number | null;
-			score_value: number | null;
-			score_scarcity: number | null;
-			psa_gem_rate: number | null;
-			psa_pop_total: number | null;
-			psa10_delta: number | null;
-			psa10_multiple: number | null;
-			ranking_confidence: string | null;
-		}>) {
+		for (const r of (indexRows ?? []) as Array<
+			RawDiscoveryRow & { card_id: string; raw_nm_price: number | null }
+		>) {
 			indexPrices[r.card_id] = r.raw_nm_price;
-			const confOk =
-				r.ranking_confidence === 'high' || r.ranking_confidence === 'medium';
-			const psa10Delta =
-				r.psa10_delta != null && r.psa10_delta > 0 ? r.psa10_delta : null;
-			discoveryByCard[r.card_id] = {
-				value_rank: r.score_value != null && confOk ? r.score_value : null,
-				scarcity_rank: r.score_scarcity != null && confOk ? r.score_scarcity : null,
-				gem_rate:
-					r.psa_gem_rate != null && (r.psa_pop_total ?? 0) > 0
-						? r.psa_gem_rate
-						: null,
-				psa10_delta: psa10Delta,
-				psa10_multiple: psa10Delta != null ? r.psa10_multiple : null
-			};
+			discoveryByCard[r.card_id] = gateDiscoverySignals(r);
 		}
 	}
 

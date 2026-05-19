@@ -1,5 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { DiscoverySignals } from '$services/discovery-signals';
+
+	interface SetCard {
+		id: string;
+		name: string;
+		number: string;
+		rarity: string;
+		imageSmall: string;
+		owned: boolean;
+		quantity: number;
+		marketPrice: number;
+		discovery: DiscoverySignals | null;
+	}
 
 	interface MarketSet {
 		id: string;
@@ -41,21 +54,120 @@
 		return `$${n.toFixed(2)}`;
 	}
 
-	let selectedSet = $derived(data.selectedSet as {
-		name: string; total: number; owned: number;
-		cards: { id: string; name: string; number: string; rarity: string; imageSmall: string; owned: boolean; quantity: number; marketPrice: number }[];
-	} | null);
+	let selectedSet = $derived(
+		data.selectedSet as { name: string; total: number; owned: number; cards: SetCard[] } | null
+	);
 
 	let selectedSetId = $derived(data.selectedSetId as string);
 	let sets = $derived(data.sets as { id: string; name: string; images: { logo: string; symbol: string } }[]);
 	let showFilter = $state<'all' | 'owned' | 'missing'>('all');
 
+	// Sort the selected set's cards by a discovery axis. Default 'number'
+	// keeps the familiar set order. Cards lacking the chosen signal sink to
+	// the bottom (shown, never hidden — rankings doctrine), tie-broken by
+	// card number.
+	type SetSort = 'number' | 'price' | 'value' | 'scarcity' | 'gem' | 'psa10';
+	let setSort = $state<SetSort>('number');
+	const SET_SORT_LABELS: Record<SetSort, string> = {
+		number: 'Card number',
+		price: 'Market price',
+		value: 'Value rank',
+		scarcity: 'Scarcity rank',
+		gem: 'Hardest to gem',
+		psa10: 'Raw → PSA 10'
+	};
+	function cardNum(c: SetCard): number {
+		return parseInt(c.number) || 999;
+	}
+	function setSortKey(c: SetCard): number | null {
+		const d = c.discovery;
+		if (setSort === 'price') return c.marketPrice > 0 ? c.marketPrice : null;
+		if (setSort === 'value') return d?.value_rank ?? null;
+		if (setSort === 'scarcity') return d?.scarcity_rank ?? null;
+		if (setSort === 'gem') return d?.gem_rate ?? null;
+		if (setSort === 'psa10') return d?.psa10_delta ?? null;
+		return null;
+	}
+
 	let filteredCards = $derived(() => {
-		if (!selectedSet) return [];
-		if (showFilter === 'owned') return selectedSet.cards.filter((c) => c.owned);
-		if (showFilter === 'missing') return selectedSet.cards.filter((c) => !c.owned);
-		return selectedSet.cards;
+		if (!selectedSet) return [] as SetCard[];
+		let cards =
+			showFilter === 'owned'
+				? selectedSet.cards.filter((c) => c.owned)
+				: showFilter === 'missing'
+					? selectedSet.cards.filter((c) => !c.owned)
+					: selectedSet.cards;
+		if (setSort === 'number') return cards;
+		const asc = setSort === 'gem'; // lower gem rate = harder = first
+		return [...cards].sort((a, b) => {
+			const ka = setSortKey(a);
+			const kb = setSortKey(b);
+			if (ka == null && kb == null) return cardNum(a) - cardNum(b);
+			if (ka == null) return 1;
+			if (kb == null) return -1;
+			if (ka === kb) return cardNum(a) - cardNum(b);
+			return asc ? ka - kb : kb - ka;
+		});
 	});
+
+	// Set-scoped standouts — the per-card variance the set view never
+	// showed. Same honesty gate as the chips (server-gated; null ⇒ the
+	// card simply isn't a candidate). Each surfaces only if a real
+	// candidate exists in this set.
+	function topCard(
+		metric: (d: DiscoverySignals) => number | null,
+		dir: 'desc' | 'asc'
+	): SetCard | null {
+		if (!selectedSet) return null;
+		const pool = selectedSet.cards.filter((c) => c.discovery && metric(c.discovery) != null);
+		if (pool.length === 0) return null;
+		return pool.reduce((best, c) =>
+			dir === 'desc'
+				? metric(c.discovery!)! > metric(best.discovery!)!
+					? c
+					: best
+				: metric(c.discovery!)! < metric(best.discovery!)!
+					? c
+					: best
+		);
+	}
+	interface SetStandout { key: string; label: string; detail: string; accent: string; c: SetCard }
+	let standouts = $derived(
+		(
+			[
+				(() => {
+					const c = topCard((d) => d.psa10_delta, 'desc');
+					return c
+						? {
+								key: 'psa10',
+								label: 'Biggest raw → PSA 10',
+								detail: `+${fmtMoney(c.discovery!.psa10_delta!)}${c.discovery!.psa10_multiple != null ? ` (${c.discovery!.psa10_multiple}×)` : ''}`,
+								accent: 'text-vault-green',
+								c
+							}
+						: null;
+				})(),
+				(() => {
+					const c = topCard((d) => d.scarcity_rank, 'desc');
+					return c
+						? { key: 'scarce', label: 'Scarcest in set', detail: `Scarcity ${c.discovery!.scarcity_rank}/100`, accent: 'text-vault-purple', c }
+						: null;
+				})(),
+				(() => {
+					const c = topCard((d) => d.gem_rate, 'asc');
+					return c
+						? { key: 'gem', label: 'Hardest to gem', detail: `${c.discovery!.gem_rate}% gem rate`, accent: 'text-vault-gold', c }
+						: null;
+				})(),
+				(() => {
+					const c = topCard((d) => d.value_rank, 'desc');
+					return c
+						? { key: 'value', label: 'Top Value rank', detail: `Value ${c.discovery!.value_rank}/100`, accent: 'text-vault-purple', c }
+						: null;
+				})()
+			] as (SetStandout | null)[]
+		).filter((x): x is SetStandout => x != null)
+	);
 
 	let costToComplete = $derived(() => {
 		if (!selectedSet) return 0;
@@ -241,6 +353,28 @@
 			</div>
 		</div>
 
+		<!-- Set standouts — per-card variance the set view never showed.
+		     Honesty-gated server-side; a card appears only if its signal is
+		     real/eligible. Purple = modeled rank, gold/green = real data. -->
+		{#if standouts.length > 0}
+			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="set-standouts">
+				{#each standouts as st (st.key)}
+					<a
+						href="/card/{st.c.id}"
+						data-testid="set-standout-{st.key}"
+						class="stat-card group flex items-center gap-3 rounded-2xl border border-vault-border bg-vault-surface p-3 transition-all hover:border-vault-purple/40"
+					>
+						<img src={st.c.imageSmall} alt={st.c.name} loading="lazy" class="h-16 w-11 flex-shrink-0 rounded-lg object-cover" />
+						<div class="min-w-0">
+							<p class="text-[11px] uppercase tracking-wide text-vault-text-muted">{st.label}</p>
+							<p class="truncate text-sm font-medium text-white group-hover:text-vault-purple">{st.c.name}</p>
+							<p class="mt-0.5 text-xs font-semibold {st.accent}">{st.detail}</p>
+						</div>
+					</a>
+				{/each}
+			</div>
+		{/if}
+
 		<!-- Filter tabs -->
 		<div class="flex gap-1 rounded-2xl border border-vault-border bg-vault-surface p-1">
 			<button
@@ -261,6 +395,21 @@
 			>
 				Missing ({selectedSet.total - selectedSet.owned})
 			</button>
+		</div>
+
+		<!-- Sort-by-axis at set scope -->
+		<div class="flex items-center justify-end gap-2">
+			<label for="set-sort" class="text-xs text-vault-text-muted">Sort by</label>
+			<select
+				id="set-sort"
+				bind:value={setSort}
+				data-testid="set-sort"
+				class="rounded-lg border border-vault-border bg-vault-bg px-3 py-1.5 text-xs text-vault-text focus:border-vault-purple focus:outline-none"
+			>
+				{#each Object.entries(SET_SORT_LABELS) as [val, lbl]}
+					<option value={val}>{lbl}</option>
+				{/each}
+			</select>
 		</div>
 
 		<!-- Card Grid -->
@@ -293,6 +442,26 @@
 					{#if card.marketPrice > 0}
 						<div class="absolute bottom-1 right-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-vault-gold">
 							${card.marketPrice.toFixed(2)}
+						</div>
+					{/if}
+					<!-- Discovery chips (bottom-left). Server-gated: a chip
+					     renders only when its signal is real/eligible. Purple
+					     = modeled rank, gold/green = real acquired data. -->
+					{#if card.discovery}
+						{@const d = card.discovery}
+						<div class="absolute bottom-1 left-1 flex flex-col items-start gap-0.5">
+							{#if d.psa10_delta != null}
+								<span class="rounded bg-black/75 px-1 py-0.5 text-[9px] font-bold text-vault-green" title="Real raw → PSA 10 uplift +{fmtMoney(d.psa10_delta)}{d.psa10_multiple != null ? ` (${d.psa10_multiple}× multiple)` : ''}">+{fmtMoney(d.psa10_delta)}</span>
+							{/if}
+							{#if d.gem_rate != null}
+								<span class="rounded bg-black/75 px-1 py-0.5 text-[9px] font-semibold text-vault-gold" title="Real PSA gem rate {d.gem_rate}% (lower = harder pull)">{d.gem_rate}% gem</span>
+							{/if}
+							{#if d.value_rank != null}
+								<span class="rounded bg-black/75 px-1 py-0.5 text-[9px] font-semibold text-vault-purple" title="Value rank {d.value_rank}/100 — PSA 10 price percentile (high/medium confidence)">V{d.value_rank}</span>
+							{/if}
+							{#if d.scarcity_rank != null}
+								<span class="rounded bg-black/75 px-1 py-0.5 text-[9px] font-semibold text-vault-purple" title="Scarcity rank {d.scarcity_rank}/100 — inverse graded population (high/medium confidence)">S{d.scarcity_rank}</span>
+							{/if}
 						</div>
 					{/if}
 				</a>
