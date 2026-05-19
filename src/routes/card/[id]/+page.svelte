@@ -965,7 +965,7 @@
 						<div>
 							<h2 class="text-lg font-semibold text-white">Discovery Scores</h2>
 							<p class="mt-0.5 text-xs text-vault-text-muted">
-								Percentile-ranked 0–100 across the whole catalog. <a href="/rankings" class="underline hover:text-vault-purple">See all rankings →</a>
+								Percentile-ranked 0–100 across the whole catalog. <a href="/rankings?q={encodeURIComponent(card.name)}&set={card.set.id}" class="underline hover:text-vault-purple">See this card in Rankings →</a>
 							</p>
 						</div>
 						{#if rankingScores.ranking_confidence}
