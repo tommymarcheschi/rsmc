@@ -84,6 +84,13 @@ export const SORT_OPTIONS: SortOption[] = [
 	// across service switches. Label names "PSA gem rate" so the user knows
 	// the signal is anchored to PSA population data.
 	{ value: 'roi_desc', label: 'Grading ROI (PSA gem rate)', kind: 'index', indexColumn: 'grading_roi_premium', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
+	// Discovery rank sorts — same percentile axes as /rankings, brought to
+	// the browse grid so "find cards I never knew were valuable / scarce" is
+	// a sort, not a separate page. Columns are indexed (migration 017
+	// idx_ci_score_value / idx_ci_score_scarcity, desc nulls last), so this
+	// stays a bounded index scan.
+	{ value: 'disc_value', label: 'Discovery: Value rank', kind: 'index', indexColumn: 'score_value', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
+	{ value: 'disc_scarcity', label: 'Discovery: Scarcity rank', kind: 'index', indexColumn: 'score_scarcity', indexDirection: 'desc', indexNulls: 'last', availableIn: ['hunt'] },
 ];
 
 const DEFAULT_OPTION = SORT_OPTIONS[0];
@@ -218,6 +225,8 @@ export interface EnrichedCard extends PokemonCard {
 		psa_pop_total?: number | null;
 		psa_pop_10?: number | null;
 		psa_gem_rate?: number | null;
+		score_value?: number | null;
+		ranking_confidence?: string | null;
 		pcUrl: string | null;
 	};
 }

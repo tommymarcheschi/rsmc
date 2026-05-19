@@ -11,6 +11,8 @@
 		psa_pop_total?: number | null;
 		psa_pop_10?: number | null;
 		psa_gem_rate?: number | null;
+		score_value?: number | null;
+		ranking_confidence?: string | null;
 		cgc_pop_total?: number | null;
 		combined_pop_total?: number | null;
 		pcUrl?: string | null;
@@ -38,6 +40,19 @@
 	let gemRate = $derived(
 		enrichment?.psa_gem_rate != null && (enrichment?.psa_pop_total ?? 0) > 0
 			? enrichment.psa_gem_rate
+			: null
+	);
+	// Discovery Value rank (0–100 percentile, /rankings axis). Modeled, not
+	// a real price — so it's gated to high/medium confidence (never headline
+	// a low-confidence score) and styled distinctly from the real-$ badges
+	// (purple = "rank", not green/gold = "money"). Brings the rankings
+	// context onto the grid so the user sees where a card sits without a
+	// detour. null / low-confidence ⇒ render nothing (honesty doctrine).
+	let valueRank = $derived(
+		enrichment?.score_value != null &&
+			(enrichment?.ranking_confidence === 'high' ||
+				enrichment?.ranking_confidence === 'medium')
+			? enrichment.score_value
 			: null
 	);
 
@@ -100,6 +115,19 @@
 	{#if hasDelta}
 		<div class="absolute left-2 top-2 rounded-full bg-vault-gold/90 px-2 py-0.5 text-xs font-bold text-vault-bg shadow-lg backdrop-blur-sm" title="Raw → PSA 10 delta">
 			+{fmtPrice(enrichment!.psa10_delta!)}
+		</div>
+	{/if}
+
+	<!-- Discovery Value rank (bottom right) — percentile, not a price.
+	     Purple distinguishes "rank" from the green/gold money badges.
+	     Informational only (no nested anchor — the card already links to
+	     detail, where the focused "open in Rankings" link lives). -->
+	{#if valueRank != null}
+		<div
+			class="absolute bottom-14 right-2 rounded-full border border-vault-purple/40 bg-vault-bg/90 px-2 py-0.5 text-[10px] font-semibold text-vault-purple shadow-lg backdrop-blur-sm"
+			title="Value rank {valueRank}/100 — PSA 10 price percentile across the whole catalog ({enrichment!.ranking_confidence} confidence)"
+		>
+			Val {valueRank}
 		</div>
 	{/if}
 
