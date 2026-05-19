@@ -186,6 +186,26 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		// migration 019 not applied yet — TAG ladder hidden, page is fine
 	}
 
+	// CGC + Beckett full-distribution columns land in migration 021. Same
+	// isolated/best-effort pattern as tagExtra so the page renders before
+	// it's applied (those ladders simply stay hidden until column + crawl).
+	let cgcBgsExtra: {
+		cgc_grades: Record<string, number> | null;
+		cgc_synced_at: string | null;
+		bgs_grades: Record<string, number> | null;
+		bgs_synced_at: string | null;
+	} | null = null;
+	try {
+		const { data, error } = await supabase
+			.from('card_index')
+			.select('cgc_grades, cgc_synced_at, bgs_grades, bgs_synced_at')
+			.eq('card_id', params.id)
+			.maybeSingle();
+		if (!error) cgcBgsExtra = (data as typeof cgcBgsExtra) ?? null;
+	} catch {
+		// migration 021 not applied yet — CGC/BGS ladders hidden, page fine
+	}
+
 	// Real per-grade ladder (migration 020). Isolated + best-effort like
 	// tagExtra above so the page renders normally before 020 is applied
 	// (the per-grade ladder simply stays absent until the column +
@@ -271,6 +291,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		conditionPrices,
 		indexRow,
 		tagExtra,
+		cgcBgsExtra,
 		gradeLadders,
 		gradeLadderFetchedAt,
 		cardSignal,

@@ -201,6 +201,48 @@
 		})()
 	);
 
+	// CGC + Beckett full distributions (migration 021), same isolated prop
+	// pattern as tagExtra. Real counts only; hidden until 021 + crawl.
+	let cgcBgsExtra = $derived(
+		((data as Record<string, unknown>).cgcBgsExtra ?? null) as {
+			cgc_grades: Record<string, number> | null;
+			cgc_synced_at: string | null;
+			bgs_grades: Record<string, number> | null;
+			bgs_synced_at: string | null;
+		} | null
+	);
+	// Sort numeric grades ascending; grader-special tiers (Pristine/Perfect/
+	// Black Label) right after 10, then Authentic tiers last.
+	const SPECIAL_ORDER: Record<string, number> = {
+		'10': 100,
+		'10P': 101,
+		'10PF': 102,
+		'10BL': 101,
+		AU: 200,
+		AA: 201,
+		VA: 200
+	};
+	function gradeRowsOf(g: Record<string, number> | null | undefined) {
+		if (!g) return [] as Array<{ label: string; count: number }>;
+		return Object.entries(g)
+			.map(([label, count]) => ({ label, count: Number(count) || 0 }))
+			.sort((a, b) => {
+				const av = SPECIAL_ORDER[a.label] ?? parseFloat(a.label);
+				const bv = SPECIAL_ORDER[b.label] ?? parseFloat(b.label);
+				return av - bv;
+			});
+	}
+	let cgcGradeRows = $derived(gradeRowsOf(cgcBgsExtra?.cgc_grades));
+	let bgsGradeRows = $derived(gradeRowsOf(cgcBgsExtra?.bgs_grades));
+	function gradeTierLabel(l: string): string {
+		if (l === '10P') return '10 Pristine';
+		if (l === '10PF') return '10 Perfect';
+		if (l === '10BL') return '10 Black';
+		if (l === 'AU') return 'Auth';
+		if (l === 'AA') return 'Auth Alt';
+		return l;
+	}
+
 	// Per-grade ladders: real cells (bold white) + honest, real-anchored
 	// estimates (darker blue + est. chip + tooltip). Built server-side by
 	// grade-estimate.ts; empty array = nothing to show (page unaffected).
@@ -694,6 +736,52 @@
 								{/each}
 							</div>
 							<p class="mt-2 text-[10px] text-vault-text-muted">VA = Verified Authentic (ungraded). Real counts from TAG; grades with no copies are omitted.</p>
+						</div>
+					{/if}
+
+					<!-- CGC full grade distribution (1–10 + halves + Pristine/Perfect 10 + Auth) -->
+					{#if cgcGradeRows.length > 0}
+						<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-3">
+							<div class="flex items-baseline justify-between">
+								<p class="text-[11px] font-medium text-blue-400">CGC full grade distribution</p>
+								{#if cgcBgsExtra?.cgc_synced_at}
+									<p class="text-[10px] text-vault-text-muted" title="Direct from CGC's population report (cgccards.com).">
+										CGC · {daysSince(cgcBgsExtra?.cgc_synced_at) ?? 0}d
+									</p>
+								{/if}
+							</div>
+							<div class="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+								{#each cgcGradeRows as r (r.label)}
+									<div class="rounded-lg border border-vault-border/60 px-2 py-1 text-center">
+										<p class="text-[10px] text-vault-text-muted">CGC {gradeTierLabel(r.label)}</p>
+										<p class="text-sm font-bold text-white">{fmtInt(r.count)}</p>
+									</div>
+								{/each}
+							</div>
+							<p class="mt-2 text-[10px] text-vault-text-muted">10 = Gem Mint 10. Real counts from CGC; grades with no copies are omitted.</p>
+						</div>
+					{/if}
+
+					<!-- Beckett (BGS) full grade distribution (1–10 incl. halves + Black Label) -->
+					{#if bgsGradeRows.length > 0}
+						<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-3">
+							<div class="flex items-baseline justify-between">
+								<p class="text-[11px] font-medium text-amber-400">Beckett (BGS) full grade distribution</p>
+								{#if cgcBgsExtra?.bgs_synced_at}
+									<p class="text-[10px] text-vault-text-muted" title="Direct from Beckett's population report (beckett.com).">
+										BGS · {daysSince(cgcBgsExtra?.bgs_synced_at) ?? 0}d
+									</p>
+								{/if}
+							</div>
+							<div class="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-6">
+								{#each bgsGradeRows as r (r.label)}
+									<div class="rounded-lg border border-vault-border/60 px-2 py-1 text-center">
+										<p class="text-[10px] text-vault-text-muted">BGS {gradeTierLabel(r.label)}</p>
+										<p class="text-sm font-bold text-white">{fmtInt(r.count)}</p>
+									</div>
+								{/each}
+							</div>
+							<p class="mt-2 text-[10px] text-vault-text-muted">10 = BGS 10, 10 Black = Black Label. Real counts from Beckett; grades with no copies are omitted.</p>
 						</div>
 					{/if}
 

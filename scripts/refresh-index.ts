@@ -52,6 +52,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // passes Cloudflare). Set DEV_SERVER_URL=http://localhost:5178 in .env.local.
 import { fetchPriceCharting as fetchPriceChartingDirect } from '../src/lib/services/pricecharting-scraper.js';
 import { getTagCardPop, tagPopScalars, TagGradingError } from '../src/lib/services/tag-grading.js';
+import { getCgcCardPop, cgcPopScalars, CgcGradingError } from '../src/lib/services/cgc-grading.js';
+import { getBgsCardPop, bgsDrillKeyword, bgsPopScalars, BgsGradingError } from '../src/lib/services/bgs-grading.js';
 
 const DEV_SERVER_URL = process.env.DEV_SERVER_URL ?? '';
 
@@ -749,6 +751,77 @@ async function main() {
 		} catch (e) {
 			const m = e instanceof TagGradingError ? e.message : (e as Error).message;
 			console.warn(`TAG re-verify skipped: ${m}`);
+		}
+
+		// On-query CGC re-verify (single card; provenance from a prior nightly
+		// cgc-pop crawl). Failure leaves stored values untouched.
+		try {
+			const { data: prov } = await supabase
+				.from('card_index')
+				.select('card_number, cgc_group_id')
+				.eq('card_id', cardId)
+				.maybeSingle();
+			if (prov?.cgc_group_id && prov?.card_number) {
+				const grades = await getCgcCardPop({
+					groupId: prov.cgc_group_id as number,
+					cardNumber: prov.card_number as string
+				});
+				if (grades) {
+					const sc = cgcPopScalars(grades);
+					const nowIso = new Date().toISOString();
+					Object.assign(row, {
+						cgc_pop_total: sc.total,
+						cgc_pop_10: sc.grade10,
+						cgc_gem_rate: sc.gemRate,
+						cgc_gem_rate_full: sc.gemRate,
+						cgc_grades: grades,
+						cgc_fetched_at: nowIso,
+						cgc_synced_at: nowIso
+					});
+				}
+			}
+		} catch (e) {
+			const m = e instanceof CgcGradingError ? e.message : (e as Error).message;
+			console.warn(`CGC re-verify skipped: ${m}`);
+		}
+
+		// On-query BGS re-verify (single card; provenance from a prior nightly
+		// bgs-pop crawl). Failure leaves stored values untouched.
+		try {
+			const { data: prov } = await supabase
+				.from('card_index')
+				.select('card_number, bgs_set_id, bgs_lpg_set_id, bgs_set_name')
+				.eq('card_id', cardId)
+				.maybeSingle();
+			if (
+				prov?.bgs_set_id &&
+				prov?.bgs_lpg_set_id &&
+				prov?.bgs_set_name &&
+				prov?.card_number
+			) {
+				const grades = await getBgsCardPop({
+					setNameKeyword: bgsDrillKeyword(prov.bgs_set_name as string),
+					displaySetId: prov.bgs_set_id as string,
+					lpgSetId: prov.bgs_lpg_set_id as string,
+					cardNumber: prov.card_number as string
+				});
+				if (grades) {
+					const sc = bgsPopScalars(grades);
+					const nowIso = new Date().toISOString();
+					Object.assign(row, {
+						bgs_pop_total: sc.total,
+						bgs_pop_10: sc.grade10,
+						bgs_gem_rate: sc.gemRate,
+						bgs_gem_rate_full: sc.gemRate,
+						bgs_grades: grades,
+						bgs_fetched_at: nowIso,
+						bgs_synced_at: nowIso
+					});
+				}
+			}
+		} catch (e) {
+			const m = e instanceof BgsGradingError ? e.message : (e as Error).message;
+			console.warn(`BGS re-verify skipped: ${m}`);
 		}
 
 		if (dryRun) {
