@@ -33,8 +33,11 @@
 
 	let mobileMenuOpen = $state(false);
 
-	// /login uses its own standalone layout — skip the sidebar chrome there.
-	let isLoginPage = $derived($page.url.pathname === '/login');
+	// Standalone (no sidebar chrome) pages: /login, /privacy, /terms. The
+	// latter two need to be readable by unauthenticated visitors (e.g. eBay
+	// reviewers checking links from the developer-program application).
+	const STANDALONE_PATHS = new Set(['/login', '/privacy', '/terms']);
+	let isLoginPage = $derived(STANDALONE_PATHS.has($page.url.pathname));
 
 	function isActive(href: string, currentPath: string): boolean {
 		if (href === '/') return currentPath === '/';
