@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import { ApiStatus, Icon, CommandPalette, ShowModeToggle } from '$components';
+	import { showMode } from '$stores/show-mode';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -9,16 +10,24 @@
 
 	let { children }: Props = $props();
 
-	const navItems = [
+	// Primary sidebar items (always visible).
+	const primaryNav = [
 		{ href: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
 		{ href: '/browse', label: 'Browse', icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' },
-		{ href: '/collection', label: 'Collection', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+		{ href: '/collection', label: 'Collection', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' }
+	];
+
+	// Demoted under "More" — routes stay alive (no 404s on existing bookmarks
+	// or in-page links) but disappear from the top-level sidebar. PRs 1C/1D
+	// fold their content onto Dashboard / Browse / card-page; until then this
+	// keeps them reachable.
+	const moreNav = [
 		{ href: '/watchlist', label: 'Watchlist', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' },
-		{ href: '/grading', label: 'Grading', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
 		{ href: '/insights', label: 'Insights', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
 		{ href: '/rankings', label: 'Rankings', icon: 'M16 4h2a2 2 0 012 2v1a4 4 0 01-4 4M8 4H6a2 2 0 00-2 2v1a4 4 0 004 4m0 0a4 4 0 008 0M8 11v1a4 4 0 008 0v-1m-4 7v3m-4 0h8' },
 		{ href: '/analytics', label: 'Analytics', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
 		{ href: '/sets', label: 'Set Tracker', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
+		{ href: '/grading', label: 'Grading', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
 		{ href: '/admin/index', label: 'Card Index', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' }
 	];
 
@@ -31,6 +40,19 @@
 		if (href === '/') return currentPath === '/';
 		return currentPath.startsWith(href);
 	}
+
+	// Auto-expand the "More" accordion whenever the user is on one of its
+	// routes, so their position in the nav stays visible. User can still
+	// close it manually; it'll re-open on the next navigation into a More route.
+	let moreOpen = $state(false);
+	let mobileMoreOpen = $state(false);
+	$effect(() => {
+		const onMoreRoute = moreNav.some((item) => isActive(item.href, $page.url.pathname));
+		if (onMoreRoute) {
+			moreOpen = true;
+			mobileMoreOpen = true;
+		}
+	});
 </script>
 
 {#if isLoginPage}
@@ -55,12 +77,12 @@
 		</div>
 
 		<!-- Nav items -->
-		<nav class="flex-1 space-y-1 p-3">
-			{#each navItems as item}
+		<nav class="flex-1 space-y-1 overflow-y-auto p-3">
+			{#each primaryNav as item}
 				{@const active = isActive(item.href, $page.url.pathname)}
 				<a
 					href={item.href}
-					class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200
+					class="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all duration-200
 						{active ? 'nav-active' : 'text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
 				>
 					<svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -68,7 +90,62 @@
 					</svg>
 					{item.label}
 				</a>
+				{#if item.href === '/browse'}
+					<button
+						type="button"
+						onclick={() => showMode.toggle()}
+						aria-pressed={$showMode}
+						aria-label={$showMode ? 'Turn off Show Mode' : 'Turn on Show Mode'}
+						class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all duration-200
+							{$showMode
+								? 'border-amber-400/60 bg-amber-400/10 text-amber-300 shadow-[0_0_0_1px_rgba(251,191,36,0.18)] hover:bg-amber-400/15'
+								: 'border-transparent text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+					>
+						<svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+						</svg>
+						Show Mode
+						{#if $showMode}
+							<span class="ml-auto text-[10px] font-bold uppercase tracking-wider opacity-80">on</span>
+						{/if}
+					</button>
+				{/if}
 			{/each}
+
+			<details bind:open={moreOpen} class="group">
+				<summary
+					class="flex cursor-pointer list-none items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium text-vault-text-muted transition-all duration-200 hover:bg-vault-surface-hover hover:text-white [&::-webkit-details-marker]:hidden"
+				>
+					<svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+					</svg>
+					More
+					<svg
+						class="ml-auto h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+					</svg>
+				</summary>
+				<div class="mt-1 space-y-1 border-l border-vault-border pl-2">
+					{#each moreNav as item}
+						{@const active = isActive(item.href, $page.url.pathname)}
+						<a
+							href={item.href}
+							class="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm font-medium transition-all duration-200
+								{active ? 'nav-active' : 'text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+						>
+							<svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+								<path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
+							</svg>
+							{item.label}
+						</a>
+					{/each}
+				</div>
+			</details>
 		</nav>
 
 		<!-- Footer -->
@@ -166,13 +243,13 @@
 				</div>
 				<span class="text-xl font-bold text-gradient">Trove</span>
 			</div>
-			<nav class="space-y-1 p-3">
-				{#each navItems as item}
+			<nav class="space-y-1 overflow-y-auto p-3" style="max-height: calc(100vh - 4rem)">
+				{#each primaryNav as item}
 					{@const active = isActive(item.href, $page.url.pathname)}
 					<a
 						href={item.href}
 						onclick={() => (mobileMenuOpen = false)}
-						class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all
+						class="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all
 							{active ? 'nav-active' : 'text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
 					>
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -180,7 +257,63 @@
 						</svg>
 						{item.label}
 					</a>
+					{#if item.href === '/browse'}
+						<button
+							type="button"
+							onclick={() => showMode.toggle()}
+							aria-pressed={$showMode}
+							aria-label={$showMode ? 'Turn off Show Mode' : 'Turn on Show Mode'}
+							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all
+								{$showMode
+									? 'border-amber-400/60 bg-amber-400/10 text-amber-300'
+									: 'border-transparent text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+						>
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+							</svg>
+							Show Mode
+							{#if $showMode}
+								<span class="ml-auto text-[10px] font-bold uppercase tracking-wider opacity-80">on</span>
+							{/if}
+						</button>
+					{/if}
 				{/each}
+
+				<details bind:open={mobileMoreOpen} class="group">
+					<summary
+						class="flex cursor-pointer list-none items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium text-vault-text-muted transition-all hover:bg-vault-surface-hover hover:text-white [&::-webkit-details-marker]:hidden"
+					>
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+						More
+						<svg
+							class="ml-auto h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+							stroke-width="2"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+						</svg>
+					</summary>
+					<div class="mt-1 space-y-1 border-l border-vault-border pl-2">
+						{#each moreNav as item}
+							{@const active = isActive(item.href, $page.url.pathname)}
+							<a
+								href={item.href}
+								onclick={() => (mobileMenuOpen = false)}
+								class="flex items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm font-medium transition-all
+									{active ? 'nav-active' : 'text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+							>
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
+								</svg>
+								{item.label}
+							</a>
+						{/each}
+					</div>
+				</details>
 			</nav>
 		</div>
 	</div>
