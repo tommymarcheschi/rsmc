@@ -75,6 +75,7 @@
 	);
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
+	let cgcGradingROI = $derived(data.cgcGradingROI as GradingROIResult | null);
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
 	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
 	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
@@ -904,6 +905,50 @@
 							{#if !gradingROI.confident}
 								<p class="mt-3 text-[10px] italic text-amber-400">
 									Low PSA sample ({indexRow.psa_pop_total ?? 0} graded) — gem rate estimate is noisy.
+								</p>
+							{/if}
+						</div>
+					{/if}
+
+					<!-- Grading ROI (CGC) — same math, with CGC's grade-10 price + gem
+					     rate + pop. Renders only when CGC data exists for this card so
+					     thin-data cards stay quiet (honesty doctrine). Absorbed from
+					     /grading per the Sprint 1 simplification mandate — /grading
+					     stays alive but per-card ROI lives on the card. -->
+					{#if cgcGradingROI && cgcGradingROI.gradingCost > 0 && indexRow.raw_nm_price != null && indexRow.cgc10_price != null}
+						<div class="mt-3 rounded-xl border border-vault-border bg-vault-bg p-3 sm:p-4">
+							<div class="flex items-center justify-between">
+								<p class="text-sm font-medium text-white">Grading ROI (CGC)</p>
+								<span class="text-[10px] text-vault-text-muted">
+									{cgcGradingROI.resolvedTier?.name} · ${cgcGradingROI.gradingCost}
+								</span>
+							</div>
+							<div class="mt-3 grid grid-cols-3 gap-2 text-center">
+								<div>
+									<p class="text-[10px] text-vault-text-muted">Realistic</p>
+									<p class="mt-0.5 text-sm font-bold {cgcGradingROI.realisticProfit != null && cgcGradingROI.realisticProfit > 0 ? 'text-vault-green' : 'text-vault-red'}">
+										{cgcGradingROI.realisticProfit != null ? fmtMoney(cgcGradingROI.realisticProfit) : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">using gem rate</p>
+								</div>
+								<div>
+									<p class="text-[10px] text-vault-text-muted">If it 10s</p>
+									<p class="mt-0.5 text-sm font-bold {cgcGradingROI.optimisticProfit != null && cgcGradingROI.optimisticProfit > 0 ? 'text-vault-green' : 'text-vault-red'}">
+										{cgcGradingROI.optimisticProfit != null ? fmtMoney(cgcGradingROI.optimisticProfit) : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">upside cap</p>
+								</div>
+								<div>
+									<p class="text-[10px] text-vault-text-muted">Break-even</p>
+									<p class="mt-0.5 text-sm font-bold text-white">
+										{cgcGradingROI.breakEvenGemRate != null ? cgcGradingROI.breakEvenGemRate.toFixed(0) + '%' : '—'}
+									</p>
+									<p class="text-[10px] text-vault-text-muted">gem rate needed</p>
+								</div>
+							</div>
+							{#if !cgcGradingROI.confident}
+								<p class="mt-3 text-[10px] italic text-amber-400">
+									Low CGC sample ({indexRow.cgc_pop_total ?? 0} graded) — gem rate estimate is noisy.
 								</p>
 							{/if}
 						</div>

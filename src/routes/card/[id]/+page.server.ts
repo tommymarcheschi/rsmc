@@ -102,6 +102,33 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		  )
 		: null;
 
+	// CGC ROI — same math, with CGC's grade-10 price + gem rate + pop. The
+	// GradingROIInput field names say "psa_*" but the function is service-
+	// generic: it computes premium = (gem_rate/100) × (grade10 − raw), which
+	// works for any grader whose data we pass in. Surfaced on the card page
+	// next to the PSA ROI block so users can compare grader profitability at
+	// a glance without leaving the card view (Sprint-1 audit consolidation).
+	const cgcRow = indexRow as unknown as {
+		raw_nm_price: number | null;
+		cgc10_price: number | null;
+		cgc_gem_rate: number | null;
+		cgc_pop_total: number | null;
+	} | null;
+	const cgcGradingROI =
+		cgcRow && cgcRow.cgc10_price != null
+			? computeGradingROI(
+					{
+						raw_nm_price: cgcRow.raw_nm_price,
+						psa10_price: cgcRow.cgc10_price,
+						psa_gem_rate: cgcRow.cgc_gem_rate,
+						psa_pop_total: cgcRow.cgc_pop_total
+					},
+					'CGC' as GradingService,
+					DEFAULT_TIER_BY_SERVICE.CGC,
+					gradingFees
+			  )
+			: null;
+
 	const similarCards = indexRow
 		? await getSimilarCards(
 				params.id,
@@ -297,6 +324,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		gradeLadderFetchedAt,
 		cardSignal,
 		gradingROI,
+		cgcGradingROI,
 		similarCards,
 		psa10Sales,
 		pcUrlOverride,
