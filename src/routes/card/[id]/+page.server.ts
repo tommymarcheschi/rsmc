@@ -7,6 +7,7 @@ import { supabase } from '$services/supabase';
 import { supabaseAdmin } from '$lib/server/supabase-admin';
 import { getCardSignal, getSimilarCards } from '$services/insights';
 import { computeGradingROI, DEFAULT_TIER_BY_SERVICE } from '$services/grading-roi';
+import { getLiveListingsProvider } from '$services/live-listings';
 import { buildGradeLadders, type CohortRow } from '$services/grade-estimate';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
@@ -137,6 +138,19 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 				indexRow.psa10_price
 		  ).catch(() => [])
 		: [];
+
+	// Live active listings (project_live_listings_first_principle). Provider
+	// is selected by LIVE_LISTINGS_PROVIDER env var, defaulting to 'stub' so
+	// the page always has content. Any failure returns a null result and the
+	// UI just doesn't render the section — never crashes the page.
+	const liveListings = await getLiveListingsProvider()
+		.fetchForCard({
+			card_id: params.id,
+			name: card.name,
+			set_name: card.set?.name ?? '',
+			card_number: card.number ?? ''
+		})
+		.catch(() => null);
 
 	// PSA 10 historical sales for the time-series list on card detail.
 	// Newest first, capped at 30 — matches what PriceCharting surfaces.
@@ -325,6 +339,7 @@ export const load: PageServerLoad = async ({ params, setHeaders }) => {
 		cardSignal,
 		gradingROI,
 		cgcGradingROI,
+		liveListings,
 		similarCards,
 		psa10Sales,
 		pcUrlOverride,
