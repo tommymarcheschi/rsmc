@@ -8,7 +8,7 @@ import {
 
 // Paths that don't require an authenticated session.
 // Everything else (pages AND api routes) requires login.
-const PUBLIC_PATHS = new Set(['/login', '/logout']);
+const PUBLIC_PATHS = new Set(['/login', '/logout', '/privacy', '/terms']);
 
 function isPublicPath(pathname: string): boolean {
 	if (PUBLIC_PATHS.has(pathname)) return true;
