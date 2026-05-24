@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
-	import { ApiStatus, Icon, CommandPalette } from '$components';
+	import { ApiStatus, Icon, CommandPalette, ShowModeToggle } from '$components';
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -138,7 +138,10 @@
 				</div>
 			</form>
 
-			<ApiStatus />
+			<div class="flex items-center gap-2">
+				<ShowModeToggle />
+				<ApiStatus />
+			</div>
 		</header>
 
 		<!-- Page content -->
