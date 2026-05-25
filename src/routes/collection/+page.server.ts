@@ -10,6 +10,7 @@ import {
 	type RawDiscoveryRow
 } from '$services/discovery-signals';
 import { valueEntry, loadConditionComps, compKey, type Valuation } from '$services/valuation';
+import { loadWatchlistData, type WatchlistLoadResult } from '$services/watchlist-load';
 
 const ADD_SEARCH_PAGE_SIZE = 12;
 
@@ -141,6 +142,15 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// renders on the same round-trip. Option (b) from the task spec — keeping
 	// the modal in-page and using query params for each step is less
 	// disruptive than a separate /collection/add route.
+	// Tab strip — Sprint 1D-i fold. /watchlist redirects here with ?tab=watchlist.
+	// Default tab is the collection view; the watchlist UI only appears when
+	// the user (or a redirect) asks for it explicitly. The watchlist data is
+	// only loaded when the tab is active so the default Collection view pays
+	// no extra DB cost. Triggered-count is always loaded (cheap) so the tab
+	// badge can show even when the user is on the Collection tab.
+	const tabParam = url.searchParams.get('tab');
+	const tab: 'collection' | 'watchlist' = tabParam === 'watchlist' ? 'watchlist' : 'collection';
+
 	const addMode = url.searchParams.get('add') === '1';
 	const addSearch = url.searchParams.get('addSearch') ?? '';
 	const selectedCardId = url.searchParams.get('selectedCard') ?? '';
@@ -204,7 +214,27 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		};
 	}
 
+	// Watchlist is full-loaded on its tab + a lightweight triggered-count is
+	// available even on the Collection tab so the tab badge can render. A
+	// single COUNT-only watchlist query would still be a round-trip + still
+	// need the price join to know "triggered" — so for simplicity we just
+	// load the full watchlist on both tabs. ~tens of rows; cost is trivial
+	// and keeps the contract simple.
+	let watchlist: WatchlistLoadResult = {
+		entries: [],
+		cardCache: {},
+		valuationByEntry: {},
+		triggeredCount: 0
+	};
+	try {
+		watchlist = await loadWatchlistData();
+	} catch {
+		// Watchlist fetch failure shouldn't break /collection — the tab just
+		// shows zero triggered, and clicking it shows an empty state.
+	}
+
 	return {
+		tab,
 		entries,
 		cardCache,
 		valuationByEntry,
@@ -212,7 +242,8 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		addMode,
 		addSearch,
 		addSearchResults,
-		selectedCard
+		selectedCard,
+		watchlist
 	};
 };
 

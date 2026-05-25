@@ -10,3 +10,4 @@ export type { IconName } from './icon-names';
 export { default as CommandPalette } from './CommandPalette.svelte';
 export { default as ShowModeToggle } from './ShowModeToggle.svelte';
 export { default as LiveListings } from './LiveListings.svelte';
+export { default as WatchlistView } from './WatchlistView.svelte';

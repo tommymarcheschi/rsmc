@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Icon } from '$components';
+	import { Icon, WatchlistView } from '$components';
 	import type { CollectionEntry, PokemonCard, CardCondition } from '$types';
+	import type { WatchlistLoadResult } from '$services/watchlist-load';
 
 	interface ValuationRow {
 		nm_price: number | null;
@@ -23,6 +24,18 @@
 	}
 
 	let { data, form } = $props();
+
+	// Tab strip — Sprint 1D-i fold. /watchlist now redirects to
+	// /collection?tab=watchlist so the two views share this shell.
+	let tab = $derived((data as { tab?: 'collection' | 'watchlist' }).tab ?? 'collection');
+	let watchlist = $derived(
+		(data as { watchlist?: WatchlistLoadResult }).watchlist ?? {
+			entries: [],
+			cardCache: {},
+			valuationByEntry: {},
+			triggeredCount: 0
+		}
+	);
 
 	let entries = $derived(data.entries as CollectionEntry[]);
 	let cardCache = $derived(data.cardCache as Record<string, PokemonCard>);
@@ -222,30 +235,92 @@
 </script>
 
 <svelte:head>
-	<title>My Collection — Trove</title>
+	<title>{tab === 'watchlist' ? 'Watchlist' : 'My Collection'} — Trove</title>
 </svelte:head>
 
 <div class="space-y-6">
 	<div class="flex items-center justify-between">
 		<div>
-			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">My Collection</h1>
-			<p class="mt-1 text-vault-text-muted">Track every card you own</p>
+			<h1 class="text-2xl font-bold text-gradient sm:text-3xl">
+				{tab === 'watchlist' ? 'My Watchlist' : 'My Collection'}
+			</h1>
+			<p class="mt-1 text-vault-text-muted">
+				{tab === 'watchlist'
+					? 'Cards you’re tracking — alerts fire when prices hit your targets'
+					: 'Track every card you own'}
+			</p>
 		</div>
-		<!--
-			"+ Add Card" is a plain link to ?add=1 so the modal opens server-side.
-			The modal's card-search form submits back to the same route with
-			?addSearch=<q>; the loader populates results. Option (b) from the task
-			spec — less disruptive than a separate /collection/add route and keeps
-			the existing in-page modal UX.
-		-->
+		{#if tab === 'collection'}
+			<!--
+				"+ Add Card" is a plain link to ?add=1 so the modal opens server-side.
+				The modal's card-search form submits back to the same route with
+				?addSearch=<q>; the loader populates results. Option (b) from the task
+				spec — less disruptive than a separate /collection/add route and keeps
+				the existing in-page modal UX.
+			-->
+			<a
+				href="/collection?add=1"
+				data-testid="open-add-modal"
+				class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+			>
+				+ Add Card
+			</a>
+		{/if}
+	</div>
+
+	<!-- Tab strip — Sprint 1D-i fold. Watchlist used to be its own page;
+	     it's now a tab here so collection + watchlist share the page shell.
+	     Plain <a> tags so the tabs work without JS (each click is a fresh
+	     SSR load that picks up ?tab=). -->
+	<div class="flex border-b border-vault-border" role="tablist" aria-label="Collection views">
 		<a
-			href="/collection?add=1"
-			data-testid="open-add-modal"
-			class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
+			href="/collection"
+			role="tab"
+			aria-selected={tab === 'collection'}
+			data-testid="tab-collection"
+			class="flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors {tab ===
+			'collection'
+				? 'border-vault-accent text-white'
+				: 'border-transparent text-vault-text-muted hover:text-white'}"
 		>
-			+ Add Card
+			Collection
+			<span class="rounded-full bg-vault-bg px-2 py-0.5 text-[10px] text-vault-text-muted">
+				{entries.length}
+			</span>
+		</a>
+		<a
+			href="/collection?tab=watchlist"
+			role="tab"
+			aria-selected={tab === 'watchlist'}
+			data-testid="tab-watchlist"
+			class="flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors {tab ===
+			'watchlist'
+				? 'border-vault-accent text-white'
+				: 'border-transparent text-vault-text-muted hover:text-white'}"
+		>
+			Watchlist
+			<span class="rounded-full bg-vault-bg px-2 py-0.5 text-[10px] text-vault-text-muted">
+				{watchlist.entries.length}
+			</span>
+			{#if watchlist.triggeredCount > 0}
+				<span
+					class="rounded-full bg-vault-green/20 px-2 py-0.5 text-[10px] font-bold text-vault-green"
+					title="{watchlist.triggeredCount} alert{watchlist.triggeredCount === 1 ? '' : 's'} triggered"
+				>
+					{watchlist.triggeredCount}
+				</span>
+			{/if}
 		</a>
 	</div>
+
+	{#if tab === 'watchlist'}
+		<WatchlistView
+			entries={watchlist.entries}
+			cardCache={watchlist.cardCache}
+			valuationByEntry={watchlist.valuationByEntry}
+			triggeredCount={watchlist.triggeredCount}
+		/>
+	{:else}
 
 	<!-- Summary -->
 	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -487,6 +562,7 @@
 			</div>
 		{/if}
 	</div>
+	{/if}
 </div>
 
 <!-- Add Card Modal — rendered when ?add=1 is in the URL. Closing is a link back
