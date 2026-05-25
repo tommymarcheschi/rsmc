@@ -11,6 +11,7 @@
  * specific implementation — the swap is one line here.
  */
 
+import { ebayBrowseProvider } from './ebay-browse';
 import { stubProvider } from './stub';
 import type { LiveListingsProvider } from './types';
 
@@ -21,7 +22,8 @@ export function getLiveListingsProvider(): LiveListingsProvider {
 	switch (choice) {
 		case 'stub':
 			return stubProvider;
-		// case 'ebay':     return ebayBrowseProvider;        // Sprint 2.x — when EBAY_CLIENT_ID is set
+		case 'ebay':
+			return ebayBrowseProvider;
 		// case '130point': return onethreezeropointProvider; // Sprint 2.x — when partnership signed
 		// case 'brightdata': return brightDataProvider;      // Sprint 2.x — when paid subscription active
 		default:
