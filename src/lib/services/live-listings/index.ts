@@ -15,6 +15,7 @@ import { stubProvider } from './stub';
 import type { LiveListingsProvider } from './types';
 
 export type { LiveListing, LiveListingsResult, LiveListingsProvider } from './types';
+export { getCachedOrFetch, logCardQueryHit, deriveQueryKey } from './cache';
 
 export function getLiveListingsProvider(): LiveListingsProvider {
 	const choice = (process.env.LIVE_LISTINGS_PROVIDER ?? 'stub').toLowerCase();
