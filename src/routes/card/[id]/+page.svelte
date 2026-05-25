@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { PriceChart } from '$components';
+	import { PriceChart, LiveListings } from '$components';
 	import type { PokedexData, EvolutionNode } from '$types';
 	import type { PokeTracePrice } from '$services/poketrace';
 	import type { GradedPrice } from '$services/price-tracker';
@@ -76,6 +76,9 @@
 	let cardSignal = $derived(data.cardSignal as CardSignal | null);
 	let gradingROI = $derived(data.gradingROI as GradingROIResult | null);
 	let cgcGradingROI = $derived(data.cgcGradingROI as GradingROIResult | null);
+	let liveListings = $derived(
+		data.liveListings as import('$services/live-listings').LiveListingsResult | null
+	);
 	let similarCards = $derived((data.similarCards ?? []) as SimilarCard[]);
 	interface Psa10Sale { sold_at: string; price_cents: number; marketplace: string | null; }
 	let psa10Sales = $derived(((data as Record<string, unknown>).psa10Sales ?? []) as Psa10Sale[]);
@@ -611,6 +614,14 @@
 					</div>
 				</div>
 			{/if}
+
+			<!-- Live listings — first-class data alongside sold comps
+			     (project_live_listings_first_principle). Currently fed by the
+			     'stub' provider while we wait for a real path-C source
+			     (project_ebay_dev_rejected); the UI labels stub data as
+			     "Sample data" so users don't read fake numbers as real
+			     market prices. -->
+			<LiveListings result={liveListings} />
 
 			<!-- Market Signals — all data we have on this card from card_index -->
 			{#if hasMarketSignals && indexRow}
