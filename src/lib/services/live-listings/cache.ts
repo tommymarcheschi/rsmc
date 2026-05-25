@@ -26,6 +26,7 @@
 import { supabase } from '$services/supabase';
 import { supabaseAdmin } from '$lib/server/supabase-admin';
 import { stubProvider } from './stub';
+import { deriveQueryKey } from './provider';
 import type { FetchForCardOptions, LiveListingsProvider, LiveListingsResult } from './types';
 
 const DEFAULT_TTL_SECONDS = 6 * 60 * 60; // 6h — listings move fast, but not hourly fast.
@@ -34,19 +35,6 @@ interface CachedRow {
 	payload: LiveListingsResult;
 	fetched_at: string;
 	provider: string;
-}
-
-/**
- * Stable, human-readable cache key for a fetch options bundle. Sorted
- * deterministically so {grader, grade} and {grade, grader} hash the same.
- */
-export function deriveQueryKey(opts: FetchForCardOptions): string {
-	const parts: string[] = [];
-	if (opts.grader) parts.push(`grader=${opts.grader}`);
-	if (opts.grade != null) parts.push(`grade=${opts.grade}`);
-	if (opts.raw_only) parts.push('raw_only=1');
-	if (opts.limit != null) parts.push(`limit=${opts.limit}`);
-	return parts.length === 0 ? 'all' : parts.join('&');
 }
 
 /**

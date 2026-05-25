@@ -1,0 +1,42 @@
+name: warm-live-listings
+
+# Nightly cache warmer for live listings (project_live_listings_cache).
+# Pulls the top-N viewed cards from card_query_log and refreshes their
+# live_listings_cache rows so the first visitor after a quiet stretch
+# gets cached data instantly instead of paying the provider round-trip.
+#
+# Runs separately from engine-nightly so its schedule, concurrency, and
+# failure visibility stay independent. Times are UTC; this fires after
+# the engine-nightly window (09:15 UTC) so they don't share a runner.
+
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: warm-live-listings
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      # Leave unset to use the stub (safe default until a real provider
+      # lands). Swap to 'ebay' / '130point' / 'brightdata' here when the
+      # corresponding provider implementation + secrets are in place.
+      LIVE_LISTINGS_PROVIDER: ${{ vars.LIVE_LISTINGS_PROVIDER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: warm-live-listings
+        run: node_modules/.bin/tsx scripts/warm-live-listings.ts
