@@ -12,10 +12,15 @@
  * and we never write back here. The cache rows are populated by the
  * card-page SWR wrapper and the warming cron — this page only consumes.
  *
- * Honesty doctrine: while `LIVE_LISTINGS_PROVIDER` is unset/stub, every
- * row's `provider` is "stub", so the UI shows a SAMPLE DATA badge per
- * row. % under is omitted when the sold comp is missing — we don't
- * fabricate a percentage out of a null comp.
+ * Honesty doctrine: stub-source cache rows are excluded at the query
+ * level — a "sleeper" is a real live ask vs a real sold comp, so a
+ * fabricated ask can only produce a fabricated insight. When the only
+ * source is the stub provider, /sleepers renders the empty state
+ * ("No sleepers yet") instead of fake rankings; the surface lights up
+ * automatically once `LIVE_LISTINGS_PROVIDER` flips to a real provider
+ * and the warming cron repopulates the cache. % under is also omitted
+ * when the sold comp is missing — we don't fabricate a percentage out
+ * of a null comp.
  */
 
 import { supabase } from '$services/supabase';
@@ -80,8 +85,10 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const sortMode: SortMode = sortParam === 'percent' ? 'percent' : 'absolute';
 	const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1') || 1);
 
-	// Pull every cache row with a real lowest ask. The partial index from
-	// migration 022 (`live_listings_cache_lowest_ask_idx`) covers this.
+	// Pull every cache row with a real lowest ask, excluding the stub
+	// provider entirely (honesty doctrine — see file header). The partial
+	// index from migration 022 (`live_listings_cache_lowest_ask_idx`)
+	// still covers this; the .neq filter is a small additional WHERE.
 	// Cache size is bounded by warming-cron N (default 100) plus organic
 	// card-page hits, so fetching the whole set + ranking in memory is
 	// cheap and lets us compute the per-row delta without a DB view.
@@ -89,6 +96,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		.from('live_listings_cache')
 		.select('card_id, query_key, provider, payload, lowest_ask_cents, listings_count, fetched_at')
 		.not('lowest_ask_cents', 'is', null)
+		.neq('provider', 'stub')
 		.returns<CacheRow[]>();
 
 	if (cacheErr) {
@@ -183,11 +191,10 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	const from = (page - 1) * PAGE_SIZE;
 	const pageRows = enriched.slice(from, from + PAGE_SIZE);
 
-	// Whether the SAMPLE DATA badge applies at all — if every row is
-	// real-source data, drop the page-level callout (per-row badge still
-	// renders for individual stub rows if any sneak through).
-	const anyStub = pageRows.some((r) => r.provider === 'stub');
-
+	// Stub rows were filtered at the DB level, so every row here is real-
+	// source and the SAMPLE DATA banner is no longer needed. Kept the
+	// field on the return for now (set to false) so the .svelte side and
+	// any consumers don't break if cached.
 	return {
 		filter,
 		sortMode,
@@ -196,7 +203,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		pageSize: PAGE_SIZE,
 		totalCount,
 		rows: pageRows,
-		anyStub,
+		anyStub: false,
 		errorMsg: null as string | null
 	};
 };
