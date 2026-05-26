@@ -93,6 +93,24 @@ export const CONDITION_DISCOUNT: Readonly<Record<string, number>> = Object.freez
 	DMG: 0.31
 });
 
+/**
+ * Minimum TCGPlayer sample size required to trust a real per-condition
+ * median for the NM condition. Below this, the canonical PriceCharting
+ * NM comp is a better signal — a single TCGPlayer listing at $180 vs a
+ * PriceCharting last-sold at $32 is the kind of stale-ask trap this
+ * threshold blocks. Non-NM conditions get the real_comp at any n>=1
+ * because the alternative is a discount estimate, which is always
+ * less honest than a real observation at that condition.
+ */
+export const MIN_NM_REAL_COMP_SAMPLES = 5;
+
+/**
+ * Threshold below which a real_comp is flagged as thin-data — still used,
+ * but the UI should signal that the median has high variance. Matches
+ * the n<10 "low n" italic flag already shown on /collection.
+ */
+export const THIN_REAL_COMP_SAMPLES = 10;
+
 export type CardCondition = 'NM' | 'LP' | 'MP' | 'HP' | 'DMG';
 
 /** Real TCGPlayer per-condition median, latest snapshot. */
@@ -151,12 +169,22 @@ export function valueEntry(input: ValuationInput): Valuation {
 	let asOf: string | null = null;
 	let effectiveDiscount = discount;
 
-	if (comp && comp.median_cents > 0) {
-		unitValue = Math.round(comp.median_cents) / 100;
+	// Real-comp eligibility: NM requires MIN_NM_REAL_COMP_SAMPLES because
+	// PriceCharting's raw_nm (a last-sold comp) is a better signal than a
+	// thin TCGPlayer ask median. Non-NM conditions take any n>=1 because
+	// the alternative is a discount estimate — a single observed HP/DMG
+	// listing still beats an extrapolated multiplier.
+	const compEligible =
+		comp != null &&
+		comp.median_cents > 0 &&
+		(cond !== 'NM' || (comp.sample_count ?? 0) >= MIN_NM_REAL_COMP_SAMPLES);
+
+	if (compEligible) {
+		unitValue = Math.round(comp!.median_cents) / 100;
 		source = 'real_comp';
 		isEstimate = false;
-		sampleCount = comp.sample_count ?? null;
-		asOf = comp.snapshot_date ?? null;
+		sampleCount = comp!.sample_count ?? null;
+		asOf = comp!.snapshot_date ?? null;
 		// We don't model an implicit discount for a real comp — it IS the
 		// observed price at that condition, full stop.
 		effectiveDiscount = 1.0;
