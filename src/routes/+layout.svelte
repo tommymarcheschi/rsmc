@@ -2,7 +2,10 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import { ApiStatus, Icon, CommandPalette, ShowModeToggle } from '$components';
-	import { showMode } from '$stores/show-mode';
+	// `showMode` store no longer read here — the sidebar Show button is now
+	// a link to /show (project_show_mode_page). The header ShowModeToggle
+	// component still reads the store on its own; a follow-up PR can
+	// retire it entirely along with the store.
 
 	interface Props {
 		children: import('svelte').Snippet;
@@ -37,10 +40,13 @@
 
 	let mobileMenuOpen = $state(false);
 
-	// Standalone (no sidebar chrome) pages: /login, /privacy, /terms. The
-	// latter two need to be readable by unauthenticated visitors (e.g. eBay
-	// reviewers checking links from the developer-program application).
-	const STANDALONE_PATHS = new Set(['/login', '/privacy', '/terms']);
+	// Standalone (no sidebar chrome) pages: /login, /privacy, /terms, /show.
+	// /privacy + /terms need to be readable by unauthenticated visitors
+	// (e.g. eBay reviewers checking the developer-program links). /show
+	// is the card-show search-engine page (project_show_mode_page) — it
+	// wants maximum screen real estate for the search field + results,
+	// so we skip the sidebar/header entirely.
+	const STANDALONE_PATHS = new Set(['/login', '/privacy', '/terms', '/show']);
 	let isLoginPage = $derived(STANDALONE_PATHS.has($page.url.pathname));
 
 	function isActive(href: string, currentPath: string): boolean {
@@ -98,24 +104,17 @@
 					{item.label}
 				</a>
 				{#if item.href === '/browse'}
-					<button
-						type="button"
-						onclick={() => showMode.toggle()}
-						aria-pressed={$showMode}
-						aria-label={$showMode ? 'Turn off Show Mode' : 'Turn on Show Mode'}
-						class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all duration-200
-							{$showMode
-								? 'border-amber-400/60 bg-amber-400/10 text-amber-300 shadow-[0_0_0_1px_rgba(251,191,36,0.18)] hover:bg-amber-400/15'
-								: 'border-transparent text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+					<!-- Was a runtime toggle; now a link to the standalone /show
+					     page (project_show_mode_page, decided 2026-05-25). -->
+					<a
+						href="/show"
+						class="flex w-full items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/5 px-3 py-2.5 text-sm font-medium text-amber-300 transition-all duration-200 hover:border-amber-400/60 hover:bg-amber-400/10"
 					>
 						<svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
-						Show Mode
-						{#if $showMode}
-							<span class="ml-auto text-[10px] font-bold uppercase tracking-wider opacity-80">on</span>
-						{/if}
-					</button>
+						Show
+					</a>
 				{/if}
 			{/each}
 
@@ -265,24 +264,16 @@
 						{item.label}
 					</a>
 					{#if item.href === '/browse'}
-						<button
-							type="button"
-							onclick={() => showMode.toggle()}
-							aria-pressed={$showMode}
-							aria-label={$showMode ? 'Turn off Show Mode' : 'Turn on Show Mode'}
-							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-all
-								{$showMode
-									? 'border-amber-400/60 bg-amber-400/10 text-amber-300'
-									: 'border-transparent text-vault-text-muted hover:bg-vault-surface-hover hover:text-white'}"
+						<a
+							href="/show"
+							onclick={() => (mobileMenuOpen = false)}
+							class="flex w-full items-center gap-3 rounded-xl border border-amber-400/40 bg-amber-400/5 px-3 py-2.5 text-sm font-medium text-amber-300 transition-all hover:border-amber-400/60 hover:bg-amber-400/10"
 						>
 							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
 								<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
 							</svg>
-							Show Mode
-							{#if $showMode}
-								<span class="ml-auto text-[10px] font-bold uppercase tracking-wider opacity-80">on</span>
-							{/if}
-						</button>
+							Show
+						</a>
 					{/if}
 				{/each}
 
