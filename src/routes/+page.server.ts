@@ -110,24 +110,39 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			});
 		}
 
+		// Same condition-discount ladder /collection uses so the dashboard's
+		// per-card unit price + portfolio total agree with /collection (and
+		// with the per-card "value (est.)" tag shown in the list). Keeps
+		// `marketPrice` honestly = the unit value at the entry's actual
+		// condition, not a fabricated NM number.
+		const CONDITION_DISCOUNT: Record<string, number> = {
+			NM: 1.0,
+			LP: 0.85,
+			MP: 0.7,
+			HP: 0.5,
+			DMG: 0.3
+		};
+
 		for (const entry of collection) {
 			const meta = cardMap.get(entry.card_id);
 			// Even with no card_index row (shouldn't normally happen), still
 			// surface the holding so the count matches Total Cards.
 			const name = meta?.name ?? entry.card_id;
 			const imageUrl = meta?.imageUrl ?? null;
-			const marketPrice = meta?.marketPrice ?? null;
-			const totalValue = marketPrice != null ? marketPrice * entry.quantity : 0;
+			const nmPrice = meta?.marketPrice ?? null;
+			const discount = CONDITION_DISCOUNT[entry.condition] ?? 1.0;
+			const unitPrice = nmPrice != null ? Math.round(nmPrice * discount * 100) / 100 : null;
+			const totalValue = unitPrice != null ? unitPrice * entry.quantity : 0;
 			portfolioValue += totalValue;
 			const costBasis = (entry.purchase_price ?? 0) * entry.quantity;
 			topHoldings.push({
 				card_id: entry.card_id,
 				name,
 				quantity: entry.quantity,
-				marketPrice,
+				marketPrice: unitPrice,
 				totalValue,
 				imageUrl,
-				gainLoss: marketPrice != null ? totalValue - costBasis : null
+				gainLoss: unitPrice != null ? totalValue - costBasis : null
 			});
 		}
 
