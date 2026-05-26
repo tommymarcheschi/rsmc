@@ -54,17 +54,84 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// show an empty axis). score_momentum/score_liquidity are ~null in prod
 	// so they are deliberately NOT pulled.
 	const discoveryByCard: Record<string, DiscoverySignals> = {};
+	// Card metadata for the cardCache fallback (see below). pokemontcg.io
+	// 404s for Scrydex-only sets (e.g. `me3`), and when getCard() fails the
+	// whole row collapses to its card_id with a "..." thumbnail and falls
+	// out of the Insight strip. card_index is our source of truth for every
+	// owned card, so we read name/image/set/number/rarity off the same row
+	// and synthesize a minimal PokemonCard for any pokemontcg miss.
+	interface IndexMeta {
+		name: string;
+		set_id: string | null;
+		set_name: string | null;
+		card_number: string | null;
+		image_small_url: string | null;
+		image_large_url: string | null;
+		rarity: string | null;
+	}
+	const indexMeta: Record<string, IndexMeta> = {};
 	if (uniqueCardIds.length > 0) {
 		const { data: indexRows } = await supabase
 			.from('card_index')
-			.select(`card_id, raw_nm_price, ${DISCOVERY_SELECT_COLS}`)
+			.select(
+				`card_id, raw_nm_price, name, set_id, set_name, card_number, image_small_url, image_large_url, rarity, ${DISCOVERY_SELECT_COLS}`
+			)
 			.in('card_id', uniqueCardIds);
 		for (const r of (indexRows ?? []) as Array<
-			RawDiscoveryRow & { card_id: string; raw_nm_price: number | null }
+			RawDiscoveryRow & {
+				card_id: string;
+				raw_nm_price: number | null;
+				name: string;
+				set_id: string | null;
+				set_name: string | null;
+				card_number: string | null;
+				image_small_url: string | null;
+				image_large_url: string | null;
+				rarity: string | null;
+			}
 		>) {
 			indexPrices[r.card_id] = r.raw_nm_price;
 			discoveryByCard[r.card_id] = gateDiscoverySignals(r);
+			indexMeta[r.card_id] = {
+				name: r.name,
+				set_id: r.set_id,
+				set_name: r.set_name,
+				card_number: r.card_number,
+				image_small_url: r.image_small_url,
+				image_large_url: r.image_large_url,
+				rarity: r.rarity
+			};
 		}
+	}
+
+	// Backfill cardCache for any card the pokemontcg.io lookup missed. The
+	// UI reads card.name / card.images.small / card.set.name / card.number,
+	// so we synthesize just those fields from card_index. Cast to
+	// PokemonCard — fields the UI doesn't touch stay undefined.
+	for (const id of uniqueCardIds) {
+		if (cardCache[id]) continue;
+		const m = indexMeta[id];
+		if (!m) continue;
+		cardCache[id] = {
+			id,
+			name: m.name,
+			supertype: '',
+			number: m.card_number ?? '',
+			rarity: m.rarity ?? undefined,
+			images: {
+				small: m.image_small_url ?? '',
+				large: m.image_large_url ?? m.image_small_url ?? ''
+			},
+			set: {
+				id: m.set_id ?? '',
+				name: m.set_name ?? '',
+				series: '',
+				printedTotal: 0,
+				total: 0,
+				releaseDate: '',
+				images: { symbol: '', logo: '' }
+			}
+		} as PokemonCard;
 	}
 
 	// Add-modal state is driven by URL params so the whole flow works without
