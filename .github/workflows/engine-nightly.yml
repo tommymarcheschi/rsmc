@@ -22,6 +22,13 @@ jobs:
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      # pokemontcg.io API key — improves resolver step 2 (rate limit goes
+      # from ~30/hr unauth to ~20k/day) and feeds the same X-Api-Key
+      # header through tcg-api.ts / auto-heal.ts / detect-new-sets.ts /
+      # refresh-index.ts. Secret was set repo-wide on 2026-05-18 but
+      # never exposed as a job env var, which is part of why the
+      # snapshot pipeline went silently dead the same day.
+      POKEMON_TCG_API_KEY: ${{ secrets.POKEMON_TCG_API_KEY }}
       # Per-day ingest cap. The script processes cards in priority order
       # (owned > watched > value-ranked), so this is the size of the daily
       # owned-first wave, not a coverage ceiling. Bump if scrape latency
