@@ -1,6 +1,4 @@
 import { supabase } from '$services/supabase';
-import { getCard } from '$services/tcg-api';
-import { getCachedPricesForCards } from '$services/price-cache';
 import { getPsa10Momentum } from '$services/insights';
 import type { PageServerLoad } from './$types';
 
@@ -81,45 +79,55 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	);
 
 	let portfolioValue = 0;
-	let topHoldings: { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[] = [];
+	let topHoldings: { card_id: string; name: string; quantity: number; marketPrice: number | null; totalValue: number; imageUrl: string | null; gainLoss: number | null }[] = [];
 
 	if (collection.length > 0) {
-		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))].slice(0, 20);
+		// Source of truth for card metadata + raw_nm_price is card_index — the
+		// same table the card page, /browse, /rankings and /sets all read from.
+		// The dashboard used to call getCard() (pokemontcg.io) + price_cache
+		// (TCGPlayer market), which silently dropped cards from non-pokemontcg
+		// sets (e.g. the `me3` Scrydex set) and showed prices that disagreed
+		// with the card page. Reading card_index here keeps every surface
+		// consistent and lets us honestly render "—" when no price exists.
+		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))];
 
-		// Get cached prices + fetch card metadata in one pass
-		const [cachedPrices, ...cardResults] = await Promise.all([
-			getCachedPricesForCards(uniqueCardIds),
-			...uniqueCardIds.map((id) => getCard(id).catch(() => null))
-		]);
+		const { data: idxRows } = await supabase
+			.from('card_index')
+			.select('card_id, name, image_small_url, raw_nm_price')
+			.in('card_id', uniqueCardIds);
 
-		const cardMap = new Map<string, { name: string; marketPrice: number; imageUrl: string }>();
-
-		for (const card of cardResults) {
-			if (!card) continue;
-			let marketPrice = (cachedPrices as Map<string, number>).get(card.id) ?? 0;
-			if (marketPrice === 0 && card.tcgplayer?.prices) {
-				for (const variant of Object.values(card.tcgplayer.prices)) {
-					if (variant.market) { marketPrice = variant.market; break; }
-					if (variant.mid) { marketPrice = variant.mid; break; }
-				}
-			}
-			cardMap.set(card.id, { name: card.name, marketPrice, imageUrl: card.images.small });
+		const cardMap = new Map<string, { name: string; marketPrice: number | null; imageUrl: string | null }>();
+		for (const r of (idxRows ?? []) as Array<{
+			card_id: string;
+			name: string;
+			image_small_url: string | null;
+			raw_nm_price: number | null;
+		}>) {
+			cardMap.set(r.card_id, {
+				name: r.name,
+				marketPrice: r.raw_nm_price,
+				imageUrl: r.image_small_url
+			});
 		}
 
 		for (const entry of collection) {
-			const card = cardMap.get(entry.card_id);
-			if (!card) continue;
-			const totalValue = card.marketPrice * entry.quantity;
+			const meta = cardMap.get(entry.card_id);
+			// Even with no card_index row (shouldn't normally happen), still
+			// surface the holding so the count matches Total Cards.
+			const name = meta?.name ?? entry.card_id;
+			const imageUrl = meta?.imageUrl ?? null;
+			const marketPrice = meta?.marketPrice ?? null;
+			const totalValue = marketPrice != null ? marketPrice * entry.quantity : 0;
 			portfolioValue += totalValue;
 			const costBasis = (entry.purchase_price ?? 0) * entry.quantity;
 			topHoldings.push({
 				card_id: entry.card_id,
-				name: card.name,
+				name,
 				quantity: entry.quantity,
-				marketPrice: card.marketPrice,
+				marketPrice,
 				totalValue,
-				imageUrl: card.imageUrl,
-				gainLoss: totalValue - costBasis
+				imageUrl,
+				gainLoss: marketPrice != null ? totalValue - costBasis : null
 			});
 		}
 

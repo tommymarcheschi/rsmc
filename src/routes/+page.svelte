@@ -5,7 +5,7 @@
 
 	let { data } = $props();
 	let stats = $derived(data.stats);
-	let topHoldings = $derived(data.topHoldings as { card_id: string; name: string; quantity: number; marketPrice: number; totalValue: number; imageUrl: string; gainLoss: number }[]);
+	let topHoldings = $derived(data.topHoldings as { card_id: string; name: string; quantity: number; marketPrice: number | null; totalValue: number; imageUrl: string | null; gainLoss: number | null }[]);
 	let attention = $derived(((data as Record<string, unknown>).attention ?? { triggeredAlerts: [], triggeredAlertsTotal: 0, rising: [] }) as Attention);
 
 	function fmtMoney(n: number | null | undefined): string {
@@ -116,15 +116,15 @@
 	<div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 			<div class="flex items-center justify-between">
-				<p class="text-sm text-vault-text-muted">Total Invested</p>
+				<p class="text-sm text-vault-text-muted">Portfolio Value</p>
 				<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-vault-gold/10">
 					<svg class="h-5 w-5 text-vault-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 					</svg>
 				</div>
 			</div>
-			<p class="mt-2 text-2xl font-bold sm:mt-3 sm:text-3xl text-vault-gold">${stats.totalInvested.toFixed(2)}</p>
-			<p class="mt-1 text-sm text-vault-text-muted">purchase cost basis</p>
+			<p class="mt-2 text-2xl font-bold sm:mt-3 sm:text-3xl text-vault-gold">${stats.portfolioValue.toFixed(2)}</p>
+			<p class="mt-1 text-sm text-vault-text-muted">cost basis ${stats.totalInvested.toFixed(2)}</p>
 		</div>
 		<div class="stat-card rounded-2xl border border-vault-border bg-vault-surface p-4 sm:p-6">
 			<div class="flex items-center justify-between">
@@ -175,16 +175,27 @@
 			<div class="divide-y divide-vault-border">
 				{#each topHoldings as holding}
 					<a href="/card/{holding.card_id}" class="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-vault-surface-hover sm:gap-4 sm:px-6">
-						<img src={holding.imageUrl} alt={holding.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+						{#if holding.imageUrl}
+							<img src={holding.imageUrl} alt={holding.name} class="h-14 w-10 rounded-lg object-cover" loading="lazy" />
+						{:else}
+							<div class="h-14 w-10 rounded-lg bg-vault-bg"></div>
+						{/if}
 						<div class="min-w-0 flex-1">
 							<p class="truncate text-sm font-medium text-white">{holding.name}</p>
-							<p class="text-xs text-vault-text-muted">Qty: {holding.quantity} &middot; ${holding.marketPrice.toFixed(2)} each</p>
+							<p class="text-xs text-vault-text-muted">
+								Qty: {holding.quantity} &middot;
+								{holding.marketPrice != null ? `$${holding.marketPrice.toFixed(2)} each` : 'price —'}
+							</p>
 						</div>
 						<div class="text-right">
-							<p class="text-sm font-bold text-vault-gold">${holding.totalValue.toFixed(2)}</p>
-							<p class="text-xs {holding.gainLoss >= 0 ? 'text-vault-green' : 'text-vault-red'}">
-								{holding.gainLoss >= 0 ? '+' : ''}${holding.gainLoss.toFixed(2)}
+							<p class="text-sm font-bold text-vault-gold">
+								{holding.marketPrice != null ? `$${holding.totalValue.toFixed(2)}` : '—'}
 							</p>
+							{#if holding.gainLoss != null}
+								<p class="text-xs {holding.gainLoss >= 0 ? 'text-vault-green' : 'text-vault-red'}">
+									{holding.gainLoss >= 0 ? '+' : ''}${holding.gainLoss.toFixed(2)}
+								</p>
+							{/if}
 						</div>
 					</a>
 				{/each}
