@@ -22,7 +22,11 @@ jobs:
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
-      TROVE_INGEST_SETS: base1,base2,base3,base4,base5
+      # Per-day ingest cap. The script processes cards in priority order
+      # (owned > watched > value-ranked), so this is the size of the daily
+      # owned-first wave, not a coverage ceiling. Bump if scrape latency
+      # stays well under the 120-min job timeout.
+      TROVE_INGEST_LIMIT: '100'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,9 +43,15 @@ jobs:
         continue-on-error: true
         run: node_modules/.bin/tsx scripts/auto-heal-sets.ts
 
+      # Priority queue: owned cards first, then watched, then top
+      # value-ranked catalog rows. Capped daily so the job stays inside
+      # its 120-min timeout. Replaces the prior --set base1..base5 mode
+      # which had pinned coverage at ~14 cards out of 20k catalog —
+      # collection cards were never reached. Resolver uses migration 024
+      # cache so each card resolves productId only once forever.
       - name: ingest-condition-prices
         continue-on-error: true
-        run: node_modules/.bin/tsx scripts/ingest-condition-prices.ts --set "$TROVE_INGEST_SETS"
+        run: node_modules/.bin/tsx scripts/ingest-condition-prices.ts --priority --limit "$TROVE_INGEST_LIMIT"
 
       - name: snapshot-card-index
         continue-on-error: true
