@@ -147,9 +147,7 @@
 								{/if}
 								{#if r.lowest_ask_cents != null}
 									<p class="mt-1 text-sm font-semibold text-vault-green">{money(r.lowest_ask_cents)}</p>
-									<p class="text-[10px] uppercase tracking-wider text-vault-green/80">
-										Low ask{#if r.low_ask_is_sample} <span class="text-amber-300" title="Sample data — real live-listings provider not yet wired up.">·sample</span>{/if}
-									</p>
+									<p class="text-[10px] uppercase tracking-wider text-vault-green/80">Low ask</p>
 								{/if}
 								{#if r.psa10_price == null && r.raw_nm_price == null}
 									<p class="text-sm italic text-vault-text-muted">no price</p>

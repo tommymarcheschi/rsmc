@@ -72,18 +72,6 @@
 		</p>
 	</header>
 
-	{#if data.anyStub}
-		<div
-			class="mb-4 rounded-card border border-amber-400/30 bg-amber-400/5 p-3 text-xs text-amber-300"
-		>
-			<span class="font-bold uppercase tracking-wider">Sample data</span> —
-			the live-listings provider is currently the deterministic stub, so these
-			"sleepers" are fabricated for layout/QA. Numbers become real once
-			<code class="rounded bg-amber-400/10 px-1 py-0.5">LIVE_LISTINGS_PROVIDER</code>
-			is flipped to a real source (eBay Browse / 130point).
-		</div>
-	{/if}
-
 	<!-- Filter chips + sort toggle -->
 	<div class="mb-4 flex flex-wrap items-center gap-3">
 		<div class="flex gap-1">
@@ -148,14 +136,6 @@
 						<div class="min-w-0 flex-1">
 							<div class="flex flex-wrap items-center gap-1.5">
 								<p class="truncate font-semibold text-white">{r.name}</p>
-								{#if r.provider === 'stub'}
-									<span
-										class="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300"
-										title="Sample data — real live-listings provider not yet wired up."
-									>
-										sample data
-									</span>
-								{/if}
 								<span class="rounded-full bg-vault-bg px-2 py-0.5 text-[10px] uppercase tracking-wider text-vault-text-muted">
 									{r.condition === 'graded' ? (r.grader ?? 'graded') + ' 10' : 'raw'}
 								</span>

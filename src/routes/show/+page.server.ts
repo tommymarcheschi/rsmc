@@ -48,7 +48,6 @@ export interface ShowResult {
 	raw_nm_price: number | null;
 	psa10_price: number | null;
 	lowest_ask_cents: number | null;
-	low_ask_is_sample: boolean;
 }
 
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
@@ -106,6 +105,13 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 
 	const results: ShowResult[] = matched.map((r) => {
 		const cache = cacheByCardId.get(r.card_id);
+		// Honesty doctrine: stub-source cache rows hold fabricated dollar
+		// amounts (see src/lib/services/live-listings/stub.ts). Never surface
+		// them as a "Low ask" headline next to the real raw / PSA 10 prices.
+		// The field lights up automatically once a real provider populates
+		// the cache.
+		const lowestAskCents =
+			cache && cache.provider !== 'stub' ? cache.lowest_ask_cents : null;
 		return {
 			card_id: r.card_id,
 			name: r.name,
@@ -115,8 +121,7 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 			rarity: r.rarity,
 			raw_nm_price: r.raw_nm_price,
 			psa10_price: r.psa10_price,
-			lowest_ask_cents: cache?.lowest_ask_cents ?? null,
-			low_ask_is_sample: cache?.provider === 'stub'
+			lowest_ask_cents: lowestAskCents
 		};
 	});
 
