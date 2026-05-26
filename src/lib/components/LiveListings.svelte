@@ -61,24 +61,37 @@
 	}
 </script>
 
-{#if result && result.listings.length > 0}
+{#if result && result.source === 'stub'}
+	<!-- Honesty doctrine (feedback_multipliers_vs_real_data): the stub
+	     provider rolls deterministic-but-fabricated dollar numbers (a $27
+	     "low ask" Charizard Base next to its real $556 market price is
+	     too easy to read as truth, badge or not). Until a real provider
+	     ships, render an honest empty state — no listings, no low-ask
+	     headline. The full UI returns automatically the moment
+	     `result.source` is anything other than 'stub'. -->
+	<div class="rounded-2xl border border-vault-border bg-vault-surface">
+		<div class="border-b border-vault-border px-4 py-3 sm:px-6">
+			<h2 class="font-semibold text-white">Live listings</h2>
+			<p class="mt-0.5 text-xs text-vault-text-muted">
+				Real-time eBay / TCGPlayer asks — coming soon
+			</p>
+		</div>
+		<div class="px-4 py-6 text-center sm:px-6">
+			<p class="text-sm text-vault-text-muted">
+				No live listings yet. We're wiring up a real provider; until then
+				this surface stays empty rather than show fabricated numbers.
+			</p>
+		</div>
+	</div>
+{:else if result && result.listings.length > 0}
 	<div class="rounded-2xl border border-vault-border bg-vault-surface">
 		<div class="flex items-center justify-between gap-3 border-b border-vault-border px-4 py-3 sm:px-6">
 			<div class="min-w-0">
 				<div class="flex flex-wrap items-center gap-2">
 					<h2 class="font-semibold text-white">Live listings</h2>
-					{#if result.source === 'stub'}
-						<span
-							class="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300"
-							title="Sample data — real live-listings provider is being wired up (Sprint 2). Numbers are not market prices."
-						>
-							Sample data
-						</span>
-					{:else}
-						<span class="text-[10px] uppercase tracking-wider text-vault-text-muted">
-							via {result.source}
-						</span>
-					{/if}
+					<span class="text-[10px] uppercase tracking-wider text-vault-text-muted">
+						via {result.source}
+					</span>
 				</div>
 				{#if result.lowest_ask_cents != null}
 					<p class="mt-0.5 text-xs text-vault-text-muted">
