@@ -18,7 +18,63 @@ import type { PageServerLoad, Actions } from './$types';
 import type { GradingService } from '$types';
 
 export const load: PageServerLoad = async ({ params, setHeaders }) => {
-	const card = await getCard(params.id).catch(() => null);
+	// pokemontcg.io is the richer source (attacks, abilities, evolves-from,
+	// HP, types, artist, etc.) but goes flaky on rate limits / Cloudflare
+	// hiccups regularly enough that hard-404ing on a failed getCard means
+	// "this card doesn't exist" lies to the user multiple times per day.
+	// project_pokemontcg_ratelimit has been tracking this. Fallback: if
+	// pokemontcg.io fails, hydrate a minimal PokemonCard from card_index
+	// — our source of truth that already powers /, /collection, /watchlist,
+	// /browse, /rankings. Only 404 if BOTH miss.
+	let card = await getCard(params.id).catch(() => null);
+	if (!card) {
+		const { data: idx } = await supabase
+			.from('card_index')
+			.select(
+				'card_id, name, set_id, set_name, card_number, image_small_url, image_large_url, rarity'
+			)
+			.eq('card_id', params.id)
+			.maybeSingle();
+		const m = idx as {
+			card_id: string;
+			name: string;
+			set_id: string | null;
+			set_name: string | null;
+			card_number: string | null;
+			image_small_url: string | null;
+			image_large_url: string | null;
+			rarity: string | null;
+		} | null;
+		if (m) {
+			card = {
+				id: m.card_id,
+				name: m.name,
+				supertype: '',
+				number: m.card_number ?? '',
+				rarity: m.rarity ?? undefined,
+				images: {
+					small: m.image_small_url ?? '',
+					large: m.image_large_url ?? m.image_small_url ?? ''
+				},
+				set: {
+					id: m.set_id ?? '',
+					name: m.set_name ?? '',
+					series: '',
+					printedTotal: 0,
+					total: 0,
+					releaseDate: '',
+					images: { symbol: '', logo: '' }
+				}
+				// Note: attacks/abilities/weaknesses/HP/types/artist all
+				// undefined — the template guards each with {#if}, so the
+				// page renders a degraded but usable card view. The card_
+				// index-backed sections (Market Signals, Discovery Scores,
+				// Grading ROI, Per-Grade Ladder, condition_price_snapshots)
+				// all render their full data — those are what actually
+				// matters for valuation decisions.
+			};
+		}
+	}
 	if (!card) throw error(404, 'Card not found');
 
 	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
