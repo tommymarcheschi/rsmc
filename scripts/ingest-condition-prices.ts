@@ -31,6 +31,7 @@ import {
 	type TCGListing
 } from '../src/lib/services/tcgplayer-listings-scraper.js';
 import { MIN_SNAPSHOT_CONFIDENCE } from '../src/lib/services/condition-detector.js';
+import { resolveTcgPlayerProductId } from '../src/lib/services/tcgplayer-product-resolver.js';
 
 config({ path: '.env.local' });
 
@@ -70,6 +71,8 @@ interface CliOptions {
 	all: boolean;
 	dryRun: boolean;
 	resume: boolean;
+	priority: boolean;
+	owned: boolean;
 }
 
 function parseCli(): CliOptions {
@@ -80,7 +83,15 @@ function parseCli(): CliOptions {
 			limit: { type: 'string' },
 			all: { type: 'boolean', default: false },
 			'dry-run': { type: 'boolean', default: false },
-			'no-resume': { type: 'boolean', default: false }
+			'no-resume': { type: 'boolean', default: false },
+			// Priority queue (owned > watched > value-ranked > rest). Use
+			// with --limit to do N cards/day on the cron and keep the user's
+			// own collection always at the front of the line.
+			priority: { type: 'boolean', default: false },
+			// Shortcut: just the user's collection. Identical to priority
+			// but stops once owned cards are exhausted — no watchlist or
+			// catalog fall-through. Useful for ad-hoc "snapshot my stuff".
+			owned: { type: 'boolean', default: false }
 		},
 		strict: false
 	});
@@ -90,7 +101,9 @@ function parseCli(): CliOptions {
 		limit: values.limit ? parseInt(String(values.limit), 10) : undefined,
 		all: !!values.all,
 		dryRun: !!values['dry-run'],
-		resume: !values['no-resume']
+		resume: !values['no-resume'],
+		priority: !!values.priority,
+		owned: !!values.owned
 	};
 }
 
@@ -115,6 +128,10 @@ async function loadCards(opts: CliOptions): Promise<CardRow[]> {
 			.limit(1);
 		if (error) throw error;
 		return (data ?? []) as CardRow[];
+	}
+
+	if (opts.owned || opts.priority) {
+		return loadPriorityCards(opts);
 	}
 
 	let query = supabase
@@ -145,31 +162,103 @@ async function loadCards(opts: CliOptions): Promise<CardRow[]> {
 	return (data ?? []) as CardRow[];
 }
 
-// ---------------------------------------------------------------------------
-// productId resolution (pokemontcg.io redirect → /product/{id}/…)
-// ---------------------------------------------------------------------------
+/**
+ * Priority queue:
+ *   1. Cards in collection
+ *   2. Cards in watchlist
+ *   3. Catalog ordered by score_value desc (the "ranked" surface — high-
+ *      value cards first, lower-value last)
+ *
+ * Dedupes across tiers so a watched-and-owned card is only scraped once
+ * and counted in the first tier it qualifies for. `--owned` stops after
+ * tier 1; `--priority` walks all three, capped by `--limit`.
+ *
+ * Honesty doctrine: we surface the tier breakdown in the run summary
+ * so a 100-card daily cron is auditable ("ok=27 (owned=5 watched=8
+ * ranked=14)") rather than just a total.
+ */
+async function loadPriorityCards(opts: CliOptions): Promise<CardRow[]> {
+	const want = opts.limit ?? Number.MAX_SAFE_INTEGER;
+	const out: CardRow[] = [];
+	const seen = new Set<string>();
 
-const productIdCache = new Map<string, string | null>();
-
-async function resolveProductId(cardId: string): Promise<string | null> {
-	if (productIdCache.has(cardId)) return productIdCache.get(cardId) ?? null;
-	try {
-		const res = await fetch(`https://prices.pokemontcg.io/tcgplayer/${cardId}`, {
-			redirect: 'manual',
-			headers: {
-				'User-Agent':
-					'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
-			}
-		});
-		const location = res.headers.get('location');
-		const match = location?.match(/\/product\/(\d+)(?:[\/?]|$)/);
-		const pid = match?.[1] ?? null;
-		productIdCache.set(cardId, pid);
-		return pid;
-	} catch {
-		productIdCache.set(cardId, null);
-		return null;
+	// Tier 1 — owned.
+	const { data: ownedRows } = await supabase
+		.from('collection')
+		.select('card_id');
+	const ownedIds = Array.from(new Set((ownedRows ?? []).map((r: { card_id: string }) => r.card_id)));
+	if (ownedIds.length > 0) {
+		const { data } = await supabase
+			.from('card_index')
+			.select('card_id, name, set_id, set_name, card_number')
+			.in('card_id', ownedIds);
+		for (const c of (data ?? []) as CardRow[]) {
+			if (out.length >= want) break;
+			if (seen.has(c.card_id)) continue;
+			seen.add(c.card_id);
+			out.push(c);
+		}
 	}
+	if (opts.owned || out.length >= want) return out;
+
+	// Tier 2 — watched.
+	const { data: watchedRows } = await supabase
+		.from('watchlist')
+		.select('card_id');
+	const watchedIds = Array.from(
+		new Set((watchedRows ?? []).map((r: { card_id: string }) => r.card_id))
+	).filter((id) => !seen.has(id));
+	if (watchedIds.length > 0) {
+		const { data } = await supabase
+			.from('card_index')
+			.select('card_id, name, set_id, set_name, card_number')
+			.in('card_id', watchedIds);
+		for (const c of (data ?? []) as CardRow[]) {
+			if (out.length >= want) break;
+			if (seen.has(c.card_id)) continue;
+			seen.add(c.card_id);
+			out.push(c);
+		}
+	}
+	if (out.length >= want) return out;
+
+	// Tier 3 — catalog by value rank. Pull in pages until the limit is met.
+	const remaining = want - out.length;
+	const { data: ranked } = await supabase
+		.from('card_index')
+		.select('card_id, name, set_id, set_name, card_number')
+		.not('score_value', 'is', null)
+		.order('score_value', { ascending: false })
+		.limit(Math.min(remaining * 2, 1000)); // headroom for dedupe filter
+	for (const c of (ranked ?? []) as CardRow[]) {
+		if (out.length >= want) break;
+		if (seen.has(c.card_id)) continue;
+		seen.add(c.card_id);
+		out.push(c);
+	}
+	return out;
+}
+
+// ---------------------------------------------------------------------------
+// productId resolution — delegates to $services/tcgplayer-product-resolver.
+// ---------------------------------------------------------------------------
+//
+// The original resolver here was a single-shot call to the pokemontcg.io
+// redirect endpoint (`https://prices.pokemontcg.io/tcgplayer/{card_id}`).
+// That endpoint started returning 404 universally on ~2026-05-18 and
+// silently killed this pipeline for 8 days. The new resolver tries a
+// fallback chain (persistent cache → pokemontcg v2 → TCGPlayer search
+// API → legacy redirect) so a single dead endpoint can't take the
+// ingest down again.
+
+async function resolveProductId(card: CardRow): Promise<string | null> {
+	const r = await resolveTcgPlayerProductId(supabase, {
+		card_id: card.card_id,
+		name: card.name,
+		set_name: card.set_name,
+		card_number: card.card_number
+	});
+	return r.product_id != null ? String(r.product_id) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -364,7 +453,7 @@ async function upsertSnapshots(snapshots: SnapshotRow[], dryRun: boolean): Promi
 async function processCard(card: CardRow, opts: CliOptions): Promise<'ok' | 'skip' | 'noid' | 'empty' | 'err'> {
 	if (opts.resume && (await alreadyIngestedToday(card.card_id))) return 'skip';
 
-	const productId = await resolveProductId(card.card_id);
+	const productId = await resolveProductId(card);
 	if (!productId) return 'noid';
 
 	const result = await withBackoff(() =>

@@ -90,6 +90,7 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		gainLoss: number | null;
 		isEstimate: boolean;
 		source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+		sampleCount: number | null;
 	}[] = [];
 
 	if (collection.length > 0) {
@@ -150,7 +151,8 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 				imageUrl,
 				gainLoss: v.gain_loss,
 				isEstimate: v.is_estimate,
-				source: v.source
+				source: v.source,
+				sampleCount: v.sample_count
 			});
 		}
 

@@ -16,6 +16,7 @@
 			gainLoss: number | null;
 			isEstimate: boolean;
 			source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+			sampleCount: number | null;
 		}[]
 	);
 	let attention = $derived(((data as Record<string, unknown>).attention ?? { triggeredAlerts: [], triggeredAlertsTotal: 0, rising: [] }) as Attention);
@@ -198,7 +199,10 @@
 								Qty: {holding.quantity} &middot;
 								{holding.marketPrice != null ? `$${holding.marketPrice.toFixed(2)} each` : 'price —'}
 								{#if holding.source === 'real_comp'}
-									<span class="ml-1 text-vault-green" title="Real TCGPlayer active-listing median for this exact condition">·real</span>
+									<span class="ml-1 text-vault-green" title="Real TCGPlayer active-listing median for this exact condition (n={holding.sampleCount ?? '?'})">·real</span>
+									{#if holding.sampleCount != null && holding.sampleCount < 10}
+										<span class="ml-1 italic text-amber-400/80" title="Thin sample (n={holding.sampleCount}) — median has high variance">low n</span>
+									{/if}
 								{:else if holding.isEstimate}
 									<span class="ml-1 text-amber-400/80" title="Estimated from raw NM × calibrated condition discount — no real per-condition comp available yet">·est.</span>
 								{/if}
