@@ -5,7 +5,19 @@
 
 	let { data } = $props();
 	let stats = $derived(data.stats);
-	let topHoldings = $derived(data.topHoldings as { card_id: string; name: string; quantity: number; marketPrice: number | null; totalValue: number; imageUrl: string | null; gainLoss: number | null }[]);
+	let topHoldings = $derived(
+		data.topHoldings as {
+			card_id: string;
+			name: string;
+			quantity: number;
+			marketPrice: number | null;
+			totalValue: number;
+			imageUrl: string | null;
+			gainLoss: number | null;
+			isEstimate: boolean;
+			source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+		}[]
+	);
 	let attention = $derived(((data as Record<string, unknown>).attention ?? { triggeredAlerts: [], triggeredAlertsTotal: 0, rising: [] }) as Attention);
 
 	function fmtMoney(n: number | null | undefined): string {
@@ -185,6 +197,11 @@
 							<p class="text-xs text-vault-text-muted">
 								Qty: {holding.quantity} &middot;
 								{holding.marketPrice != null ? `$${holding.marketPrice.toFixed(2)} each` : 'price —'}
+								{#if holding.source === 'real_comp'}
+									<span class="ml-1 text-vault-green" title="Real TCGPlayer active-listing median for this exact condition">·real</span>
+								{:else if holding.isEstimate}
+									<span class="ml-1 text-amber-400/80" title="Estimated from raw NM × calibrated condition discount — no real per-condition comp available yet">·est.</span>
+								{/if}
 							</p>
 						</div>
 						<div class="text-right">

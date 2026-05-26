@@ -1,5 +1,6 @@
 import { supabase } from '$services/supabase';
 import { getPsa10Momentum } from '$services/insights';
+import { valueEntry, loadConditionComps, compKey } from '$services/valuation';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ setHeaders }) => {
@@ -79,24 +80,40 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 	);
 
 	let portfolioValue = 0;
-	let topHoldings: { card_id: string; name: string; quantity: number; marketPrice: number | null; totalValue: number; imageUrl: string | null; gainLoss: number | null }[] = [];
+	let topHoldings: {
+		card_id: string;
+		name: string;
+		quantity: number;
+		marketPrice: number | null;
+		totalValue: number;
+		imageUrl: string | null;
+		gainLoss: number | null;
+		isEstimate: boolean;
+		source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
+	}[] = [];
 
 	if (collection.length > 0) {
 		// Source of truth for card metadata + raw_nm_price is card_index — the
 		// same table the card page, /browse, /rankings and /sets all read from.
-		// The dashboard used to call getCard() (pokemontcg.io) + price_cache
-		// (TCGPlayer market), which silently dropped cards from non-pokemontcg
-		// sets (e.g. the `me3` Scrydex set) and showed prices that disagreed
-		// with the card page. Reading card_index here keeps every surface
-		// consistent and lets us honestly render "—" when no price exists.
+		// Reading card_index here keeps every surface consistent and lets us
+		// honestly render "—" when no price exists.
 		const uniqueCardIds = [...new Set(collection.map((e: { card_id: string }) => e.card_id))];
 
-		const { data: idxRows } = await supabase
-			.from('card_index')
-			.select('card_id, name, image_small_url, raw_nm_price')
-			.in('card_id', uniqueCardIds);
+		const [{ data: idxRows }, compsByKey] = await Promise.all([
+			supabase
+				.from('card_index')
+				.select('card_id, name, image_small_url, raw_nm_price')
+				.in('card_id', uniqueCardIds),
+			// Real TCGPlayer per-condition medians for any owned (card,condition)
+			// pair — same source /collection uses. When a real comp exists for
+			// the entry's exact condition, the valuation service uses it
+			// verbatim; otherwise we fall through to the calibrated discount
+			// ladder. Both surfaces share $services/valuation so they can't
+			// drift.
+			loadConditionComps(supabase, uniqueCardIds)
+		]);
 
-		const cardMap = new Map<string, { name: string; marketPrice: number | null; imageUrl: string | null }>();
+		const cardMap = new Map<string, { name: string; rawNm: number | null; imageUrl: string | null }>();
 		for (const r of (idxRows ?? []) as Array<{
 			card_id: string;
 			name: string;
@@ -105,23 +122,10 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 		}>) {
 			cardMap.set(r.card_id, {
 				name: r.name,
-				marketPrice: r.raw_nm_price,
+				rawNm: r.raw_nm_price,
 				imageUrl: r.image_small_url
 			});
 		}
-
-		// Same condition-discount ladder /collection uses so the dashboard's
-		// per-card unit price + portfolio total agree with /collection (and
-		// with the per-card "value (est.)" tag shown in the list). Keeps
-		// `marketPrice` honestly = the unit value at the entry's actual
-		// condition, not a fabricated NM number.
-		const CONDITION_DISCOUNT: Record<string, number> = {
-			NM: 1.0,
-			LP: 0.85,
-			MP: 0.7,
-			HP: 0.5,
-			DMG: 0.3
-		};
 
 		for (const entry of collection) {
 			const meta = cardMap.get(entry.card_id);
@@ -129,20 +133,24 @@ export const load: PageServerLoad = async ({ setHeaders }) => {
 			// surface the holding so the count matches Total Cards.
 			const name = meta?.name ?? entry.card_id;
 			const imageUrl = meta?.imageUrl ?? null;
-			const nmPrice = meta?.marketPrice ?? null;
-			const discount = CONDITION_DISCOUNT[entry.condition] ?? 1.0;
-			const unitPrice = nmPrice != null ? Math.round(nmPrice * discount * 100) / 100 : null;
-			const totalValue = unitPrice != null ? unitPrice * entry.quantity : 0;
-			portfolioValue += totalValue;
-			const costBasis = (entry.purchase_price ?? 0) * entry.quantity;
+			const v = valueEntry({
+				condition: entry.condition,
+				quantity: entry.quantity,
+				purchase_price: entry.purchase_price ?? null,
+				raw_nm_price: meta?.rawNm ?? null,
+				conditionComp: compsByKey[compKey(entry.card_id, entry.condition)] ?? null
+			});
+			portfolioValue += v.line_value ?? 0;
 			topHoldings.push({
 				card_id: entry.card_id,
 				name,
 				quantity: entry.quantity,
-				marketPrice: unitPrice,
-				totalValue,
+				marketPrice: v.unit_value,
+				totalValue: v.line_value ?? 0,
 				imageUrl,
-				gainLoss: unitPrice != null ? totalValue - costBasis : null
+				gainLoss: v.gain_loss,
+				isEstimate: v.is_estimate,
+				source: v.source
 			});
 		}
 

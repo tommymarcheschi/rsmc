@@ -9,6 +9,7 @@ import {
 	type DiscoverySignals,
 	type RawDiscoveryRow
 } from '$services/discovery-signals';
+import { valueEntry, loadConditionComps, compKey, type Valuation } from '$services/valuation';
 
 const ADD_SEARCH_PAGE_SIZE = 12;
 
@@ -159,60 +160,19 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		selectedCard = await getCard(selectedCardId).catch(() => null);
 	}
 
-	// Real per-condition medians (TCGPlayer active-listing comps, Phase 1).
-	// This is the honest-valuation differentiator: when we have a true
-	// per-condition median for a card we value the entry off THAT, not a
-	// fabricated discount of NM. Only fall back to the multiplier when no
-	// real comp exists. Batched, collapsed to latest snapshot per
-	// (card_id, condition).
-	const realByCardCond: Record<string, { median: number; sample: number; as_of: string }> = {};
-	if (uniqueCardIds.length > 0) {
-		const { data: snapRows } = await supabase
-			.from('condition_price_snapshots')
-			.select('card_id, condition, median_cents, sample_count, snapshot_date')
-			.in('card_id', uniqueCardIds)
-			.order('snapshot_date', { ascending: false });
-		for (const r of (snapRows ?? []) as Array<{
-			card_id: string;
-			condition: string;
-			median_cents: number;
-			sample_count: number;
-			snapshot_date: string;
-		}>) {
-			const key = `${r.card_id}|${r.condition}`;
-			// rows are newest-first, so the first one we see per key wins
-			if (!realByCardCond[key] && r.median_cents != null) {
-				realByCardCond[key] = {
-					median: Math.round(r.median_cents) / 100,
-					sample: r.sample_count,
-					as_of: r.snapshot_date
-				};
-			}
-		}
-	}
+	// Real per-condition TCGPlayer medians, batched. Same shared loader the
+	// dashboard uses so both surfaces always agree on which entries qualify
+	// for the real-comp path.
+	const compsByKey = await loadConditionComps(supabase, uniqueCardIds);
 
-	// Per-entry current valuation. Priority: (1) real per-condition median
-	// comp, (2) raw NM (canonical, condition NM only), (3) NM × standard
-	// TCGPlayer discount multiplier — flagged `est.` so the number is never
-	// mistaken for a true comp. Honesty doctrine: prefer a real number over
-	// a fabricated one; never silently dress an estimate up as a comp.
-	const CONDITION_DISCOUNT: Record<string, number> = {
-		NM: 1.0,
-		LP: 0.85,
-		MP: 0.7,
-		HP: 0.5,
-		DMG: 0.3
-	};
-
-	interface ValuationRow {
+	// Per-entry valuation. All math + the calibrated discount ladder live
+	// in $services/valuation — see that file's header for the priority order
+	// and the calibration provenance (real_comp > raw_nm > estimate > none).
+	// We also expose nm_price so the existing tooltip ("Estimated: NM $X ×
+	// Y% HP discount") keeps showing the NM anchor.
+	interface ValuationRow extends Valuation {
 		nm_price: number | null;
-		unit_value: number | null;
-		line_value: number | null;
-		is_estimate: boolean;
-		discount: number;
-		value_source: 'real_comp' | 'raw_nm' | 'estimate' | 'none';
-		sample_count: number | null;
-		as_of: string | null;
+		value_source: Valuation['source'];
 	}
 	const valuationByEntry: Record<string, ValuationRow> = {};
 	for (const entry of entries) {
@@ -230,40 +190,17 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 			}
 		}
 
-		const discount = CONDITION_DISCOUNT[entry.condition] ?? 1.0;
-		const real = realByCardCond[`${entry.card_id}|${entry.condition}`];
-
-		let unitValue: number | null;
-		let isEstimate: boolean;
-		let source: ValuationRow['value_source'];
-		if (real) {
-			unitValue = real.median;
-			isEstimate = false;
-			source = 'real_comp';
-		} else if (entry.condition === 'NM' && nm != null) {
-			unitValue = Math.round(nm * 100) / 100;
-			isEstimate = false;
-			source = 'raw_nm';
-		} else if (nm != null) {
-			unitValue = Math.round(nm * discount * 100) / 100;
-			isEstimate = discount < 1.0;
-			source = discount < 1.0 ? 'estimate' : 'raw_nm';
-		} else {
-			unitValue = null;
-			isEstimate = false;
-			source = 'none';
-		}
-
-		const lineValue = unitValue != null ? Math.round(unitValue * entry.quantity * 100) / 100 : null;
+		const v = valueEntry({
+			condition: entry.condition,
+			quantity: entry.quantity,
+			purchase_price: entry.purchase_price ?? null,
+			raw_nm_price: nm,
+			conditionComp: compsByKey[compKey(entry.card_id, entry.condition)] ?? null
+		});
 		valuationByEntry[entry.id] = {
+			...v,
 			nm_price: nm,
-			unit_value: unitValue,
-			line_value: lineValue,
-			is_estimate: isEstimate,
-			discount,
-			value_source: source,
-			sample_count: real ? real.sample : null,
-			as_of: real ? real.as_of : null
+			value_source: v.source
 		};
 	}
 
