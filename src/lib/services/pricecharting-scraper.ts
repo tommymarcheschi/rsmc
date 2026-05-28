@@ -85,8 +85,15 @@ export interface PriceChartingData {
 	psa10LastSold: string | null;
 	/** Up to 30 most recent PSA 10 sold comps, newest first. Each row has
 	 *  an ISO date, a USD price, and the marketplace the sale happened on
-	 *  (eBay, Goldin, Fanatics, etc.) when detectable. */
-	psa10Sales: Array<{ sold_at: string; price: number; marketplace: string | null }>;
+	 *  (eBay, Goldin, Fanatics, etc.) when detectable, and the source
+	 *  listing URL (the PriceCharting title anchor → goldin.co / ebay /
+	 *  fanatics item page) when present, so a comp can be confirmed. */
+	psa10Sales: Array<{
+		sold_at: string;
+		price: number;
+		marketplace: string | null;
+		url: string | null;
+	}>;
 	/** Full URL of the matched product page */
 	pcUrl: string;
 	/** The product name as shown on PriceCharting */
@@ -390,13 +397,18 @@ function parsePopData(html: string): { psa: PopDistribution | null; cgc: PopDist
  */
 function parsePsa10Sales(
 	html: string
-): Array<{ sold_at: string; price: number; marketplace: string | null }> {
+): Array<{ sold_at: string; price: number; marketplace: string | null; url: string | null }> {
 	const section = html.match(
 		/<div class="completed-auctions-manual-only">([\s\S]*?)<\/div>\s*<div class="/i
 	);
 	if (!section) return [];
 
-	const rows: Array<{ sold_at: string; price: number; marketplace: string | null }> = [];
+	const rows: Array<{
+		sold_at: string;
+		price: number;
+		marketplace: string | null;
+		url: string | null;
+	}> = [];
 	// Iterate each <tr>…</tr> within the section's tbody.
 	const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
 	for (const m of section[1].matchAll(trRegex)) {
@@ -410,10 +422,14 @@ function parsePsa10Sales(
 		// Marketplace: PriceCharting appends `[eBay]`, `[Goldin]`, `[Fanatics]`, etc.
 		// after the auction title. It's not always present on every row.
 		const mpMatch = row.match(/\[([A-Za-z][A-Za-z ]{1,40})\]/);
+		// Source listing link: the title-cell anchor PriceCharting points
+		// at the real auction (goldin.co / ebay / fanatics item page).
+		const urlMatch = row.match(/<td class="title">\s*<a\b[^>]*\bhref="([^"]+)"/i);
 		rows.push({
 			sold_at: dateMatch[1],
 			price,
-			marketplace: mpMatch ? mpMatch[1].trim() : null
+			marketplace: mpMatch ? mpMatch[1].trim() : null,
+			url: urlMatch ? urlMatch[1].replace(/&amp;/g, '&') : null
 		});
 	}
 	return rows;
