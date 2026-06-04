@@ -1,6 +1,6 @@
 import { supabase } from '$services/supabase';
-import { getCard, searchCards } from '$services/tcg-api';
-import { fail, redirect } from '@sveltejs/kit';
+import { getCard } from '$services/tcg-api';
+import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { PokemonCard, CollectionEntry } from '$types';
 import {
@@ -11,8 +11,6 @@ import {
 } from '$services/discovery-signals';
 import { valueEntry, loadConditionComps, compKey, type Valuation } from '$services/valuation';
 import { loadWatchlistData, type WatchlistLoadResult } from '$services/watchlist-load';
-
-const ADD_SEARCH_PAGE_SIZE = 12;
 
 export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// Do NOT cache the HTML document. See src/routes/browse/+page.server.ts
@@ -136,12 +134,9 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		} as PokemonCard;
 	}
 
-	// Add-modal state is driven by URL params so the whole flow works without
-	// JS: `?add=1` opens the modal, `?addSearch=<q>` runs a server-side card
-	// search, `?selectedCard=<id>` pre-fetches that card so the detail preview
-	// renders on the same round-trip. Option (b) from the task spec — keeping
-	// the modal in-page and using query params for each step is less
-	// disruptive than a separate /collection/add route.
+	// Adding a card now lives on the dedicated /collection/add page (live
+	// autosuggest over card_index) — the old in-page modal driven by ?add=1 /
+	// ?addSearch / ?selectedCard query params has been removed.
 	// Tab strip — Sprint 1D-i fold. /watchlist redirects here with ?tab=watchlist.
 	// Default tab is the collection view; the watchlist UI only appears when
 	// the user (or a redirect) asks for it explicitly. The watchlist data is
@@ -150,25 +145,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 	// badge can show even when the user is on the Collection tab.
 	const tabParam = url.searchParams.get('tab');
 	const tab: 'collection' | 'watchlist' = tabParam === 'watchlist' ? 'watchlist' : 'collection';
-
-	const addMode = url.searchParams.get('add') === '1';
-	const addSearch = url.searchParams.get('addSearch') ?? '';
-	const selectedCardId = url.searchParams.get('selectedCard') ?? '';
-
-	let addSearchResults: PokemonCard[] = [];
-	if (addMode && addSearch.trim()) {
-		try {
-			const result = await searchCards(`name:"${addSearch}*"`, 1, ADD_SEARCH_PAGE_SIZE);
-			addSearchResults = result.data;
-		} catch {
-			// swallow — show empty results rather than crashing the page
-		}
-	}
-
-	let selectedCard: PokemonCard | null = null;
-	if (addMode && selectedCardId) {
-		selectedCard = await getCard(selectedCardId).catch(() => null);
-	}
 
 	// Real per-condition TCGPlayer medians, batched. Same shared loader the
 	// dashboard uses so both surfaces always agree on which entries qualify
@@ -239,10 +215,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
 		cardCache,
 		valuationByEntry,
 		discoveryByCard,
-		addMode,
-		addSearch,
-		addSearchResults,
-		selectedCard,
 		watchlist
 	};
 };
@@ -261,56 +233,6 @@ export const load: PageServerLoad = async ({ url, setHeaders }) => {
  * the /api/collection POST handler so both paths behave identically.
  */
 export const actions: Actions = {
-	addEntry: async ({ request }) => {
-		const form = await request.formData();
-		const cardId = (form.get('card_id') ?? '').toString().trim();
-		if (!cardId) return fail(400, { action: 'add', message: 'Card is required' });
-
-		const conditionRaw = (form.get('condition') ?? 'NM').toString();
-		const condition = ['NM', 'LP', 'MP', 'HP', 'DMG'].includes(conditionRaw)
-			? conditionRaw
-			: 'NM';
-
-		const quantityRaw = parseInt((form.get('quantity') ?? '1').toString(), 10);
-		const quantity = Number.isFinite(quantityRaw) && quantityRaw > 0 ? quantityRaw : 1;
-
-		const priceRaw = (form.get('purchase_price') ?? '').toString().trim();
-		const purchasePrice = priceRaw ? parseFloat(priceRaw) : null;
-
-		const dateRaw = (form.get('purchase_date') ?? '').toString().trim();
-		const purchaseDate = dateRaw || null;
-
-		const notesRaw = (form.get('notes') ?? '').toString().trim();
-		const notes = notesRaw || null;
-
-		const { data: existing } = await supabase
-			.from('collection')
-			.select('id, quantity')
-			.eq('card_id', cardId)
-			.eq('condition', condition)
-			.maybeSingle();
-
-		if (existing) {
-			const { error: err } = await supabase
-				.from('collection')
-				.update({ quantity: existing.quantity + quantity })
-				.eq('id', existing.id);
-			if (err) return fail(500, { action: 'add', message: err.message });
-		} else {
-			const { error: err } = await supabase.from('collection').insert({
-				card_id: cardId,
-				quantity,
-				condition,
-				purchase_price: purchasePrice,
-				purchase_date: purchaseDate,
-				notes
-			});
-			if (err) return fail(500, { action: 'add', message: err.message });
-		}
-
-		throw redirect(303, '/collection');
-	},
-
 	increment: async ({ request }) => {
 		const form = await request.formData();
 		const id = (form.get('id') ?? '').toString();

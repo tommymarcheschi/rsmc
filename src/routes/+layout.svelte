@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { ApiStatus, Icon, CommandPalette, ShowModeToggle } from '$components';
 	// `showMode` store no longer read here — the sidebar Show button is now
 	// a link to /show (project_show_mode_page). The header ShowModeToggle
@@ -41,6 +42,17 @@
 	];
 
 	let mobileMenuOpen = $state(false);
+
+	// The scrollable region is <main> (overflow-y-auto), not the window — so
+	// SvelteKit's built-in scroll reset (which targets the window) leaves the
+	// inner panel parked wherever the previous page left it, dumping you
+	// mid-page after a navigation. Reset it ourselves on every navigation,
+	// except when jumping to an in-page #hash anchor.
+	let mainEl = $state<HTMLElement | null>(null);
+	afterNavigate((nav) => {
+		if (nav.to?.url.hash) return;
+		mainEl?.scrollTo({ top: 0, left: 0 });
+	});
 
 	// Standalone (no sidebar chrome) pages: /login, /privacy, /terms, /show.
 	// /privacy + /terms need to be readable by unauthenticated visitors
@@ -230,7 +242,7 @@
 		</header>
 
 		<!-- Page content -->
-		<main class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
+		<main bind:this={mainEl} class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
 			{@render children()}
 		</main>
 	</div>

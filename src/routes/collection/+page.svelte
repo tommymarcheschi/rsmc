@@ -23,7 +23,7 @@
 		psa10_multiple: number | null;
 	}
 
-	let { data, form } = $props();
+	let { data } = $props();
 
 	// Tab strip — Sprint 1D-i fold. /watchlist now redirects to
 	// /collection?tab=watchlist so the two views share this shell.
@@ -45,13 +45,6 @@
 	let discoveryByCard = $derived(
 		((data as Record<string, unknown>).discoveryByCard ?? {}) as Record<string, DiscoverySignals>
 	);
-	let addMode = $derived(data.addMode);
-	let selectedCard = $derived(data.selectedCard as PokemonCard | null);
-	let addSearchResults = $derived(data.addSearchResults as PokemonCard[]);
-	let addSearchQuery = $derived(data.addSearch ?? '');
-
-	let saveError = $derived(form && !form.success ? form.message : null);
-
 	// Stats
 	let totalCards = $derived(entries.reduce((sum, e) => sum + e.quantity, 0));
 	let totalInvested = $derived(
@@ -252,14 +245,14 @@
 		</div>
 		{#if tab === 'collection'}
 			<!--
-				"+ Add Card" is a plain link to ?add=1 so the modal opens server-side.
-				The modal's card-search form submits back to the same route with
-				?addSearch=<q>; the loader populates results. Option (b) from the task
-				spec — less disruptive than a separate /collection/add route and keeps
-				the existing in-page modal UX.
+				"+ Add Card" navigates to the dedicated /collection/add page — a
+				search-engine style flow with live autosuggest (card_index) that
+				redirects back here once a card is added. Replaced the old in-page
+				modal, which searched the flaky pokemontcg.io API and errored on
+				mobile.
 			-->
 			<a
-				href="/collection?add=1"
+				href="/collection/add"
 				data-testid="open-add-modal"
 				class="btn-press rounded-xl bg-gradient-to-r from-vault-accent to-vault-accent-hover px-4 py-2 text-sm font-medium text-vault-bg shadow-lg shadow-vault-accent/20 transition-all hover:shadow-vault-accent/40"
 			>
@@ -564,169 +557,3 @@
 	</div>
 	{/if}
 </div>
-
-<!-- Add Card Modal — rendered when ?add=1 is in the URL. Closing is a link back
-     to /collection (which re-runs load without the add params). -->
-{#if addMode}
-	<div class="fixed inset-0 z-50 flex items-center justify-center p-4" data-testid="add-modal">
-		<a href="/collection" aria-label="Close modal" class="fixed inset-0 bg-black/60"></a>
-		<div class="relative w-full max-w-sm rounded-2xl border border-vault-border bg-vault-surface p-4 shadow-2xl sm:max-w-lg sm:p-6">
-			<div class="flex items-center justify-between">
-				<h2 class="text-lg font-semibold text-white">Add Card to Collection</h2>
-				<a href="/collection" class="text-vault-text-muted hover:text-white" aria-label="Close">
-					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</a>
-			</div>
-
-			<div class="mt-4 space-y-4">
-				<!-- Card search — plain GET form back to /collection?add=1&addSearch=<q>.
-				     Loader runs the TCG search and returns results in data.addSearchResults. -->
-				<form method="GET" action="/collection" class="space-y-2">
-					<input type="hidden" name="add" value="1" />
-					<label class="block text-sm font-medium text-vault-text-muted" for="card-search">Search Card</label>
-					<div class="flex gap-2">
-						<input
-							id="card-search"
-							name="addSearch"
-							type="text"
-							value={addSearchQuery}
-							placeholder="Type a card name..."
-							data-testid="card-search-input"
-							class="flex-1 rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text placeholder-vault-text-muted focus:border-vault-purple focus:outline-none"
-						/>
-						<button
-							type="submit"
-							data-testid="card-search-submit"
-							class="rounded-lg bg-vault-accent px-4 py-2 text-sm font-medium text-vault-bg hover:bg-vault-accent-hover"
-						>
-							Search
-						</button>
-					</div>
-				</form>
-
-				<!-- Search results — each result is a link to ?add=1&selectedCard=<id>,
-				     so picking one is a normal navigation. -->
-				{#if addSearchResults.length > 0 && !selectedCard}
-					<div class="max-h-48 overflow-y-auto rounded-lg border border-vault-border bg-vault-bg" data-testid="card-search-results">
-						{#each addSearchResults as result}
-							<a
-								href="/collection?add=1&selectedCard={encodeURIComponent(result.id)}&addSearch={encodeURIComponent(addSearchQuery)}"
-								data-testid="card-search-result"
-								data-card-id={result.id}
-								class="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-vault-surface-hover"
-							>
-								<img src={result.images.small} alt={result.name} class="h-10 w-7 rounded object-cover" />
-								<div>
-									<p class="text-sm text-white">{result.name}</p>
-									<p class="text-xs text-vault-text-muted">{result.set.name} · #{result.number}</p>
-								</div>
-							</a>
-						{/each}
-					</div>
-				{/if}
-
-				{#if addSearchQuery && addSearchResults.length === 0 && !selectedCard}
-					<p class="text-sm text-vault-text-muted">No cards found for "{addSearchQuery}"</p>
-				{/if}
-
-				<!-- Selected card preview + add form. The final submit is a POST to
-				     ?/addEntry with all fields in FormData. -->
-				{#if selectedCard}
-					<div class="flex items-center gap-3 rounded-lg border border-vault-purple/30 bg-vault-purple/5 p-3" data-testid="selected-card">
-						<img src={selectedCard.images.small} alt={selectedCard.name} class="h-16 w-11 rounded object-cover" />
-						<div class="flex-1">
-							<p class="font-medium text-white">{selectedCard.name}</p>
-							<p class="text-xs text-vault-text-muted">{selectedCard.set.name} · {selectedCard.rarity ?? 'Unknown'}</p>
-						</div>
-						<a href="/collection?add=1&addSearch={encodeURIComponent(addSearchQuery)}" class="text-xs text-vault-text-muted hover:text-white">
-							Change
-						</a>
-					</div>
-
-					<form method="POST" action="?/addEntry" use:enhance class="space-y-4">
-						<input type="hidden" name="card_id" value={selectedCard.id} />
-
-						<div class="grid grid-cols-2 gap-4">
-							<div>
-								<label class="block text-sm font-medium text-vault-text-muted" for="quantity">Quantity</label>
-								<input
-									id="quantity"
-									name="quantity"
-									type="number"
-									min="1"
-									value="1"
-									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-								/>
-							</div>
-							<div>
-								<label class="block text-sm font-medium text-vault-text-muted" for="condition">Condition</label>
-								<select
-									id="condition"
-									name="condition"
-									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-								>
-									<option value="NM">Near Mint</option>
-									<option value="LP">Lightly Played</option>
-									<option value="MP">Moderately Played</option>
-									<option value="HP">Heavily Played</option>
-									<option value="DMG">Damaged</option>
-								</select>
-							</div>
-						</div>
-
-						<div class="grid grid-cols-2 gap-4">
-							<div>
-								<label class="block text-sm font-medium text-vault-text-muted" for="purchase-price">Purchase Price ($)</label>
-								<input
-									id="purchase-price"
-									name="purchase_price"
-									type="number"
-									step="0.01"
-									min="0"
-									placeholder="0.00"
-									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-								/>
-							</div>
-							<div>
-								<label class="block text-sm font-medium text-vault-text-muted" for="purchase-date">Purchase Date</label>
-								<input
-									id="purchase-date"
-									name="purchase_date"
-									type="date"
-									class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-								/>
-							</div>
-						</div>
-
-						<div>
-							<label class="block text-sm font-medium text-vault-text-muted" for="notes">Notes</label>
-							<input
-								id="notes"
-								name="notes"
-								type="text"
-								placeholder="Optional notes..."
-								class="mt-1 w-full rounded-lg border border-vault-border bg-vault-bg px-4 py-2 text-sm text-vault-text focus:border-vault-purple focus:outline-none"
-							/>
-						</div>
-
-						<button
-							type="submit"
-							data-testid="submit-add-entry"
-							class="w-full rounded-lg bg-vault-accent px-4 py-2.5 text-sm font-medium text-vault-bg transition-colors hover:bg-vault-accent-hover disabled:opacity-50"
-						>
-							Add to Collection
-						</button>
-					</form>
-				{/if}
-
-				{#if saveError}
-					<div class="rounded-lg border border-vault-accent/40 bg-vault-accent/10 px-4 py-3 text-sm text-vault-accent" data-testid="save-error">
-						<span class="font-semibold">Couldn't save:</span> {saveError}
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
-{/if}
